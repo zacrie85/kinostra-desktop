@@ -1,22 +1,48 @@
 /* ================================================================
-   KINOSTRA DESKTOP — batch.js (v2.1)
-   Antrian batch — banyak video diproses berurutan memakai setelan
-   saat ini + KOTAK VIDEO bergambar (thumbnail):
-   - klik kotak → video dimuat ke preview utama (menggantikan yang aktif)
-   - saat batch jalan, video yang diproses otomatis tampil di preview
+   KINOSTRA DESKTOP — batch.js (v2.2 · KOTAK VIDEO TERPADU)
+   SATU kotak berurutan (atas → bawah) untuk SEMUA video:
+   - IMPOR MEDIA (tombol header) → masuk kotak
+   - drag-drop ke jendela    → masuk kotak
+   - TAMBAH FILE (batch)     → masuk kotak
+   - klik baris  → tonton di preview utama
+   - ▲ ▼         → atur urutan proses
+   - ×           → hapus dari kotak
+   - MULAI BATCH → memproses isi kotak berurutan dari atas
    ================================================================ */
 'use strict';
 
-function addBatchPath(p) {
-  if (!p) return;
-  if (state.batch.some(b => b.path === p)) return;
-  state.batch.push({ path: p, name: p.split(/[\\/]/).pop(), size: 0, status: 'wait', msg: '', thumb: null, dur: 0, sel: false });
-  renderBatchList();
+function addBatchPath(p, via = 'batch') {
+  if (!p) return null;
+  const exists = state.batch.find(b => b.path === p);
+  if (exists) { if (!exists.via) exists.via = via; renderQueue(); return exists; }
+  const it = { path: p, name: p.split(/[\\/]/).pop(), size: 0, status: 'wait', msg: '', thumb: null, dur: 0, sel: false, via };
+  state.batch.push(it);
+  renderQueue();
   queueBatchThumb();
+  return it;
 }
-function addBatchPaths(paths) { (paths || []).forEach(addBatchPath); }
+function addBatchPaths(paths, via) { (paths || []).forEach(p => addBatchPath(p, via)); }
 
-/* ---------- v2.1: THUMBNAIL BERANTIRAN (satu file dalam satu waktu) ---------- */
+/* pindah urutan (naik/turun) */
+function moveQueueItem(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= state.batch.length) return;
+  const [it] = state.batch.splice(i, 1);
+  state.batch.splice(j, 0, it);
+  renderQueue();
+}
+
+/* kosongkan kotak */
+function clearQueue() {
+  if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
+  if (state.batch.some(b => b.status === 'working')) { toast('Ada file sedang diproses', 'warn'); return; }
+  const n = state.batch.length;
+  state.batch = [];
+  renderQueue();
+  toast(n ? `Kotak dikosongkan (${n} video dihapus)` : 'Kotak sudah kosong');
+}
+
+/* ---------- THUMBNAIL BERANTIRAN (satu file dalam satu waktu) ---------- */
 let _thumbRunning = false;
 function queueBatchThumb() {
   if (_thumbRunning) return;
@@ -25,7 +51,7 @@ function queueBatchThumb() {
   _thumbRunning = true;
   makeThumb(it)
     .catch(() => { it._thumbErr = true; })
-    .finally(() => { _thumbRunning = false; renderBatchList(); queueBatchThumb(); });
+    .finally(() => { _thumbRunning = false; renderQueue(); queueBatchThumb(); });
 }
 
 async function makeThumb(it) {
@@ -55,7 +81,7 @@ async function makeThumb(it) {
         v.currentTime = Math.min(1.2, (v.duration || 2) * 0.1);
         setTimeout(res, 2600);
       });
-      const w = 192, h = Math.max(2, Math.round(w * (v.videoHeight || 9) / (v.videoWidth || 16)));
+      const w = 104, h = Math.max(2, Math.round(w * (v.videoHeight || 9) / (v.videoWidth || 16)));
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const x = c.getContext('2d');
       x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
@@ -69,72 +95,72 @@ async function makeThumb(it) {
   } catch (e) { /* file tak terbaca — biarkan placeholder */ }
 }
 
-/* ---------- v2.1: PREVIEW FILE BATCH KE LAYAR UTAMA ---------- */
-async function previewBatchItem(it, i) {
-  if (state.busy) { toast('Batch sedang berjalan — tunggu selesai', 'warn'); return; }
+/* ---------- PRATINJAU FILE DARI KOTAK KE LAYAR UTAMA ---------- */
+async function previewQueueItem(it, i) {
+  if (state.busy) { toast('Proses sedang berjalan — tunggu selesai', 'warn'); return; }
   state.batch.forEach((b, j) => b.sel = j === i);
-  renderBatchList();
+  renderQueue();
   toast('Memuat pratinjau: ' + it.name);
   await loadFromPath(it.path);   /* menggantikan video yang sedang tampil */
 }
 
-/* ---------- DAFTAR & GRID ---------- */
-function renderBatchList() {
-  /* grid kotak video */
-  const g = $('#batchGrid');
-  if (!state.batch.length) g.innerHTML = '<div class="empty">ANTRIAN KOSONG</div>';
-  else {
-    g.innerHTML = '';
+/* ---------- RENDER KOTAK VIDEO (urutan atas ke bawah) ---------- */
+function renderQueue() {
+  const el = $('#queueList');
+  if (!state.batch.length) {
+    el.innerHTML = '<div class="empty">KOTAK KOSONG — SEMUA VIDEO YANG DIIMPOR MUNCUL DI SINI</div>';
+  } else {
+    el.innerHTML = '';
     state.batch.forEach((it, i) => {
-      const c = document.createElement('div');
-      c.className = 'bcell ' + (it.status === 'done' ? 'done' : it.status === 'err' ? 'err' : it.status === 'working' ? 'working' : '') + (it.sel ? ' sel' : '');
+      const stcls = it.status === 'done' ? 'done' : it.status === 'err' ? 'err' : it.status === 'working' ? 'working' : '';
+      const r = document.createElement('div');
+      r.className = 'qrow ' + stcls + (it.sel ? ' sel' : '');
       const thumbHtml = it.thumb === 'audio'
-        ? '<span class="bthumb ph">♪</span>'
+        ? '<span class="qthumb">♪</span>'
         : it.thumb
-          ? `<img class="bthumb" src="${it.thumb}" alt="">`
-          : '<span class="bthumb ph">▮▶</span>';
-      const stat = it.status === 'wait' ? (it.dur ? fmtT(it.dur) + ' · MENUNGGU' : 'MENUNGGU')
+          ? `<img class="qthumb" src="${it.thumb}" alt="">`
+          : '<span class="qthumb">▶</span>';
+      const st = it.status === 'wait' ? (it.dur ? fmtT(it.dur) + ' · MENUNGGU' : 'MENUNGGU')
         : it.status === 'working' ? 'DIPROSES…'
         : it.status === 'done' ? `SELESAI · ${it.msg}`
         : `GAGAL · ${it.msg}`;
-      c.innerHTML = `${thumbHtml}<span class="bname" title="${it.path}">${it.name}</span><span class="bstat">${stat}</span>`;
-      const del = document.createElement('button'); del.className = 'bdel'; del.textContent = '×'; del.title = 'Hapus dari antrian';
-      del.onclick = ev => {
-        ev.stopPropagation();
-        if (it.status === 'working') { toast('File sedang diproses', 'warn'); return; }
-        state.batch.splice(i, 1); renderBatchList();
+      const viaTxt = it.via === 'impor' ? 'IMPOR' : it.via === 'drop' ? 'DRAG-DROP' : 'BATCH';
+      r.innerHTML = `<span class="qno">${String(i + 1).padStart(2, '0')}</span>${thumbHtml}
+        <span class="qinfo"><span class="qname" title="${it.path}">${it.name}</span>
+        <span class="qmeta">${viaTxt} · ${st}</span></span>`;
+      const btns = document.createElement('span'); btns.className = 'qbtns';
+      const mk = (txt, title, fn, hide) => {
+        if (hide) return;
+        const b = document.createElement('button');
+        b.textContent = txt; b.title = title;
+        b.onclick = ev => { ev.stopPropagation(); fn(); };
+        btns.appendChild(b);
       };
-      c.appendChild(del);
-      c.onclick = () => previewBatchItem(it, i);
-      g.appendChild(c);
-    });
-  }
-  /* daftar ringkas baris */
-  const el = $('#batchList');
-  if (!state.batch.length) { el.innerHTML = '<div class="empty">ANTRIAN KOSONG</div>'; }
-  else {
-    el.innerHTML = '';
-    state.batch.forEach((it, i) => {
-      const r = document.createElement('div');
-      r.className = 'brow ' + (it.status === 'done' ? 'done' : it.status === 'err' ? 'err' : it.status === 'working' ? 'working' : '');
-      const stat = it.status === 'wait' ? 'MENUNGGU' : it.status === 'working' ? 'DIPROSES…' : it.status === 'done' ? `SELESAI · ${it.msg}` : `GAGAL · ${it.msg}`;
-      r.innerHTML = `<span class="bn" title="${it.path}">${it.name}</span><span class="bs">${stat}</span>`;
-      const del = document.createElement('button'); del.className = 'bdel'; del.textContent = '×';
-      del.onclick = () => { if (it.status === 'working') { toast('File sedang diproses', 'warn'); return; } state.batch.splice(i, 1); renderBatchList(); };
-      r.appendChild(del);
-      r.onclick = e => { if (e.target !== del) previewBatchItem(it, i); };
+      mk('▶', 'Tonton di preview', () => previewQueueItem(it, i));
+      mk('↑', 'Naikkan urutan', () => moveQueueItem(i, -1), i === 0);
+      mk('↓', 'Turunkan urutan', () => moveQueueItem(i, 1), i === state.batch.length - 1);
+      mk('×', 'Hapus dari kotak', () => {
+        if (it.status === 'working') { toast('File sedang diproses', 'warn'); return; }
+        state.batch.splice(i, 1); renderQueue();
+      });
+      r.appendChild(btns);
+      r.onclick = () => previewQueueItem(it, i);
       el.appendChild(r);
     });
   }
   const n = state.batch.length, done = state.batch.filter(b => b.status === 'done').length;
-  $('#batchStat').textContent = `${n} file dalam antrian · ${done} selesai · klik kotak untuk menonton`;
+  $('#qStat').textContent = `${n} video dalam kotak · ${done} selesai · klik baris untuk menonton`;
+  $('#batchStat').textContent = `${n} file dalam kotak · ${done} selesai`;
 }
+/* alias kompatibilitas */
+const renderBatchList = renderQueue;
 
+/* ---------- BATCH: proses isi kotak berurutan dari atas ---------- */
 async function runBatch() {
-  if (!state.batch.length) { toast('Antrian kosong — tambah file dulu', 'warn'); return; }
+  if (!state.batch.length) { toast('Kotak kosong — tambah video dulu', 'warn'); return; }
   if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
   const pending = state.batch.filter(b => b.status !== 'done');
-  if (!pending.length) { toast('Semua antrian sudah selesai', 'ok'); return; }
+  if (!pending.length) { toast('Semua video dalam kotak sudah selesai', 'ok'); return; }
   const dir = await window.kinostra.pickOutputDir(_lastOutDir || undefined);
   if (!dir) return;
   _lastOutDir = dir;
@@ -148,7 +174,7 @@ async function runBatch() {
       if (state.abort) break;
       it.status = 'working'; it.msg = ''; it.sel = true;
       state.batch.forEach(b => { if (b !== it) b.sel = false; });
-      renderBatchList();
+      renderQueue();
       showModal({ title: `BATCH ${(ok + fail + 1).toString().padStart(2, '0')} / ${total}`,
         sub: `Memuat ${it.name}…`, cancel: true, onCancel() { state.abort = true; } });
       setProg(0.02);
@@ -168,7 +194,7 @@ async function runBatch() {
           await composeMusic(false, true);
         }
 
-        /* --- render semua part (paralel via mesin v2.1) --- */
+        /* --- render semua part (paralel via mesin TURBO) --- */
         const results = await exportPartsToDir(dir, {
           title(seg, segs) {
             showModal({ title: `BATCH ${it.name.slice(0, 26)} · PART ${String(seg.i + 1).padStart(2, '0')}/${String(segs.length).padStart(2, '0')}`,
@@ -185,13 +211,13 @@ async function runBatch() {
         it.status = 'err'; it.msg = (err.message || err).slice(0, 40); fail++;
       }
       it.sel = false;
-      renderBatchList();
+      renderQueue();
     }
     hideModal();
     if (state.abort) toast('Batch dihentikan', 'warn');
     else toast(`Batch selesai — ${ok} berhasil${fail ? `, ${fail} gagal` : ''}`, fail ? 'warn' : 'ok');
   } finally {
     state.busy = false;
-    renderBatchList();
+    renderQueue();
   }
 }

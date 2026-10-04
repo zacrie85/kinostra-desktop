@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.1.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.2.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -26,11 +26,14 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 7 | **Export Pipeline** | Render H.264 MP4 via WebCodecs + mp4-muxer |
 | 8 | **Efek Visual & Watermark** | Brightness / contrast / saturation / vignette / film grain + watermark teks & logo |
 | 9 | **Zoom Fokus & Geser** ⭐v2.1 | Mode 9:16: zoom 1–3× + geser kiri/kanan/atas/bawah (slider & drag) untuk memilih bagian gambar |
-| 10 | **Render Paralel Turbo** ⭐v2.1 | Semua part dirender bersamaan + encoder hardware GPU — ekspor jauh lebih cepat |
-| 11 | **Batch Proses + Kotak Video** ⭐v2.1 | Antrean render otomatis dengan thumbnail — klik kotak untuk menonton di preview |
-| 12 | **Subtitle Translate** | Terjemahan subtitle lokal (opus-mt) + geser waktu ±0.5s + export SRT |
+| 10 | **Kotak Video Terpadu** ⭐v2.2 | SATU kotak berurutan (atas→bawah) untuk semua video — impor, drag-drop & batch dalam satu daftar dengan thumbnail, tombol urutkan & pratinjau |
+| 11 | **Render Paralel Turbo Stream** ⭐v2.2 | Frame diambil sambil video diputar cepat (tanpa seek per frame) + lapisan statis di-cache + encoder hardware GPU — hingga **10× lebih cepat** |
+| 12 | **VOICEMATCH AI v2** ⭐v2.2 | Subtitel mengikuti bahasa yang diucapkan (deteksi token bahasa kanonik), lompat bagian hening (proses lebih cepat), filter halusinasi |
+| 13 | **Judul Multi-Baris** ⭐v2.2 | Judul panjang otomatis bersambung ke baris berikutnya — tidak terpotong kiri/kanan |
+| 14 | **Batch Proses** ⭐v2.1 | Antrean render otomatis berurutan dari atas ke bawah Kotak Video |
+| 15 | **Subtitle Translate** | Terjemahan subtitle lokal (opus-mt) + geser waktu ±0.5s + export SRT |
 
-⭐ = fitur baru di v2.1.0
+⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
 
@@ -44,8 +47,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-2.1.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-2.1.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-2.2.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-2.2.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 

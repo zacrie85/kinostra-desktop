@@ -5,17 +5,12 @@
    ================================================================ */
 'use strict';
 
-/* ---------- IMPOR ---------- */
+/* ---------- IMPOR (v2.2: semua hasil impor masuk KOTAK VIDEO) ---------- */
 $('#btnImport').onclick = async () => {
   const paths = await window.kinostra.openMedia();
   if (!paths || !paths.length) return;
-  if (paths.length === 1) {
-    loadFromPath(paths[0]);
-  } else {
-    // beberapa file -> isi antrian batch + muat yang pertama
-    addBatchPaths(paths);
-    loadFromPath(paths[0]);
-  }
+  addBatchPaths(paths, 'impor');
+  loadFromPath(paths[0]);
 };
 $('#fileInput').onchange = e => { if (e.target.files[0]) loadFileBlob(e.target.files[0]); e.target.value = ''; };
 
@@ -25,10 +20,13 @@ window.addEventListener('drop', e => {
   e.preventDefault(); document.body.classList.remove('dropping');
   const files = [...e.dataTransfer.files].filter(f => /video|audio/.test(f.type) || /\.(mp4|mkv|ts|webm|mp3|m4a|aac|wav|ogg|flac|mov)$/i.test(f.name));
   if (!files.length) return;
-  if (files.length === 1) { loadFileBlob(files[0]); }
-  else {
-    files.forEach(f => { if (f.path) addBatchPath(f.path); });
-    loadFileBlob(files[0]);
+  /* v2.2: semua file yang di-drop juga masuk KOTAK VIDEO */
+  const ps = files.map(f => f.path).filter(Boolean);
+  if (ps.length) {
+    addBatchPaths(ps, 'drop');
+    loadFromPath(ps[0]);
+  } else {
+    loadFileBlob(files[0]);   /* file tanpa path (jarang di desktop) */
   }
 });
 
@@ -50,6 +48,7 @@ async function loadFileBlob(file, force = false) {
   if (state.busy && !force) { toast('Tunggu proses lain selesai', 'warn'); return; }
   file.name = file.name || 'media.mp4';
   stopMusicPreview();
+  state.mediaEpoch = (state.mediaEpoch || 0) + 1;   /* v2.2: invalidasi cache lapisan komposisi */
   // reset
   Object.assign(state, { subs: [], peaks: null });
   state.track = { active: false, points: [], tpl: null, tw: 26, th: 26, stats: null, label: state.track.label, color: state.track.color };

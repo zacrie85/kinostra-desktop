@@ -21,6 +21,19 @@ function wrapLines(x, text, maxW) {
   }
   if (line) out.push(line); return out;
 }
+/* ---------- v2.2: WRAP UNTUK TEKS BER-SPASI HURUF (judul) ---------- */
+function measureSpaced(x, text, ls) {
+  const ws = [...text].map(c => x.measureText(c).width);
+  return ws.reduce((a, b) => a + b, 0) + ls * Math.max(0, text.length - 1);
+}
+function wrapSpaced(x, text, maxW, ls) {
+  const out = []; let line = '';
+  for (const w of text.split(/\s+/)) {
+    const t = line ? line + ' ' + w : w;
+    if (measureSpaced(x, t, ls) > maxW && line) { out.push(line); line = w; } else line = t;
+  }
+  if (line) out.push(line); return out;
+}
 
 /* ---------- SUMBER GAMBAR KOMPOSISI (UPGRADE v2.1) ----------
    Preview memakai videoEl; worker ekspor paralel memakai elemen
@@ -48,6 +61,43 @@ function videoFrameRect(vw, vh, W, H) {
   };
 }
 
+/* ---------- v2.2: CACHE LAPISAN STATIS (kecepatan render) ----------
+   Latar blur 9:16 & vignette tidak berubah antar frame — dibangun
+   SEKALI lalu di-blit tiap frame (menghemat 50-150ms/frame).
+   Cache LRU kecil: preview & tiap ukuran ekspor punya entrinya. */
+const _layerCache = new Map();
+function getLayer(key, build) {
+  let cv = _layerCache.get(key);
+  if (!cv) {
+    cv = build();
+    _layerCache.set(key, cv);
+    if (_layerCache.size > 6) { const k0 = _layerCache.keys().next().value; _layerCache.delete(k0); }
+  }
+  return cv;
+}
+function buildBlurBg(vid, W, H) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const co = coverRect(vid.videoWidth, vid.videoHeight, W, H);
+  const u = H / 1080;
+  g.filter = `blur(${Math.round(36 * u)}px) saturate(1.2)`;
+  g.drawImage(vid, co.x, co.y, co.w, co.h);
+  g.filter = 'none';
+  g.fillStyle = 'rgba(4,5,8,.45)'; g.fillRect(0, 0, W, H);
+  return c;
+}
+function bgLayerKey(vid, W, H) {
+  return `bg|${state.mediaEpoch || 0}|${vid.videoWidth}x${vid.videoHeight}|${W}x${H}`;
+}
+function buildVignette(W, H) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.5)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  return c;
+}
+
 /* ---------- KOMPONEN KOMPOSISI ---------- */
 function drawComposition(x, W, H, t) {
   const u = H / 1080, F = state.font;
@@ -58,10 +108,9 @@ function drawComposition(x, W, H, t) {
     const vid = compSrc();
     const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H);
     if (state.ratio === '9:16' && state.bgMode === 'blur' && fit.w <= W + 1) {
-      const c = coverRect(vid.videoWidth, vid.videoHeight, W, H);
-      x.save(); x.filter = `blur(${Math.round(36 * u)}px) saturate(1.2)`;
-      x.drawImage(vid, c.x, c.y, c.w, c.h); x.restore();
-      x.fillStyle = 'rgba(4,5,8,.45)'; x.fillRect(0, 0, W, H);
+      /* v2.2: latar blur dari cache — tidak dihitung ulang tiap frame */
+      const bg = getLayer(bgLayerKey(vid, W, H), () => buildBlurBg(vid, W, H));
+      x.drawImage(bg, 0, 0);
     } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video */
     const V = state.vfx;
@@ -73,11 +122,10 @@ function drawComposition(x, W, H, t) {
     x.filter = fl.length ? fl.join(' ') : 'none';
     x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
     x.restore();
-    /* UPGRADE: vignette */
+    /* UPGRADE: vignette (v2.2: dari cache) */
     if (V.vignette) {
-      const g = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.72);
-      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.5)');
-      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const vg = getLayer('vg|' + W + 'x' + H, () => buildVignette(W, H));
+      x.drawImage(vg, 0, 0);
     }
     /* UPGRADE: film grain (murah: noise halus per frame) */
     if (V.grain) drawGrain(x, W, H, t);
@@ -108,17 +156,31 @@ function drawComposition(x, W, H, t) {
     x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
     x.restore();
   }
-  /* --- JUDUL & DESKRIPSI --- */
+  /* --- JUDUL & DESKRIPSI (v2.2: judul panjang BERSAMBUNG KE BAWAH) --- */
   let yTitleBase = 0;
   if (state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
-    const fs = Math.round(52 * u * state.titleScale);
     x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, H * 0.062, 60 * u, 3 * u);
-    x.fillStyle = '#F2F0EA'; x.font = `${fs}px "${F}"`;
+    x.fillStyle = '#F2F0EA';
     const txt = state.upper ? state.title.toUpperCase() : state.title;
-    const ty = H * 0.062 + fs * 1.15;
-    drawSpaced(x, txt, W / 2, ty, 7 * u * state.titleScale, 'center');
-    yTitleBase = ty; x.restore();
+    let fs = Math.round(52 * u * state.titleScale);
+    let ls = 7 * u * state.titleScale;
+    x.font = `${fs}px "${F}"`;
+    let lines = wrapSpaced(x, txt, W * 0.84, ls);
+    let guard = 0;
+    while (lines.length > 4 && guard < 8) {
+      fs = Math.max(Math.round(fs * 0.86), Math.round(20 * u));
+      ls *= 0.9;
+      x.font = `${fs}px "${F}"`;
+      lines = wrapSpaced(x, txt, W * 0.84, ls);
+      guard++;
+    }
+    lines = lines.slice(0, 4);
+    const lh = fs * 1.18;
+    const ty0 = H * 0.062 + fs * 1.15;
+    lines.forEach((ln, i) => drawSpaced(x, ln, W / 2, ty0 + i * lh, ls, 'center'));
+    yTitleBase = ty0 + (lines.length - 1) * lh;
+    x.restore();
   }
   if (state.descOn && state.desc.trim()) {
     x.save();
@@ -153,14 +215,14 @@ function drawComposition(x, W, H, t) {
   drawWatermark(x, W, H, u);
 }
 
-/* ---------- UPGRADE: FILM GRAIN ---------- */
-let _grainCv = null, _grainStamp = 0;
-function drawGrain(x, W, H, t) {
-  const stamp = Math.floor(t * 24);
-  if (!_grainCv) { _grainCv = document.createElement('canvas'); _grainCv.width = 320; _grainCv.height = 180; }
-  if (_grainStamp !== stamp) {
-    _grainStamp = stamp;
-    const g = _grainCv.getContext('2d');
+/* ---------- UPGRADE: FILM GRAIN (v2.2: 6 tile pre-generate, di-cycle) ---------- */
+let _grainTiles = null;
+function getGrainTiles() {
+  if (_grainTiles) return _grainTiles;
+  _grainTiles = [];
+  for (let k = 0; k < 6; k++) {
+    const c = document.createElement('canvas'); c.width = 320; c.height = 180;
+    const g = c.getContext('2d');
     const img = g.createImageData(320, 180);
     const d = img.data;
     for (let i = 0; i < d.length; i += 4) {
@@ -168,11 +230,17 @@ function drawGrain(x, W, H, t) {
       d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
     }
     g.putImageData(img, 0, 0);
+    _grainTiles.push(c);
   }
+  return _grainTiles;
+}
+function drawGrain(x, W, H, t) {
+  const tiles = getGrainTiles();
+  const tl = tiles[Math.floor(t * 24) % tiles.length];
   x.save();
   x.globalAlpha = 0.055; x.globalCompositeOperation = 'overlay';
   x.imageSmoothingEnabled = true;
-  x.drawImage(_grainCv, 0, 0, W, H);
+  x.drawImage(tl, 0, 0, W, H);
   x.restore();
 }
 

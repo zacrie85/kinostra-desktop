@@ -67,7 +67,9 @@ function createWindow() {
             vfxUI: !!document.querySelector('#inVB'),
             zoomUI: !!document.querySelector('#inZoom') && !!document.querySelector('#inPanX') && !!document.querySelector('#btnFrameReset'),
             parUI: !!document.querySelector('#segParallel'),
-            batchGrid: !!document.querySelector('#batchGrid'),
+            qboxUI: !!document.querySelector('#queueList') && !!document.querySelector('#btnQAdd') && !!document.querySelector('#btnQClear'),
+            voicematch: typeof speechWindows === 'function' && typeof detectLang === 'function' && typeof cleanLine === 'function',
+            turbo: typeof renderFramesBySeek === 'function' && typeof wrapSpaced === 'function' && typeof getLayer === 'function',
             frameRect: typeof videoFrameRect === 'function',
             compSrc: typeof compSrc === 'function',
             title: document.title
@@ -138,12 +140,12 @@ function createWindow() {
         const files = fsx.readdirSync(outDir).filter(f => f.endsWith('.mp4'));
         console.log('FUNC-VERIFY files=' + files.length + ' [' + files.join(', ') + ']');
 
-        /* --- UJI THUMBNAIL BATCH --- */
+        /* --- UJI THUMBNAIL KOTAK VIDEO (v2.2) --- */
         const thumbTest = await win.webContents.executeJavaScript(`(async () => {
-          addBatchPath('/home/z/my-project/testmedia/test_video.mp4');
+          addBatchPath('/home/z/my-project/testmedia/test_video.mp4', 'impor');
           for (let i = 0; i < 30; i++) { await new Promise(r => setTimeout(r, 1000)); if (state.batch[0].thumb) break; }
           const it = state.batch[0];
-          return { thumb: (it.thumb || '').slice(0, 30), dur: Math.round(it.dur), cells: document.querySelectorAll('#batchGrid .bcell').length };
+          return { thumb: (it.thumb || '').slice(0, 30), dur: Math.round(it.dur), rows: document.querySelectorAll('#queueList .qrow').length };
         })()`);
         console.log('FUNC-BATCHTHUMB ' + JSON.stringify(thumbTest));
       } catch (e) {
@@ -218,23 +220,28 @@ function createWindow() {
       try {
         await new Promise(r => setTimeout(r, 5500));
         await win.webContents.executeJavaScript(`(async () => {
-          addBatchPath('/home/z/my-project/testmedia/test_video.mp4');
-          addBatchPath('/home/z/my-project/testmedia/zoomout/ZOOM1_PART_01.mp4');
+          addBatchPath('/home/z/my-project/testmedia/test_video.mp4', 'impor');
+          addBatchPath('/home/z/my-project/testmedia/zoomout/ZOOM1_PART_01.mp4', 'batch');
           /* muat video utama + mode 9:16 zoom */
           await loadFromPath('/home/z/my-project/testmedia/test_video.mp4');
           document.querySelector('#segRatio button[data-v="9:16"]').click();
           state.frame = { zoom: 2, panX: -0.6, panY: 0 };
           syncFrameLabels();
+          /* uji wrap judul panjang (v2.2) */
+          document.querySelector('#inTitle').value = 'Panduan Lengkap Mengekspor Video Sinematik Dengan KINOSTRA Suite Untuk Pemula Sampai Mahir';
+          document.querySelector('#inTitle').dispatchEvent(new Event('input'));
+          document.querySelector('#inDesc').value = 'Judul panjang kini bersambung ke baris berikutnya secara otomatis.';
+          document.querySelector('#inDesc').dispatchEvent(new Event('input'));
           document.querySelector('#m0').classList.remove('open');
-          document.querySelector('#m10').classList.add('open');
-          document.querySelector('#m10').scrollIntoView({ block: 'start' });
+          document.querySelector('#mq').classList.add('open');
+          document.querySelector('#mq').scrollIntoView({ block: 'start' });
           for (let i = 0; i < 25; i++) { await new Promise(r => setTimeout(r, 1000)); if (state.batch.every(b => b.thumb)) break; }
           videoEl.currentTime = 2; videoEl.pause();
           return true;
         })()`);
         await new Promise(r => setTimeout(r, 1500));
         const img = await win.webContents.capturePage();
-        require('fs').writeFileSync('/home/z/my-project/scripts/ui_v21.png', img.toPNG());
+        require('fs').writeFileSync('/home/z/my-project/scripts/ui_v22.png', img.toPNG());
         console.log('SHOT-OK ' + img.toPNG().length + ' bytes');
       } catch (e) { console.error('SHOT-FAIL', e && e.message || e); }
       setTimeout(() => app.quit(), 800);
@@ -275,6 +282,140 @@ function createWindow() {
       } catch (e) {
         console.error('AI-FAIL', e && e.message || e);
       }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE UJI AI v2 (VOICEMATCH): suara asli Indonesia + Inggris → deteksi bahasa + transkrip
+  if (process.env.KINOSTRA_AI2 === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      const runCase = async (file, tag) => {
+        const b64 = fsx.readFileSync(file).toString('base64');
+        const r = await win.webContents.executeJavaScript(`(async () => {
+          const bin = atob(${JSON.stringify(b64)});
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/wav' });
+          blob.name = ${JSON.stringify(require('path').basename(file))};
+          await loadFileBlob(blob, true);
+          await new Promise(r => setTimeout(r, 500));
+          document.querySelector('#asrLang').value = 'auto';
+          state.subTarget = 'src';
+          const t0 = Date.now();
+          await generateSubs();
+          return { n: state.subs.length, ms: Date.now() - t0,
+            vmLang: document.querySelector('#vmLang').textContent,
+            text: state.subs.map(s => s.text).join(' | ').slice(0, 320) };
+        })()`);
+        console.log('AI2-' + tag + ' ' + JSON.stringify(r));
+        return r;
+      };
+      try {
+        await runCase('/home/z/my-project/testmedia/speech_id2.wav', 'ID');
+        await runCase('/home/z/my-project/testmedia/speech_en2.wav', 'EN');
+      } catch (e) { console.error('AI2-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE DEBUG AI3: dump hasil probe per kandidat bahasa (tiny vs base)
+  if (process.env.KINOSTRA_AI3 === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      try {
+        await new Promise(r => setTimeout(r, 6000));
+        await win.webContents.executeJavaScript(`(async () => {
+          await ensureModel('Xenova/whisper-tiny', () => {});
+          await ensureModel('Xenova/whisper-base', () => {});
+          return true;
+        })()`);
+        for (const [file, tag] of [
+          ['/home/z/my-project/testmedia/t_xiaochen.wav', 'ID-XIAOCHEN'],
+          
+          
+          ['/home/z/my-project/testmedia/t_xiaochen.wav', 'ID-XIAOCHEN'],
+          ['/home/z/my-project/testmedia/speech_en.wav', 'EN']
+        ]) {
+          const b64 = fsx.readFileSync(file).toString('base64');
+          const r = await win.webContents.executeJavaScript(`(async () => {
+            const bin = atob(${JSON.stringify(b64)});
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const blob = new Blob([bytes], { type: 'audio/wav' });
+            blob.name = ${JSON.stringify(require('path').basename(file))};
+            await loadFileBlob(blob, true);
+            await new Promise(r => setTimeout(r, 400));
+            const pcm = await getMono16k();
+            const wins = speechWindows(pcm, 16000);
+            const c0 = wins[0] || { s: 0, e: 14 };
+            const probe = pcm.slice(Math.floor(c0.s * 16000), Math.min(pcm.length, Math.floor(Math.min(c0.e, c0.s + 14) * 16000)));
+            const res = { wins: wins.length, probeSec: Math.round(probe.length / 16000) };
+            /* deteksi kanonik: argmax token bahasa */
+            const asr0 = await getASR('Xenova/whisper-tiny', () => {});
+            try {
+              const det = await whisperDetectLang(asr0, probe);
+              res.detect_tiny = det.code + ' (id ' + det.id + ', seqLen ' + det.seqLen + ')';
+            } catch (e) { res.detect_tiny = 'ERR ' + (e.message || e).slice(0, 60); }
+            const asrB = await getASR('Xenova/whisper-base', () => {});
+            try {
+              const detB = await whisperDetectLang(asrB, probe);
+              res.detect_base = detB.code + ' (id ' + detB.id + ', seqLen ' + detB.seqLen + ')';
+            } catch (e) { res.detect_base = 'ERR ' + (e.message || e).slice(0, 60); }
+            for (const model of ['Xenova/whisper-tiny', 'Xenova/whisper-base']) {
+              const asr = await getASR(model, () => {});
+              res[model.split('/')[1]] = {};
+              for (const lang of [null, 'indonesian', 'english', 'spanish']) {
+                const opts = { task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: false };
+                if (lang) opts.language = lang;
+                const out = await asr(probe, opts);
+                res[model.split('/')[1]][lang || 'auto'] = (out.text || '').slice(0, 110);
+              }
+            }
+            return res;
+          })()`);
+          console.log('AI3-' + tag + ' ' + JSON.stringify(r, null, 1));
+        }
+      } catch (e) { console.error('AI3-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE UJI TITLE WRAP (v2.2): judul panjang harus bersambung ke bawah
+  if (process.env.KINOSTRA_TITLE === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      try {
+        await new Promise(r => setTimeout(r, 6000));
+        const videoB64 = require('fs').readFileSync('/home/z/my-project/testmedia/test_video.mp4').toString('base64');
+        const r = await win.webContents.executeJavaScript(`(async () => {
+          const bin = atob(${JSON.stringify(videoB64)});
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'video/mp4' });
+          blob.name = 'test_video.mp4';
+          await loadFileBlob(blob, true);
+          const LONG = 'Panduan Lengkap Mengekspor Video Sinematik Dengan KINOSTRA Suite Untuk Pemula Sampai Mahir Sekali';
+          $('#inTitle').value = LONG;
+          $('#inTitle').dispatchEvent(new Event('input'));
+          await new Promise(r2 => setTimeout(r2, 300));
+          document.fonts.load('400 52px "Bebas Neue"');
+          await new Promise(r2 => setTimeout(r2, 500));
+          const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+          const x = c.getContext('2d');
+          x.font = '52px "Bebas Neue"';
+          const lines = wrapSpaced(x, state.title.toUpperCase(), 1080 * 0.84, 7);
+          /* render frame preview untuk visual */
+          drawComposition(ctx, cv.width, cv.height, 2.5);
+          return {
+            stateTitle: state.title.slice(0, 40), inputVal: $('#inTitle').value.slice(0, 40),
+            nLines: lines.length, lines: lines.map(l => l.slice(0, 30)),
+            maxW: Math.round(Math.max(...lines.map(l => measureSpaced(x, l, 7))))
+          };
+        })()`);
+        console.log('TITLE-CHECK ' + JSON.stringify(r, null, 1));
+        const img = await win.webContents.capturePage();
+        require('fs').writeFileSync('/home/z/my-project/scripts/title_wrap.png', img.toPNG());
+      } catch (e) { console.error('TITLE-FAIL', e && e.message || e); }
       setTimeout(() => app.quit(), 800);
     });
   }

@@ -214,20 +214,25 @@ footer{border-top:1px solid var(--line);background:var(--panel);display:flex;fle
 @keyframes tin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 video{display:none}
 
-/* ===== v2.1: GRID KOTAK VIDEO BATCH ===== */
-.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:7px;max-height:230px;overflow-y:auto;border:1px solid var(--line2);background:#08090C;padding:7px}
-.bcell{position:relative;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;transition:.15s;overflow:hidden}
-.bcell:hover{border-color:var(--acc)}
-.bcell.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
-.bcell.working{border-color:var(--acc);animation:bcellpulse 1.2s infinite}
-.bcell.done{border-color:rgba(62,230,193,.55)}
-.bcell.err{border-color:var(--err)}
-.bthumb{display:flex;align-items:center;justify-content:center;width:100%;height:56px;object-fit:cover;background:#000;color:var(--tx3);font-size:16px}
-.bname{display:block;font-size:9.5px;color:var(--tx);padding:4px 5px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bstat{display:block;font-family:var(--mono);font-size:8px;color:var(--tx3);padding:0 5px 5px;letter-spacing:.04em}
-.bcell.done .bstat{color:var(--ok)}
-.bcell.err .bstat{color:var(--err)}
-.bcell.working .bstat{color:var(--acc)}
-.bdel{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.68);border:none;color:var(--tx2);font-size:11px;width:17px;height:17px;line-height:1;cursor:pointer;padding:0}
-.bdel:hover{color:var(--err)}
-@keyframes bcellpulse{0%,100%{box-shadow:0 0 0 0 rgba(247,166,0,.45)}50%{box-shadow:0 0 0 3px rgba(247,166,0,.12)}}
+/* ===== v2.2: KOTAK VIDEO TERPADU (urutan atas → bawah) ===== */
+.qlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:296px;overflow-y:auto}
+.qrow{display:flex;align-items:center;gap:9px;padding:7px 9px;border-bottom:1px solid var(--line);cursor:pointer;transition:.12s}
+.qrow:last-child{border-bottom:none}
+.qrow:hover{background:var(--panel2)}
+.qrow.sel{background:rgba(247,166,0,.08);box-shadow:inset 2px 0 0 var(--acc)}
+.qrow.working{background:rgba(247,166,0,.05);animation:qpulse 1.2s infinite}
+.qrow.done{background:rgba(62,230,193,.045)}
+.qrow.err{background:rgba(255,84,73,.05)}
+.qno{font-family:var(--mono);font-size:10px;color:var(--acc);min-width:20px;text-align:right;flex:0 0 auto}
+.qthumb{width:52px;height:30px;object-fit:cover;background:#000;border:1px solid var(--line2);flex:0 0 auto}
+span.qthumb{display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px}
+.qinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.qname{font-size:11.5px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qmeta{font-family:var(--mono);font-size:8.5px;color:var(--tx3);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qrow.working .qmeta{color:var(--acc)}
+.qrow.done .qmeta{color:var(--ok)}
+.qrow.err .qmeta{color:var(--err)}
+.qbtns{display:flex;gap:3px;flex:0 0 auto}
+.qbtns button{width:22px;height:22px;background:var(--panel2);border:1px solid var(--line2);color:var(--tx2);font-size:11px;line-height:1;padding:0;cursor:pointer}
+.qbtns button:hover{border-color:var(--acc);color:var(--acc)}
+@keyframes qpulse{0%,100%{box-shadow:inset 2px 0 0 var(--acc)}50%{box-shadow:inset 2px 0 0 rgba(247,166,0,.25)}}

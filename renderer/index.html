@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.1 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.2 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.1</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.2</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -55,6 +55,19 @@
   </section>
 
   <aside id="panel">
+
+    <div class="mod open" id="mq">
+      <button class="mod-h"><span class="no">00</span><span class="t">KOTAK VIDEO · URUTAN <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Satu kotak untuk <b>semua video</b> — dari tombol <b>IMPOR MEDIA</b>, drag-drop, maupun <b>TAMBAH FILE</b> di batch. Tersusun <b>dari atas ke bawah</b> sesuai urutan dimasukkan = urutan proses batch. Klik baris untuk menonton.</div>
+        <div class="row">
+          <button class="btn" id="btnQAdd"><i data-lucide="folder-plus"></i> TAMBAH VIDEO…</button>
+          <button class="btn sm" id="btnQClear" style="flex:0 0 auto" title="Kosongkan kotak"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="qlist" id="queueList"><div class="empty">KOTAK KOSONG — SEMUA VIDEO YANG DIIMPOR MUNCUL DI SINI</div></div>
+        <div class="substat" id="qStat">0 video dalam kotak</div>
+      </div></div></div>
+    </div>
 
     <div class="mod open" id="m0">
       <button class="mod-h"><span class="no">01</span><span class="t">SUMBER &amp; RASIO</span><i data-lucide="chevron-down"></i></button>
@@ -130,15 +143,17 @@
       <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI</span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
         <div class="row">
-          <div><div class="lbl">BAHASA VIDEO</div>
+          <div><div class="lbl">BAHASA VIDEO <b id="vmLang">AUTO</b></div>
             <select class="in" id="asrLang">
-              <option value="auto">DETEKSI OTOMATIS</option><option value="indonesian">INDONESIA</option>
+              <option value="auto">DETEKSI OTOMATIS · IKUT SUARA</option><option value="indonesian">INDONESIA</option>
               <option value="english">INGGRIS</option><option value="chinese">MANDARIN</option>
               <option value="japanese">JEPANG</option><option value="korean">KOREA</option>
               <option value="arabic">ARAB</option><option value="hindi">HINDI</option>
               <option value="spanish">SPANYOL</option><option value="french">PRANCIS</option>
               <option value="german">JERMAN</option><option value="thai">THAI</option>
-              <option value="vietnamese">VIETNAM</option>
+              <option value="vietnamese">VIETNAM</option><option value="russian">RUSIA</option>
+              <option value="portuguese">PORTUGIS</option><option value="italian">ITALIA</option>
+              <option value="dutch">BELANDA</option><option value="turkish">TURKI</option>
             </select></div>
           <div><div class="lbl">MODEL</div>
             <select class="in" id="asrModel">
@@ -152,7 +167,8 @@
           <button data-v="en">INGGRIS · TRANSLATE</button>
         </div>
         <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> GENERATE SUBTITEL</button>
-        <div class="substat" id="subStat">0 baris · Whisper berjalan 100% lokal (model diunduh sekali, lalu offline permanen)</div>
+        <div class="substat" id="subStat">VOICEMATCH v2 siap · 100% lokal (model diunduh sekali, lalu offline permanen)</div>
+        <div class="note"><b>VOICEMATCH v2</b>: mendeteksi bahasa yang diucapkan lalu menulis teks <b>dalam bahasa yang sama</b> dengan video, <b>melewati bagian hening/musik</b> (jauh lebih cepat), dan membuang baris hallucination. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
         <label class="chk"><input type="checkbox" id="subsOn" checked><span>BURN-IN SUBTITEL KE VIDEO</span></label>
         <div class="lbl">UKURAN SUBTITEL <b id="subSizeV">1.0×</b></div>
         <input type="range" id="subSize" min="0.6" max="1.8" step="0.05" value="1">
@@ -272,23 +288,20 @@
         </div>
         <div class="expsum" id="expSum">Impor media untuk melihat ringkasan.</div>
         <button class="btn acc big wide" id="btnExport"><i data-lucide="clapperboard"></i> EKSPOR &amp; SPLIT MP4</button>
-        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.1:</b> semua part dirender <b>paralel sekaligus</b> + encoder hardware GPU — jauh lebih cepat. Output: MP4 H.264 + AAC/Opus.</div>
+        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.2 TURBO:</b> frame diambil sambil video <b>diputar cepat</b> (tanpa seek per frame), lapisan statis di-cache, semua part dirender <b>paralel</b> + encoder hardware GPU. Output: MP4 H.264 + AAC/Opus.</div>
       </div></div></div>
     </div>
 
     <div class="mod" id="m10">
       <button class="mod-h"><span class="no">10</span><span class="t">BATCH PROSES <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Impor banyak video sekaligus — semua diproses <b>berurutan otomatis</b> memakai setelan saat ini (rasio, split, judul, deskripsi, efek visual, watermark, musik &amp; kualitas). <b>v2.1:</b> tiap video dirender paralel per part. Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
+        <div class="note">Tidak ada antrian terpisah lagi — video yang ditambahkan di sini <b>masuk ke KOTAK VIDEO (modul 00)</b> bersama semua video yang diimpor. Saat MULAI BATCH, seluruh isi kotak diproses <b>berurutan dari atas ke bawah</b> memakai setelan saat ini (rasio, split, judul, deskripsi, efek, watermark, musik &amp; kualitas). Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
         <div class="row">
-          <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE…</button>
+          <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE KE KOTAK…</button>
           <button class="btn sm" id="btnBatchClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>
         </div>
-        <div class="lbl">KOTAK VIDEO <span class="mono" style="font-size:9px;color:var(--tx3)">— klik untuk menonton di preview</span></div>
-        <div class="bgrid" id="batchGrid"><div class="empty">ANTRIAN KOSONG</div></div>
-        <div class="batchlist" id="batchList" style="max-height:150px"><div class="empty">ANTRIAN KOSONG</div></div>
-        <button class="btn acc wide" id="btnBatchRun"><i data-lucide="layers"></i> MULAI BATCH</button>
-        <div class="substat" id="batchStat">0 file dalam antrian</div>
+        <button class="btn acc wide" id="btnBatchRun"><i data-lucide="layers"></i> MULAI BATCH — PROSES KOTAK DARI ATAS</button>
+        <div class="substat" id="batchStat">0 file dalam kotak</div>
       </div></div></div>
     </div>
 

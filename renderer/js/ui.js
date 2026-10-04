@@ -74,6 +74,10 @@ bindSeg('segDescPos', v => { state.descPos = v; });
 
 /* ---------- 04 SUBTITEL AI ---------- */
 bindSeg('segTarget', v => { state.subTarget = v; });
+$('#asrLang').onchange = e => {
+  /* v2.2: label bahasa ikut pilihan manual; AUTO = menunggu deteksi VOICEMATCH */
+  $('#vmLang').textContent = e.target.value === 'auto' ? 'AUTO' : e.target.selectedOptions[0].text.split('·')[0].trim().toUpperCase();
+};
 $('#subsOn').onchange = e => { state.subsOn = e.target.checked; };
 $('#subSize').oninput = e => { state.subScale = parseFloat(e.target.value); $('#subSizeV').textContent = state.subScale.toFixed(2) + '×'; };
 $('#btnGen').onclick = generateSubs;
@@ -177,13 +181,24 @@ bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
 bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
 $('#btnExport').onclick = doExport;
 
-/* ---------- 10 BATCH (UPGRADE) ---------- */
+/* ---------- 10 BATCH (v2.2: memakai KOTAK VIDEO terpadu) ---------- */
 $('#btnBatchAdd').onclick = async () => {
   const paths = await window.kinostra.openMedia();
-  addBatchPaths(paths);
+  if (paths && paths.length) { addBatchPaths(paths, 'batch'); toast(`${paths.length} video masuk Kotak Video`, 'ok'); }
 };
-$('#btnBatchClear').onclick = () => { state.batch = []; renderBatchList(); };
+$('#btnBatchClear').onclick = clearQueue;
 $('#btnBatchRun').onclick = runBatch;
+
+/* ---------- 00 KOTAK VIDEO (v2.2) ---------- */
+$('#btnQAdd').onclick = async () => {
+  const paths = await window.kinostra.openMedia();
+  if (paths && paths.length) {
+    addBatchPaths(paths, 'impor');
+    toast(`${paths.length} video masuk Kotak Video`, 'ok');
+    if (!state.file) loadFromPath(paths[0]);
+  }
+};
+$('#btnQClear').onclick = clearQueue;
 
 /* ---------- TIMELINE ---------- */
 function renderTimeline() {
