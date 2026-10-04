@@ -1,0 +1,64 @@
+{
+  "name": "kinostra-desktop",
+  "productName": "KINOSTRA",
+  "version": "2.0.0",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline",
+  "main": "main/main.js",
+  "author": "KINOSTRA",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-builder --win --dir",
+    "dist:full": "electron-builder --win nsis zip"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "pe-library": "^2.0.1",
+    "resedit": "^3.1.0"
+  },
+  "build": {
+    "appId": "id.kinostra.desktop",
+    "productName": "KINOSTRA",
+    "asar": false,
+    "afterPack": "build/afterpack.js",
+    "directories": {
+      "output": "dist_out",
+      "buildResources": "build"
+    },
+    "files": [
+      "main/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false,
+      "artifactName": "KINOSTRA-Portable-${version}-win64.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KINOSTRA",
+      "artifactName": "KINOSTRA-Setup-${version}.exe"
+    }
+  }
+}

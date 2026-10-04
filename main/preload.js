@@ -1,0 +1,38 @@
+/* ================================================================
+   KINOSTRA DESKTOP — Preload (bridge aman renderer <-> main)
+   ================================================================ */
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('kinostra', {
+  /* dialogs */
+  openMedia: () => ipcRenderer.invoke('dialog:openMedia'),
+  pickWatermark: () => ipcRenderer.invoke('dialog:openWatermark'),
+  pickOutputDir: (def) => ipcRenderer.invoke('dialog:pickOutputDir', def),
+
+  /* stream writer */
+  beginWrite: (dir, fileName) => ipcRenderer.invoke('fs:beginWrite', { dir, fileName }),
+  writeChunk: (id, chunk) => ipcRenderer.invoke('fs:writeChunk', { id, chunk: new Uint8Array(chunk) }),
+  endWrite: (id) => ipcRenderer.invoke('fs:endWrite', { id }),
+  abortWrite: (id) => ipcRenderer.invoke('fs:abortWrite', { id }),
+
+  /* batch read */
+  readMediaFiles: (paths) => ipcRenderer.invoke('fs:readMediaFiles', paths),
+
+  /* model AI */
+  ensureModel: (modelId, files) => ipcRenderer.invoke('models:ensure', { modelId, files }),
+  modelStatus: () => ipcRenderer.invoke('models:status'),
+  openModelsFolder: () => ipcRenderer.invoke('models:openFolder'),
+  onModelProgress: (cb) => {
+    ipcRenderer.on('models:progress', (e, info) => cb(info));
+  },
+
+  /* shell */
+  showInFolder: (p) => ipcRenderer.invoke('shell:showInFolder', p),
+  openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
+
+  versions: {
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node
+  }
+});
