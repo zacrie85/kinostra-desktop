@@ -94,9 +94,9 @@ function trackPosAt(t) {
 }
 function drawTrack(x, W, H, t, u) {
   const tr = state.track;
-  if (!tr.active || !tr.points.length || state.isAudio || !videoEl.videoWidth) return;
+  if (!tr.active || !tr.points.length || state.isAudio || !compSrc().videoWidth) return;
   const p = trackPosAt(t); if (!p) return;
-  const fit = containRect(videoEl.videoWidth, videoEl.videoHeight, W, H);
+  const fit = videoFrameRect(compSrc().videoWidth, compSrc().videoHeight, W, H); /* v2.1: ikut zoom/pan */
   const bw = Math.max(64 * u, (tr.tw / TW) * fit.w * 2.4), bh = bw * THt / TW;
   const cx = fit.x + p.x * fit.w, cy = fit.y + p.y * fit.h, c = tr.color, L = bw * 0.3;
   x.save(); x.strokeStyle = c; x.lineWidth = 3 * u; x.beginPath();

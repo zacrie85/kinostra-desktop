@@ -37,6 +37,8 @@ const state = {
   file: null, duration: 0, isAudio: false, audioBuffer: null, peaks: null,
   title: '', titleOn: true, desc: '', descOn: true, descPos: 'under',
   ratio: '16:9', bgMode: 'blur',
+  /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
+  frame: { zoom: 1, panX: 0, panY: 0 },
   splitSec: 30, splitCustom: false, partPrefix: 'PART', partShow: 'intro',
   font: 'Bebas Neue', titleScale: 1, subScale: 1, upper: true,
   subs: [], subsOn: true, subTarget: 'src',
@@ -44,6 +46,8 @@ const state = {
   track: { active: false, points: [], tpl: null, tw: 26, th: 26, stats: null, label: 'TARGET 01', color: '#F7A600' },
   music: { buffer: null, mood: 'epic', intensity: 0.6, gain: 0.6, seed: (Math.random() * 1e9) | 0 },
   audioGain: 0.9, quality: 'balanced', scale: 1, fps: 30,
+  /* UPGRADE v2.1: jumlah render paralel (0 = otomatis) */
+  parallel: 0,
   /* UPGRADE: efek visual & watermark */
   vfx: { bright: 1, contrast: 1, saturate: 1, vignette: false, grain: false },
   wm: { mode: 'off', text: '@KINOSTRA', img: null, imgName: '', pos: 'br', opacity: 0.6, scale: 1 },
@@ -84,6 +88,24 @@ async function saveBlobToDir(blob, dir, fileName) {
   try {
     const CHUNK = 8 * 1024 * 1024; // 8 MB
     const arr = new Uint8Array(await blob.arrayBuffer());
+    for (let off = 0; off < arr.length; off += CHUNK) {
+      await window.kinostra.writeChunk(id, arr.subarray(off, Math.min(off + CHUNK, arr.length)));
+    }
+    const res = await window.kinostra.endWrite(id);
+    return res; // { path, size }
+  } catch (e) {
+    try { await window.kinostra.abortWrite(id); } catch (_) { }
+    throw e;
+  }
+}
+
+/* v2.1: tulis ArrayBuffer LANGSUNG (tanpa Blob — hindari spill blob storage,
+   lebih cepat & hemat memori untuk file MP4 hasil muxer) */
+async function saveBufferToDir(buffer, dir, fileName) {
+  const { id, path: finalPath } = await window.kinostra.beginWrite(dir, fileName);
+  try {
+    const CHUNK = 8 * 1024 * 1024; // 8 MB
+    const arr = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
     for (let off = 0; off < arr.length; off += CHUNK) {
       await window.kinostra.writeChunk(id, arr.subarray(off, Math.min(off + CHUNK, arr.length)));
     }

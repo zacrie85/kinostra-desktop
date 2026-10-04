@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.0.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.1.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -24,11 +24,13 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 5 | **Musik Prosedural** | Soundtrack otomatis 4 mood: EPIC · NEON · LO-FI · TENSION |
 | 6 | **10 Font Sinematik** | Koleksi font title & subtitle siap pakai |
 | 7 | **Export Pipeline** | Render H.264 MP4 via WebCodecs + mp4-muxer |
-| 8 | **Efek Visual & Watermark** ⭐baru | Brightness / contrast / saturation / vignette / film grain + watermark teks & logo |
-| 9 | **Subtitle Translate** ⭐baru | Terjemahan subtitle lokal (opus-mt) + geser waktu ±0.5s + export SRT |
-| 10 | **Batch Proses** ⭐baru | Antrean render otomatis banyak file secara berurutan |
+| 8 | **Efek Visual & Watermark** | Brightness / contrast / saturation / vignette / film grain + watermark teks & logo |
+| 9 | **Zoom Fokus & Geser** ⭐v2.1 | Mode 9:16: zoom 1–3× + geser kiri/kanan/atas/bawah (slider & drag) untuk memilih bagian gambar |
+| 10 | **Render Paralel Turbo** ⭐v2.1 | Semua part dirender bersamaan + encoder hardware GPU — ekspor jauh lebih cepat |
+| 11 | **Batch Proses + Kotak Video** ⭐v2.1 | Antrean render otomatis dengan thumbnail — klik kotak untuk menonton di preview |
+| 12 | **Subtitle Translate** | Terjemahan subtitle lokal (opus-mt) + geser waktu ±0.5s + export SRT |
 
-⭐ = fitur baru di v2.0.0
+⭐ = fitur baru di v2.1.0
 
 ## 🔒 100% Offline
 
@@ -42,8 +44,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-2.0.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-2.0.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-2.1.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-2.1.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 
@@ -93,5 +95,5 @@ MIT — bebas dipakai, dimodifikasi, dan didistribusikan.
 ---
 
 <div align="center">
-<sub>KINOSTRA v2.0.0 · Dibangun dengan ⚡ oleh KINOSTRA</sub>
+<sub>KINOSTRA v2.1.0 · Dibangun dengan ⚡ oleh KINOSTRA</sub>
 </div>

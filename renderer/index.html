@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.1 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.1</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -73,6 +73,17 @@
         <div id="bgRow" style="display:none">
           <div class="lbl">LATAR VERTIKAL</div>
           <div class="seg" id="segBg"><button data-v="blur" class="on">BLUR SINEMATIK</button><button data-v="dark">GELAP</button></div>
+          <div class="lbl">ZOOM FOKUS <b id="zoomV">1.00×</b></div>
+          <input type="range" id="inZoom" min="1" max="3" step="0.05" value="1">
+          <div class="lbl">GESER KIRI / KANAN <b id="panXV">TENGAH</b></div>
+          <input type="range" id="inPanX" min="-1" max="1" step="0.02" value="0">
+          <div class="lbl">GESER ATAS / BAWAH <b id="panYV">TENGAH</b></div>
+          <input type="range" id="inPanY" min="-1" max="1" step="0.02" value="0">
+          <div class="row" style="align-items:center">
+            <button class="btn sm" id="btnFrameReset"><i data-lucide="rotate-ccw"></i> RESET POSISI</button>
+            <span class="mono" style="font-size:9.5px;color:var(--tx3)">atau drag langsung di preview →</span>
+          </div>
+          <div class="note">Zoom di atas <b>1.5×</b> gambar menutup penuh frame 9:16 (tanpa latar). Geser untuk memilih sisi kiri/tengah/kanan yang diambil.</div>
         </div>
         <div class="note">Decode lewat engine Chromium: <b>MP4 (H.264), MKV (Matroska), WEBM, TS*</b>, dan <b>MP3</b>. *TS tergantung codec di dalamnya.</div>
       </div></div></div>
@@ -254,21 +265,28 @@
         <div class="seg" id="segScale"><button data-v="1" class="on">100%</button><button data-v="0.75">75%</button><button data-v="0.5">50%</button></div>
         <div class="lbl">FRAME RATE</div>
         <div class="seg" id="segFps"><button data-v="24">24</button><button data-v="30" class="on">30</button><button data-v="60">60</button></div>
+        <div class="lbl">RENDER PARALEL <span class="beta">BARU</span></div>
+        <div class="seg wrap" id="segParallel">
+          <button data-v="0" class="on">OTOMATIS</button><button data-v="1">1×</button>
+          <button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
+        </div>
         <div class="expsum" id="expSum">Impor media untuk melihat ringkasan.</div>
         <button class="btn acc big wide" id="btnExport"><i data-lucide="clapperboard"></i> EKSPOR &amp; SPLIT MP4</button>
-        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). Output: MP4 H.264 + AAC/Opus, disimpan langsung ke folder pilihanmu.</div>
+        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.1:</b> semua part dirender <b>paralel sekaligus</b> + encoder hardware GPU — jauh lebih cepat. Output: MP4 H.264 + AAC/Opus.</div>
       </div></div></div>
     </div>
 
     <div class="mod" id="m10">
       <button class="mod-h"><span class="no">10</span><span class="t">BATCH PROSES <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Impor banyak video sekaligus — semua diproses <b>berurutan otomatis</b> memakai setelan saat ini (rasio, split, judul, deskripsi, efek visual, watermark, musik &amp; kualitas). Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
+        <div class="note">Impor banyak video sekaligus — semua diproses <b>berurutan otomatis</b> memakai setelan saat ini (rasio, split, judul, deskripsi, efek visual, watermark, musik &amp; kualitas). <b>v2.1:</b> tiap video dirender paralel per part. Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
         <div class="row">
           <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE…</button>
           <button class="btn sm" id="btnBatchClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>
         </div>
-        <div class="batchlist" id="batchList"><div class="empty">ANTRIAN KOSONG</div></div>
+        <div class="lbl">KOTAK VIDEO <span class="mono" style="font-size:9px;color:var(--tx3)">— klik untuk menonton di preview</span></div>
+        <div class="bgrid" id="batchGrid"><div class="empty">ANTRIAN KOSONG</div></div>
+        <div class="batchlist" id="batchList" style="max-height:150px"><div class="empty">ANTRIAN KOSONG</div></div>
         <button class="btn acc wide" id="btnBatchRun"><i data-lucide="layers"></i> MULAI BATCH</button>
         <div class="substat" id="batchStat">0 file dalam antrian</div>
       </div></div></div>

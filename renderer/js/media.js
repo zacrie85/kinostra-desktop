@@ -122,14 +122,14 @@ function segments() {
 function containRect(vw, vh, W, H) { const s = Math.min(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }
 function coverRect(vw, vh, W, H) { const s = Math.max(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }
 
-/* ---------- SEEK PRESISI ---------- */
-function seekTo(t) {
+/* ---------- SEEK PRESISI (v2.1: mendukung elemen video worker paralel) ---------- */
+function seekTo(t, el) {
   return new Promise(res => {
-    const v = videoEl; t = clamp(t, 0, Math.max(0, state.duration - 0.02));
+    const v = el || videoEl; t = clamp(t, 0, Math.max(0, (v.duration || state.duration) - 0.02));
     if (Math.abs(v.currentTime - t) < 0.004 && !v.seeking) { res(); return; }
     let done = false;
     const fin = () => { if (done) return; done = true; v.removeEventListener('seeked', fin); clearTimeout(tm); res(); };
-    const tm = setTimeout(fin, 1600);
+    const tm = setTimeout(fin, 2500);
     v.addEventListener('seeked', fin);
     v.currentTime = t;
   });

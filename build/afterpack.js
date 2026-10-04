@@ -36,17 +36,17 @@ exports.default = async function afterPack(context) {
 
   /* --- version info --- */
   const vi = resedit.Resource.VersionInfo.createEmpty();
-  vi.setFileVersion({ major: 2, minor: 0, patch: 0, build: 0 });
-  vi.setProductVersion({ major: 2, minor: 0, patch: 0, build: 0 });
+  vi.setFileVersion({ major: 2, minor: 1, patch: 0, build: 0 });
+  vi.setProductVersion({ major: 2, minor: 1, patch: 0, build: 0 });
   vi.setStringValues({ lang: 1033, id: 1033 }, {
     CompanyName: 'KINOSTRA',
     FileDescription: 'KINOSTRA — Suite Video Otonom (Desktop Offline)',
-    FileVersion: '2.0.0.0',
+    FileVersion: '2.1.0.0',
     InternalName: 'KINOSTRA',
     LegalCopyright: 'MIT License',
     OriginalFilename: exeName,
     ProductName: 'KINOSTRA',
-    ProductVersion: '2.0.0.0'
+    ProductVersion: '2.1.0.0'
   });
   vi.outputToResourceEntries(res.entries);
 

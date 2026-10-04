@@ -17,6 +17,43 @@ $$('.mod-h').forEach(h => h.onclick = () => h.parentElement.classList.toggle('op
 bindSeg('segRatio', v => { state.ratio = v; $('#hudRatio').textContent = v; $('#bgRow').style.display = v === '9:16' ? '' : 'none'; applyRatio(); });
 bindSeg('segBg', v => { state.bgMode = v; });
 
+/* ---------- v2.1: ZOOM FOKUS & GESER (MODE 9:16) ---------- */
+function syncFrameLabels() {
+  $('#zoomV').textContent = state.frame.zoom.toFixed(2) + '×';
+  const px = state.frame.panX, py = state.frame.panY;
+  $('#panXV').textContent = Math.abs(px) < 0.02 ? 'TENGAH' : (px < 0 ? `KIRI ${Math.round(-px * 100)}%` : `KANAN ${Math.round(px * 100)}%`);
+  $('#panYV').textContent = Math.abs(py) < 0.02 ? 'TENGAH' : (py < 0 ? `ATAS ${Math.round(-py * 100)}%` : `BAWAH ${Math.round(py * 100)}%`);
+  $('#inZoom').value = state.frame.zoom; $('#inPanX').value = state.frame.panX; $('#inPanY').value = state.frame.panY;
+}
+$('#inZoom').oninput = e => { state.frame.zoom = clamp(parseFloat(e.target.value), 1, 3); syncFrameLabels(); };
+$('#inPanX').oninput = e => { state.frame.panX = clamp(parseFloat(e.target.value), -1, 1); syncFrameLabels(); };
+$('#inPanY').oninput = e => { state.frame.panY = clamp(parseFloat(e.target.value), -1, 1); syncFrameLabels(); };
+$('#btnFrameReset').onclick = () => { state.frame = { zoom: 1, panX: 0, panY: 0 }; syncFrameLabels(); toast('Posisi fokus direset', 'ok'); };
+
+/* drag langsung di preview: geser kiri/kanan/atas/bawah */
+let _frameDrag = null, _frameDragMoved = false;
+cv.addEventListener('pointerdown', e => {
+  if (state.ratio !== '9:16' || state.trackMode || !state.file || state.isAudio) return;
+  const r = cv.getBoundingClientRect();
+  _frameDrag = { x: e.clientX, y: e.clientY, px: state.frame.panX, py: state.frame.panY, r };
+  _frameDragMoved = false;
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { }
+});
+cv.addEventListener('pointermove', e => {
+  if (!_frameDrag) return;
+  const dx = (e.clientX - _frameDrag.x) / _frameDrag.r.width * 2;
+  const dy = (e.clientY - _frameDrag.y) / _frameDrag.r.height * 2;
+  if (Math.abs(e.clientX - _frameDrag.x) + Math.abs(e.clientY - _frameDrag.y) > 6) _frameDragMoved = true;
+  if (!_frameDragMoved) return;
+  /* geser gambar ke kiri → melihat bagian kanan video (rasa drag natural) */
+  state.frame.panX = clamp(_frameDrag.px - dx, -1, 1);
+  state.frame.panY = clamp(_frameDrag.py - dy, -1, 1);
+  syncFrameLabels();
+});
+cv.addEventListener('pointerup', () => { setTimeout(() => { _frameDrag = null; }, 0); });
+cv.addEventListener('pointerleave', () => { _frameDrag = null; });
+syncFrameLabels();
+
 /* ---------- 02 JUDUL & PART ---------- */
 bindSeg('segSplit', v => {
   if (v === 'custom') { state.splitCustom = true; $('#splitCustom').style.display = '';
@@ -137,6 +174,7 @@ $('#btnWmLogo').onclick = async () => {
 bindSeg('segQual', v => { state.quality = v; updateAll(); });
 bindSeg('segScale', v => { state.scale = v; updateAll(); });
 bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
+bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
 $('#btnExport').onclick = doExport;
 
 /* ---------- 10 BATCH (UPGRADE) ---------- */
@@ -202,6 +240,7 @@ stage.addEventListener('mousemove', e => {
   $('#crosshair').style.top = (e.clientY - r.top) + 'px';
 });
 cv.addEventListener('click', e => {
+  if (_frameDragMoved) { _frameDragMoved = false; return; } /* v2.1: jangan play/pause setelah drag */
   if (!state.file) return;
   if (state.trackMode) {
     const r = cv.getBoundingClientRect();

@@ -65,6 +65,11 @@ function createWindow() {
             btnExport: !!document.querySelector('#btnExport'),
             batchUI: !!document.querySelector('#btnBatchRun'),
             vfxUI: !!document.querySelector('#inVB'),
+            zoomUI: !!document.querySelector('#inZoom') && !!document.querySelector('#inPanX') && !!document.querySelector('#btnFrameReset'),
+            parUI: !!document.querySelector('#segParallel'),
+            batchGrid: !!document.querySelector('#batchGrid'),
+            frameRect: typeof videoFrameRect === 'function',
+            compSrc: typeof compSrc === 'function',
             title: document.title
           };
         })()`);
@@ -99,23 +104,152 @@ function createWindow() {
         })()`);
         console.log('FUNC-LOAD ' + JSON.stringify(loaded));
 
-        // render 2 part dengan split 4 detik + efek visual + watermark teks
+        /* --- UJI ZOOM 9:16: math videoFrameRect --- */
+        const zoomTest = await win.webContents.executeJavaScript(`(async () => {
+          state.ratio = '9:16';
+          state.frame = { zoom: 2, panX: -1, panY: 0 };
+          const r = videoFrameRect(1920, 1080, 1080, 1920);
+          state.frame = { zoom: 1, panX: 0, panY: 0 };
+          state.ratio = '16:9';
+          return { x: Math.round(r.x), w: Math.round(r.w), covered: r.w >= 1080, showsLeft: r.x === 0 };
+        })()`);
+        console.log('FUNC-ZOOM ' + JSON.stringify(zoomTest));
+
+        // render semua part paralel, split 13 dtk (4 part) + efek + subtitle + watermark
         const outDir = '/home/z/my-project/testmedia/out';
+        fsx.rmSync(outDir, { recursive: true, force: true }); fsx.mkdirSync(outDir, { recursive: true });
+        const t0 = Date.now();
         const result = await win.webContents.executeJavaScript(`(async () => {
-          state.splitSec = 4;
+          state.splitSec = 13;
+          state.parallel = 0; /* otomatis */
           state.vfx.contrast = 1.1;
           state.wm.mode = 'text'; state.wm.text = '@KINOSTRA';
           state.subs = [{ s: 0.5, e: 2.5, text: 'UJI SUBTITEL KINOSTRA' }, { s: 3, e: 3.9, text: 'Baris kedua' }];
           state.desc = 'Deskripsi uji coba render';
-          const r = await exportPartsToDir('/home/z/my-project/testmedia/out', { prog: () => {}, sub: () => {} });
+          let lastLog = 0;
+          const r = await exportPartsToDir('/home/z/my-project/testmedia/out', {
+            prog: p => { const now = Date.now(); if (now - lastLog > 10000) { lastLog = now; console.log('PROG ' + Math.round(p * 100) + '%'); } },
+            sub: s => {}
+          });
           return { parts: r.map(x => ({ name: x.name, size: x.size })) };
         })()`);
-        console.log('FUNC-EXPORT ' + JSON.stringify(result));
+        const secs = ((Date.now() - t0) / 1000).toFixed(1);
+        console.log('FUNC-EXPORT time=' + secs + 's ' + JSON.stringify(result));
         const files = fsx.readdirSync(outDir).filter(f => f.endsWith('.mp4'));
         console.log('FUNC-VERIFY files=' + files.length + ' [' + files.join(', ') + ']');
+
+        /* --- UJI THUMBNAIL BATCH --- */
+        const thumbTest = await win.webContents.executeJavaScript(`(async () => {
+          addBatchPath('/home/z/my-project/testmedia/test_video.mp4');
+          for (let i = 0; i < 30; i++) { await new Promise(r => setTimeout(r, 1000)); if (state.batch[0].thumb) break; }
+          const it = state.batch[0];
+          return { thumb: (it.thumb || '').slice(0, 30), dur: Math.round(it.dur), cells: document.querySelectorAll('#batchGrid .bcell').length };
+        })()`);
+        console.log('FUNC-BATCHTHUMB ' + JSON.stringify(thumbTest));
       } catch (e) {
         console.error('FUNC-FAIL', e && e.message || e);
       }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE UJI ZOOM: render 9:16 dengan zoom 2 & geser kiri → ekstrak frame
+  if (process.env.KINOSTRA_ZOOMTEST === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      try {
+        await new Promise(r => setTimeout(r, 6000));
+        const videoB64 = fsx.readFileSync('/home/z/my-project/testmedia/test_video.mp4').toString('base64');
+        await win.webContents.executeJavaScript(`(async () => {
+          const bin = atob(${JSON.stringify(videoB64)});
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'video/mp4' });
+          blob.name = 'test_video.mp4';
+          await loadFileBlob(blob, true);
+          state.ratio = '9:16'; state.bgMode = 'blur';
+          state.scale = '0.5'; state.splitSec = 3; state.titleOn = false; state.descOn = false; state.subsOn = false;
+          return true;
+        })()`);
+        const outDir = '/home/z/my-project/testmedia/zoomout';
+        fsx.rmSync(outDir, { recursive: true, force: true }); fsx.mkdirSync(outDir, { recursive: true });
+        /* patch: hanya render SATU klip 3 dtk (bukan semua part) */
+        const oneClip = `(async () => {
+          window.__origSegments = segments;
+          window.__origSegmentsCount = segmentsCount;
+          segments = () => [{ i: 0, start: 1, end: 4 }];
+          segmentsCount = () => 1;
+        })()`;
+        const restore = `(async () => { segments = window.__origSegments; segmentsCount = window.__origSegmentsCount; })()`;
+        await win.webContents.executeJavaScript(oneClip);
+        /* zoom 1 */
+        let r1 = await win.webContents.executeJavaScript(`(async () => {
+          state.frame = { zoom: 1, panX: 0, panY: 0 };
+          state.title = 'ZOOM1';
+          const r = await exportPartsToDir('/home/z/my-project/testmedia/zoomout', { prog: () => {}, sub: () => {} });
+          return r;
+        })()`);
+        console.log('ZOOM-EXPORT1 ' + JSON.stringify(r1));
+        /* zoom 2 geser kiri penuh */
+        let r2 = await win.webContents.executeJavaScript(`(async () => {
+          state.frame = { zoom: 2, panX: -1, panY: 0 };
+          state.title = 'ZOOM2LEFT';
+          const r = await exportPartsToDir('/home/z/my-project/testmedia/zoomout', { prog: () => {}, sub: () => {} });
+          return r;
+        })()`);
+        console.log('ZOOM-EXPORT2 ' + JSON.stringify(r2));
+        /* zoom 2 geser kanan penuh */
+        let r3 = await win.webContents.executeJavaScript(`(async () => {
+          state.frame = { zoom: 2, panX: 1, panY: 0 };
+          state.title = 'ZOOM2RIGHT';
+          const r = await exportPartsToDir('/home/z/my-project/testmedia/zoomout', { prog: () => {}, sub: () => {} });
+          return r;
+        })()`);
+        console.log('ZOOM-EXPORT3 ' + JSON.stringify(r3));
+        await win.webContents.executeJavaScript(restore);
+      } catch (e) { console.error('ZOOM-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE SHOT: screenshot UI dengan batch thumbnail + zoom 9:16
+  if (process.env.KINOSTRA_SHOT === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      try {
+        await new Promise(r => setTimeout(r, 5500));
+        await win.webContents.executeJavaScript(`(async () => {
+          addBatchPath('/home/z/my-project/testmedia/test_video.mp4');
+          addBatchPath('/home/z/my-project/testmedia/zoomout/ZOOM1_PART_01.mp4');
+          /* muat video utama + mode 9:16 zoom */
+          await loadFromPath('/home/z/my-project/testmedia/test_video.mp4');
+          document.querySelector('#segRatio button[data-v="9:16"]').click();
+          state.frame = { zoom: 2, panX: -0.6, panY: 0 };
+          syncFrameLabels();
+          document.querySelector('#m0').classList.remove('open');
+          document.querySelector('#m10').classList.add('open');
+          document.querySelector('#m10').scrollIntoView({ block: 'start' });
+          for (let i = 0; i < 25; i++) { await new Promise(r => setTimeout(r, 1000)); if (state.batch.every(b => b.thumb)) break; }
+          videoEl.currentTime = 2; videoEl.pause();
+          return true;
+        })()`);
+        await new Promise(r => setTimeout(r, 1500));
+        const img = await win.webContents.capturePage();
+        require('fs').writeFileSync('/home/z/my-project/scripts/ui_v21.png', img.toPNG());
+        console.log('SHOT-OK ' + img.toPNG().length + ' bytes');
+      } catch (e) { console.error('SHOT-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE PROBE: diagnosa saveBlobToDir
+  if (process.env.KINOSTRA_PROBE === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      try {
+        await new Promise(r => setTimeout(r, 5000));
+        const probe = require('/home/z/my-project/scripts/probe-save.js');
+        const res = await probe(win);
+        console.log('PROBE-RESULT ' + JSON.stringify(res, null, 1));
+      } catch (e) { console.error('PROBE-FAIL', e && e.message || e); }
       setTimeout(() => app.quit(), 800);
     });
   }

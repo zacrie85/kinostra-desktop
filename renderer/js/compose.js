@@ -22,18 +22,45 @@ function wrapLines(x, text, maxW) {
   if (line) out.push(line); return out;
 }
 
+/* ---------- SUMBER GAMBAR KOMPOSISI (UPGRADE v2.1) ----------
+   Preview memakai videoEl; worker ekspor paralel memakai elemen
+   videonya sendiri. Karena set + draw + capture VideoFrame dilakukan
+   SINKRON dalam satu task JS, pergantian sumber aman dari race. */
+let _compSrc = null;
+function setCompSrc(el) { _compSrc = el || null; }
+function compSrc() { return _compSrc || videoEl; }
+
+/* ---------- UPGRADE v2.1: RECT VIDEO DENGAN ZOOM & GESER ----------
+   Dipakai preview, ekspor, dan tracking agar semuanya konsisten.
+   Mode 9:16: zoom 1 = muat penuh (letterbox), zoom > 1 = membesar
+   hingga menutup frame. panX/panY (−1..1) memilih BAGIAN video yang
+   terlihat: −1 = sisi kiri/atas sumber, +1 = sisi kanan/bawah.
+   Mode 16:9: selalu contain (perilaku lama). */
+function videoFrameRect(vw, vh, W, H) {
+  const fit = containRect(vw, vh, W, H);
+  if (state.ratio !== '9:16' || state.frame.zoom <= 1.001) return fit;
+  const sw = fit.w * state.frame.zoom, sh = fit.h * state.frame.zoom;
+  const ox = Math.max(0, (sw - W) / 2), oy = Math.max(0, (sh - H) / 2);
+  return {
+    x: (W - sw) / 2 - clamp(state.frame.panX, -1, 1) * ox,
+    y: (H - sh) / 2 - clamp(state.frame.panY, -1, 1) * oy,
+    w: sw, h: sh
+  };
+}
+
 /* ---------- KOMPONEN KOMPOSISI ---------- */
 function drawComposition(x, W, H, t) {
   const u = H / 1080, F = state.font;
   /* --- latar --- */
   if (state.isAudio) {
     drawWaveBg(x, W, H, t, u);
-  } else if (videoEl.videoWidth) {
-    const fit = containRect(videoEl.videoWidth, videoEl.videoHeight, W, H);
-    if (state.ratio === '9:16' && state.bgMode === 'blur') {
-      const c = coverRect(videoEl.videoWidth, videoEl.videoHeight, W, H);
+  } else if (compSrc().videoWidth) {
+    const vid = compSrc();
+    const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H);
+    if (state.ratio === '9:16' && state.bgMode === 'blur' && fit.w <= W + 1) {
+      const c = coverRect(vid.videoWidth, vid.videoHeight, W, H);
       x.save(); x.filter = `blur(${Math.round(36 * u)}px) saturate(1.2)`;
-      x.drawImage(videoEl, c.x, c.y, c.w, c.h); x.restore();
+      x.drawImage(vid, c.x, c.y, c.w, c.h); x.restore();
       x.fillStyle = 'rgba(4,5,8,.45)'; x.fillRect(0, 0, W, H);
     } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video */
@@ -44,7 +71,7 @@ function drawComposition(x, W, H, t) {
     if (V.contrast !== 1) fl.push(`contrast(${V.contrast})`);
     if (V.saturate !== 1) fl.push(`saturate(${V.saturate})`);
     x.filter = fl.length ? fl.join(' ') : 'none';
-    x.drawImage(videoEl, fit.x, fit.y, fit.w, fit.h);
+    x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
     x.restore();
     /* UPGRADE: vignette */
     if (V.vignette) {
