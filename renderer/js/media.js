@@ -5,12 +5,12 @@
    ================================================================ */
 'use strict';
 
-/* ---------- IMPOR (v2.2: semua hasil impor masuk KOTAK VIDEO) ---------- */
+/* ---------- IMPOR (v2.3: massal sampai 100 video + proses berurutan otomatis) ---------- */
 $('#btnImport').onclick = async () => {
   const paths = await window.kinostra.openMedia();
   if (!paths || !paths.length) return;
-  addBatchPaths(paths, 'impor');
-  loadFromPath(paths[0]);
+  const n = addBatchPaths(paths, 'impor');
+  if (!maybeAutoBatch(n)) loadFromPath(paths[0]);
 };
 $('#fileInput').onchange = e => { if (e.target.files[0]) loadFileBlob(e.target.files[0]); e.target.value = ''; };
 
@@ -23,8 +23,8 @@ window.addEventListener('drop', e => {
   /* v2.2: semua file yang di-drop juga masuk KOTAK VIDEO */
   const ps = files.map(f => f.path).filter(Boolean);
   if (ps.length) {
-    addBatchPaths(ps, 'drop');
-    loadFromPath(ps[0]);
+    const n = addBatchPaths(ps, 'drop');
+    if (!maybeAutoBatch(n)) loadFromPath(ps[0]);
   } else {
     loadFileBlob(files[0]);   /* file tanpa path (jarang di desktop) */
   }
@@ -75,10 +75,12 @@ async function loadFileBlob(file, force = false) {
   })) : (videoEl.duration || 0);
   if (!state.isAudio) await decodeFileAudio();
   if (state.audioBuffer && state.isAudio) buildPeaks();
-  // judul otomatis dari nama file
-  state.title = file.name.replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim()
-    .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
-  $('#inTitle').value = state.title;
+  // judul otomatis dari nama file (v2.3: bisa dimatikan di modul 02)
+  if (state.autoTitle) {
+    state.title = file.name.replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
+    $('#inTitle').value = state.title;
+  }
   $('#fName').textContent = file.name;
   $('#fDur').textContent = fmtT(state.duration);
   $('#fRes').textContent = state.isAudio ? 'AUDIO ONLY' : `${videoEl.videoWidth}×${videoEl.videoHeight}`;

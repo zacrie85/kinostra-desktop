@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('kinostra', {
 
   /* batch read */
   readMediaFiles: (paths) => ipcRenderer.invoke('fs:readMediaFiles', paths),
+  stat: (p) => ipcRenderer.invoke('fs:stat', p),
 
   /* model AI */
   ensureModel: (modelId, files) => ipcRenderer.invoke('models:ensure', { modelId, files }),

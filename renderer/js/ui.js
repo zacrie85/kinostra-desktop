@@ -65,20 +65,70 @@ $('#inSplit').oninput = e => { state.splitSec = clamp(parseInt(e.target.value) |
 $('#selPrefix').onchange = e => { state.partPrefix = e.target.value; updateAll(); };
 bindSeg('segPartShow', v => { state.partShow = v; });
 $('#titleOn').onchange = e => { state.titleOn = e.target.checked; };
+/* v2.3: judul otomatis dari nama file + font Bebas Neue + ukuran default 40 */
+$('#titleAuto').onchange = e => {
+  state.autoTitle = e.target.checked;
+  if (state.autoTitle && state.file) {
+    /* terapkan langsung dari nama file yang sedang dimuat */
+    state.title = state.file.name.replace(/\.[^.]+$/, '').replace(/[_.\-]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
+    $('#inTitle').value = state.title; updateAll();
+  }
+  toast(state.autoTitle ? 'Judul otomatis dari nama file: AKTIF' : 'Judul manual: teks kamu dipertahankan', 'ok');
+};
 $('#inTitle').oninput = e => { state.title = e.target.value; updateAll(); };
+function syncTitleFontUI() {
+  const sel = $('#selTitleFont');
+  if (sel && sel.value !== state.font) sel.value = state.font;
+  $('#tszV').textContent = String(state.titleSize);
+  const num = $('#inTitleSize'); if (num && +num.value !== state.titleSize) num.value = state.titleSize;
+}
+(function initTitleFont() {
+  const sel = $('#selTitleFont');
+  FONTS.forEach(f => {
+    const o = document.createElement('option'); o.value = f.n; o.textContent = f.n;
+    if (f.n === state.font) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = e => {
+    state.font = e.target.value;
+    document.fonts.load(`700 48px "${state.font}"`);
+    renderFontGrid();          /* sinkron dengan grid modul 07 */
+    updateAll();
+    toast(`Font judul: ${state.font}`, 'ok');
+  };
+  $('#inTitleSize').oninput = e => {
+    state.titleSize = clamp(parseInt(e.target.value) || 40, 14, 160);
+    $('#tszV').textContent = String(state.titleSize);
+    updateAll();
+  };
+  syncTitleFontUI();
+})();
 
 /* ---------- 03 DESKRIPSI ---------- */
 $('#descOn').onchange = e => { state.descOn = e.target.checked; };
 $('#inDesc').oninput = e => { state.desc = e.target.value; };
 bindSeg('segDescPos', v => { state.descPos = v; });
 
-/* ---------- 04 SUBTITEL AI ---------- */
-bindSeg('segTarget', v => { state.subTarget = v; });
+/* ---------- 04 SUBTITEL AI (VOCALIS v3) ---------- */
 $('#asrLang').onchange = e => {
-  /* v2.2: label bahasa ikut pilihan manual; AUTO = menunggu deteksi VOICEMATCH */
-  $('#vmLang').textContent = e.target.value === 'auto' ? 'AUTO' : e.target.selectedOptions[0].text.split('·')[0].trim().toUpperCase();
+  /* v2.3: label bahasa ikut pilihan manual; AUTO = menunggu deteksi VOCALIS */
+  $('#vmLang').textContent = e.target.value === 'auto' ? 'AUTO'
+    : (e.target.value === 'javanese' ? 'JAWA' : 'INDONESIA');
 };
 $('#subsOn').onchange = e => { state.subsOn = e.target.checked; };
+/* v2.3: mesin default mengikuti RAM — TURBO butuh ±3 GB, SEDANG ±1.5 GB saat inferensi */
+(function pickEngineByRAM() {
+  try {
+    const sel = $('#asrModel');
+    const mem = navigator.deviceMemory;   // GB (estimasi Chromium, bucket 0.25..8)
+    if (sel.value === 'turbo' && mem && mem < 8) {
+      sel.value = 'small';
+      if (mem < 4) sel.value = 'base';
+      setTimeout(() => toast('RAM ' + mem + ' GB terdeteksi — mesin VOCALIS disesuaikan agar aman memori (bisa diubah manual)', 'warn'), 1500);
+    }
+  } catch (e) { }
+})();
 $('#subSize').oninput = e => { state.subScale = parseFloat(e.target.value); $('#subSizeV').textContent = state.subScale.toFixed(2) + '×'; };
 $('#btnGen').onclick = generateSubs;
 $('#btnSrt').onclick = async () => {
@@ -141,6 +191,8 @@ function renderFontGrid() {
     b.style.fontFamily = `"${f.n}"`;
     b.innerHTML = `<span>${f.n}</span><em>${f.d}</em>`;
     b.onclick = () => { state.font = f.n; document.fonts.load(`700 48px "${f.n}"`); renderFontGrid();
+      if (typeof syncTitleFontUI === 'function') syncTitleFontUI();
+      updateAll();
       toast(`Font: ${f.n}`, 'ok'); };
     g.appendChild(b);
   });
@@ -181,21 +233,25 @@ bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
 bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
 $('#btnExport').onclick = doExport;
 
-/* ---------- 10 BATCH (v2.2: memakai KOTAK VIDEO terpadu) ---------- */
+/* ---------- 10 BATCH (v2.3: impor massal 100 + proses berurutan otomatis) ---------- */
 $('#btnBatchAdd').onclick = async () => {
   const paths = await window.kinostra.openMedia();
-  if (paths && paths.length) { addBatchPaths(paths, 'batch'); toast(`${paths.length} video masuk Kotak Video`, 'ok'); }
+  if (paths && paths.length) {
+    const n = addBatchPaths(paths, 'batch');
+    toast(`${n} video masuk Kotak Video`, 'ok');
+    maybeAutoBatch(n);
+  }
 };
 $('#btnBatchClear').onclick = clearQueue;
 $('#btnBatchRun').onclick = runBatch;
 
-/* ---------- 00 KOTAK VIDEO (v2.2) ---------- */
+/* ---------- 00 KOTAK VIDEO (v2.3) ---------- */
 $('#btnQAdd').onclick = async () => {
   const paths = await window.kinostra.openMedia();
   if (paths && paths.length) {
-    addBatchPaths(paths, 'impor');
-    toast(`${paths.length} video masuk Kotak Video`, 'ok');
-    if (!state.file) loadFromPath(paths[0]);
+    const n = addBatchPaths(paths, 'impor');
+    toast(`${n} video masuk Kotak Video`, 'ok');
+    if (!maybeAutoBatch(n) && !state.file) loadFromPath(paths[0]);
   }
 };
 $('#btnQClear').onclick = clearQueue;
@@ -280,10 +336,15 @@ function fitStage() {
 window.addEventListener('resize', fitStage);
 setPreviewSize(); fitStage(); applyRatio();
 
-let lastTrack = 0, lastHud = 0;
+let lastTrack = 0, lastHud = 0, lastBusyDraw = 0;
 function loop() {
   requestAnimationFrame(loop);
   if (state.file) {
+    /* v2.3: saat proses berat (AI/batch), kurangi frekuensi gambar preview
+       agar CPU penuh untuk inferensi AI — dari 60x/s menjadi ±2.5x/s */
+    const now = performance.now();
+    if (state.busy && now - lastBusyDraw < 400) return;
+    if (state.busy) lastBusyDraw = now;
     const t = videoEl.currentTime || 0;
     // tracking realtime saat play
     if (!videoEl.paused && state.track.active && performance.now() - lastTrack > 70) {

@@ -35,7 +35,8 @@ const TRACKCOLORS = ['#F7A600', '#3EE6C1', '#FF4FA3', '#9BE15D'];
 
 const state = {
   file: null, duration: 0, isAudio: false, audioBuffer: null, peaks: null,
-  title: '', titleOn: true, desc: '', descOn: true, descPos: 'under',
+  title: '', titleOn: true, autoTitle: true, desc: '', descOn: true, descPos: 'under',
+  titleSize: 40,                           /* v2.3: ukuran font judul default 40 */
   ratio: '16:9', bgMode: 'blur',
   /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
   frame: { zoom: 1, panX: 0, panY: 0 },

@@ -156,15 +156,16 @@ function drawComposition(x, W, H, t) {
     x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
     x.restore();
   }
-  /* --- JUDUL & DESKRIPSI (v2.2: judul panjang BERSAMBUNG KE BAWAH) --- */
+  /* --- JUDUL & DESKRIPSI (v2.3: ukuran font judul diatur user, default 40) --- */
   let yTitleBase = 0;
   if (state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
     x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, H * 0.062, 60 * u, 3 * u);
     x.fillStyle = '#F2F0EA';
     const txt = state.upper ? state.title.toUpperCase() : state.title;
-    let fs = Math.round(52 * u * state.titleScale);
-    let ls = 7 * u * state.titleScale;
+    const szBase = clamp(state.titleSize || 40, 14, 160);
+    let fs = Math.round(szBase * u * state.titleScale);
+    let ls = Math.max(1, 7 * u * (fs / (52 * u)));   /* spasi huruf proporsional ukuran */
     x.font = `${fs}px "${F}"`;
     let lines = wrapSpaced(x, txt, W * 0.84, ls);
     let guard = 0;

@@ -1,6 +1,8 @@
 /* ================================================================
-   KINOSTRA DESKTOP v2.0 — Main Process
+   KINOSTRA DESKTOP v2.3 — Main Process
    Suite Video Otonom · 100% Offline setelah instalasi
+   v2.3: VOCALIS v3 (Jawa+Indonesia) · impor massal 100 video ·
+         judul otomatis Bebas Neue 40 · protokol kfile:// streaming
    ================================================================ */
 const { app, BrowserWindow, ipcMain, dialog, protocol, shell, Menu } = require('electron');
 const path = require('path');
@@ -14,7 +16,8 @@ const MODELS_DIR = path.join(app.getPath('userData'), 'models');
 /* ---------- Protokol app:// (renderer) & kmodels:// (model AI lokal) ---------- */
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
-  { scheme: 'kmodels', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }
+  { scheme: 'kmodels', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
+  { scheme: 'kfile', privileges: { standard: false, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, bypassCSP: true } }
 ]);
 
 let win = null;
@@ -45,7 +48,7 @@ function createWindow() {
 
   // Tampilkan error render di console dev (diagnostik)
   win.webContents.on('console-message', (e, level, message) => {
-    if (level >= 2) console.log('[renderer]', message);
+    if (level >= 2 || (process.env.KINOSTRA_DEBUG === '1' && level >= 1)) console.log('[renderer]', message);
   });
 
   // MODE SELF-TEST (diagnostik build): screenshot + cek DOM lalu keluar
@@ -68,6 +71,10 @@ function createWindow() {
             zoomUI: !!document.querySelector('#inZoom') && !!document.querySelector('#inPanX') && !!document.querySelector('#btnFrameReset'),
             parUI: !!document.querySelector('#segParallel'),
             qboxUI: !!document.querySelector('#queueList') && !!document.querySelector('#btnQAdd') && !!document.querySelector('#btnQClear'),
+            vocalisUI: !!document.querySelector('#asrModel') && ['turbo', 'small', 'base'].includes(document.querySelector('#asrModel').value) && !!document.querySelector('#singMode') && !!document.querySelector('#asrLang option[value="javanese"]'),
+            massUI: !!document.querySelector('#autoRun') && !!document.querySelector('#massImport') && typeof maybeAutoBatch === 'function' && typeof kfileURL === 'function',
+            titleFontUI: !!document.querySelector('#selTitleFont') && document.querySelector('#selTitleFont').value === 'Bebas Neue' && (+document.querySelector('#inTitleSize').value) === 40 && state.titleSize === 40 && state.autoTitle === true && state.font === 'Bebas Neue',
+            crossIso: self.crossOriginIsolated,
             voicematch: typeof speechWindows === 'function' && typeof detectLang === 'function' && typeof cleanLine === 'function',
             turbo: typeof renderFramesBySeek === 'function' && typeof wrapSpaced === 'function' && typeof getLayer === 'function',
             frameRect: typeof videoFrameRect === 'function',
@@ -300,8 +307,8 @@ function createWindow() {
           blob.name = ${JSON.stringify(require('path').basename(file))};
           await loadFileBlob(blob, true);
           await new Promise(r => setTimeout(r, 500));
-          document.querySelector('#asrLang').value = 'auto';
-          state.subTarget = 'src';
+          document.querySelector('#asrLang').value = ${JSON.stringify(process.env.KINOSTRA_AI2_LANG || 'auto')};
+          document.querySelector('#asrModel').value = ${JSON.stringify(process.env.KINOSTRA_AI2_ENGINE || 'turbo')};
           const t0 = Date.now();
           await generateSubs();
           return { n: state.subs.length, ms: Date.now() - t0,
@@ -312,31 +319,158 @@ function createWindow() {
         return r;
       };
       try {
-        await runCase('/home/z/my-project/testmedia/speech_id2.wav', 'ID');
-        await runCase('/home/z/my-project/testmedia/speech_en2.wav', 'EN');
+        const ai2Files = (process.env.KINOSTRA_AI2_FILES || '/home/z/my-project/testmedia/speech_id2.wav=ID|/home/z/my-project/testmedia/speech_jv.wav=JV')
+          .split('|').filter(Boolean).map(t => { const i = t.indexOf('='); return [t.slice(0, i), t.slice(i + 1)]; });
+        for (const [f, tag] of ai2Files) await runCase(f, tag);
       } catch (e) { console.error('AI2-FAIL', e && e.message || e); }
       setTimeout(() => app.quit(), 800);
     });
   }
 
-  // MODE DEBUG AI3: dump hasil probe per kandidat bahasa (tiny vs base)
+  // MODE DEBUG JV MATRIX (v2.3): pinOPSIOpsi panggilan → temukan kombinasi beracun
+  if (process.env.KINOSTRA_JV === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      try {
+        await new Promise(r => setTimeout(r, 6000));
+        const b64 = fsx.readFileSync('/home/z/my-project/testmedia/speech_id2.wav').toString('base64');
+        const tmr = setInterval(() => {
+          try {
+            for (const d of fsx.readdirSync('/proc')) {
+              if (!/^\\d+$/.test(d)) continue;
+              let cmd; try { cmd = fsx.readFileSync('/proc/' + d + '/cmdline', 'utf8'); } catch (e) { continue; }
+              if (cmd.includes('type=renderer')) {
+                const st = fsx.readFileSync('/proc/' + d + '/status', 'utf8');
+                const m = /VmRSS:\\s+(\\d+) kB/.exec(st);
+                if (m && +m[1] > 300000) console.log('RSS ' + Math.round(m[1] / 1024) + 'MB');
+              }
+            }
+          } catch (e) { }
+        }, 2500);
+        const r = await win.webContents.executeJavaScript(`(async () => {
+          const bin = atob(${JSON.stringify(b64)});
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/wav' });
+          blob.name = 'speech_id2.wav';
+          await loadFileBlob(blob, true);
+          const T = window.transformers;
+          T.env.allowLocalModels = true; T.env.useBrowserCache = false;
+          T.env.localModelPath = 'kmodels://'; T.env.allowRemoteModels = false;
+          T.env.backends.onnx.wasm.wasmPaths = 'app://localhost/vendor/ort/';
+          T.env.backends.onnx.wasm.numThreads = ${parseInt(process.env.KINOSTRA_MEM_THREADS) || 2};
+          const eng = ${JSON.stringify(process.env.KINOSTRA_JV_ENGINE || 'Xenova/whisper-base')};
+          const asr = await T.pipeline('automatic-speech-recognition', eng, { dtype: 'q8' });
+          const pcm = await getMono16k();
+          const probe = pcm.slice(0, 16000 * 12);
+          const heap = () => performance.memory ? performance.memory.usedJSHeapSize : -1;
+          const out = [];
+          const variants = [
+            ['tsFalse_bnd_jv', { chunk_length_s: 30, stride_length_s: 5, return_timestamps: false, task: 'transcribe', no_repeat_ngram_size: 5, max_new_tokens: 72, language: 'javanese' }],
+            ['tsTrue_bnd_jv', { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, task: 'transcribe', no_repeat_ngram_size: 5, max_new_tokens: 72, language: 'javanese' }],
+            ['tsTrue_unb_jv', { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, task: 'transcribe', no_repeat_ngram_size: 5, language: 'javanese' }],
+            ['tsFalse_bnd_id', { chunk_length_s: 30, stride_length_s: 5, return_timestamps: false, task: 'transcribe', no_repeat_ngram_size: 5, max_new_tokens: 72, language: 'indonesian' }]
+          ];
+          for (const [name, opts] of variants) {
+            const t = Date.now();
+            try {
+              const o = await asr(probe, opts);
+              out.push({ name, ms: Date.now() - t, heapMB: Math.round(heap() / 1048576), text: (o.text || '').slice(0, 70) });
+              console.log('VAR-OK ' + name + ' ' + (Date.now() - t) + 'ms');
+            } catch (e) {
+              out.push({ name, ms: Date.now() - t, err: (e.message || e).slice(0, 70) });
+              console.log('VAR-ERR ' + name + ' ' + (Date.now() - t) + 'ms ' + (e.message || e).slice(0, 70));
+            }
+          }
+          return out;
+        })()`);
+        clearInterval(tmr);
+        console.log('JV-RESULT ' + JSON.stringify(r, null, 1));
+      } catch (e) { console.error('JV-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE DEBUG MEMORI AI (v2.3): pipeline base 1-thread + transkrip kecil
+  if (process.env.KINOSTRA_MEM === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      try {
+        await new Promise(r => setTimeout(r, 6000));
+        const b64 = fsx.readFileSync('/home/z/my-project/testmedia/speech_id2.wav').toString('base64');
+        const r = await win.webContents.executeJavaScript(`(async () => {
+          const bin = atob(${JSON.stringify(b64)});
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'audio/wav' });
+          blob.name = 'speech_id2.wav';
+          await loadFileBlob(blob, true);
+          const T = window.transformers;
+          T.env.allowLocalModels = true; T.env.useBrowserCache = false;
+          T.env.localModelPath = 'kmodels://'; T.env.allowRemoteModels = false;
+          T.env.backends.onnx.wasm.wasmPaths = 'app://localhost/vendor/ort/';
+          T.env.backends.onnx.wasm.numThreads = ${parseInt(process.env.KINOSTRA_MEM_THREADS) || 1};
+          const info = {
+            hw: navigator.hardwareConcurrency, devMem: navigator.deviceMemory || null,
+            crossIso: self.crossOriginIsolated,
+            numThreadsSet: T.env.backends.onnx.wasm.numThreads,
+            wasmPaths: T.env.backends.onnx.wasm.wasmPaths
+          };
+          const t0 = Date.now();
+          const asr = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-base', { dtype: 'q8', progress_callback: p => { if (p.status === 'progress') console.log('DL ' + p.file + ' ' + Math.round((p.loaded || 0) / 1048576) + 'MB'); } });
+          info.pipeMs = Date.now() - t0;
+          info.heapAfterPipe = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1;
+          const pcm = await getMono16k();
+          info.probeSec = +(pcm.length / 16000).toFixed(1);
+          const NT = ${parseInt(process.env.KINOSTRA_MEM_THREADS) || 1};
+          const LOOPS = ${parseInt(process.env.KINOSTRA_MEM_LOOPS) || 1};
+          const t1 = Date.now();
+          const out = await asr(pcm.slice(0, 16000 * 12), { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, language: 'indonesian', task: 'transcribe', no_repeat_ngram_size: 5 });
+          info.infMs = Date.now() - t1;
+          info.heapAfterInf = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1;
+          info.text = (out.text || '').slice(0, 160);
+          info.chunks = (out.chunks || []).length;
+          if (LOOPS > 1) {
+            info.loopHeaps = [];
+            for (let i = 1; i < LOOPS; i++) {
+              await asr(pcm.slice(0, 16000 * 12), { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, language: 'indonesian', task: 'transcribe', no_repeat_ngram_size: 5 });
+              info.loopHeaps.push(performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1);
+              console.log('LOOP ' + i + ' heap ' + info.loopHeaps[info.loopHeaps.length - 1] + 'MB threads ' + NT);
+            }
+          }
+          if (${process.env.KINOSTRA_MEM_SECOND === '1'}) {
+            try { await asr.dispose(); info.disposed = true; } catch (e) { info.disposed = 'ERR ' + e.message; }
+            await new Promise(r => setTimeout(r, 1200));
+            const t2 = Date.now();
+            const asr2 = await T.pipeline('automatic-speech-recognition', 'Xenova/whisper-small', { dtype: 'q8', progress_callback: p => { if (p.status && p.status !== 'progress') console.log('PIPE2 ' + p.status + ' ' + (p.file || '')); } });
+            info.secondPipeMs = Date.now() - t2;
+            info.heapAfterSecond = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1;
+            const o2 = await asr2(pcm.slice(0, 16000 * 12), { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, language: 'javanese', task: 'transcribe', no_repeat_ngram_size: 5 });
+            info.secondText = (o2.text || '').slice(0, 160);
+            info.heapAfterSecondInf = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : -1;
+          }
+          return info;
+        })()`);
+        console.log('MEM-CHECK ' + JSON.stringify(r, null, 1));
+      } catch (e) { console.error('MEM-FAIL', e && e.message || e); }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
+  // MODE DEBUG AI3 (v2.3): uji VOCALIS v3 — deteksi bahasa & transkrip per mesin
   if (process.env.KINOSTRA_AI3 === '1') {
     win.webContents.once('did-finish-load', async () => {
       const fsx = require('fs');
       try {
         await new Promise(r => setTimeout(r, 6000));
         await win.webContents.executeJavaScript(`(async () => {
-          await ensureModel('Xenova/whisper-tiny', () => {});
           await ensureModel('Xenova/whisper-base', () => {});
+          await ensureModel('Xenova/whisper-small', () => {});
           return true;
         })()`);
-        for (const [file, tag] of [
-          ['/home/z/my-project/testmedia/t_xiaochen.wav', 'ID-XIAOCHEN'],
-          
-          
-          ['/home/z/my-project/testmedia/t_xiaochen.wav', 'ID-XIAOCHEN'],
-          ['/home/z/my-project/testmedia/speech_en.wav', 'EN']
-        ]) {
+        const ai3Files = (process.env.KINOSTRA_AI3_FILES || '/home/z/my-project/testmedia/speech_id2.wav=ID')
+          .split('|').filter(Boolean).map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; });
+        for (const [file, tag] of ai3Files) {
           const b64 = fsx.readFileSync(file).toString('base64');
           const r = await win.webContents.executeJavaScript(`(async () => {
             const bin = atob(${JSON.stringify(b64)});
@@ -347,29 +481,18 @@ function createWindow() {
             await loadFileBlob(blob, true);
             await new Promise(r => setTimeout(r, 400));
             const pcm = await getMono16k();
-            const wins = speechWindows(pcm, 16000);
+            const wins = speechWindows(pcm, 16000, $('#singMode').checked);
             const c0 = wins[0] || { s: 0, e: 14 };
             const probe = pcm.slice(Math.floor(c0.s * 16000), Math.min(pcm.length, Math.floor(Math.min(c0.e, c0.s + 14) * 16000)));
-            const res = { wins: wins.length, probeSec: Math.round(probe.length / 16000) };
-            /* deteksi kanonik: argmax token bahasa */
-            const asr0 = await getASR('Xenova/whisper-tiny', () => {});
-            try {
-              const det = await whisperDetectLang(asr0, probe);
-              res.detect_tiny = det.code + ' (id ' + det.id + ', seqLen ' + det.seqLen + ')';
-            } catch (e) { res.detect_tiny = 'ERR ' + (e.message || e).slice(0, 60); }
-            const asrB = await getASR('Xenova/whisper-base', () => {});
-            try {
-              const detB = await whisperDetectLang(asrB, probe);
-              res.detect_base = detB.code + ' (id ' + detB.id + ', seqLen ' + detB.seqLen + ')';
-            } catch (e) { res.detect_base = 'ERR ' + (e.message || e).slice(0, 60); }
-            for (const model of ['Xenova/whisper-tiny', 'Xenova/whisper-base']) {
-              const asr = await getASR(model, () => {});
-              res[model.split('/')[1]] = {};
-              for (const lang of [null, 'indonesian', 'english', 'spanish']) {
+            const res = { wins: wins.length, probeSec: Math.round(probe.length / 16000), crossIso: self.crossOriginIsolated, threads: window.transformers.env.backends.onnx.wasm.numThreads };
+            for (const eng of ['base', 'small']) {
+              const asr = await getASR(eng, () => {});
+              res[eng] = {};
+              for (const lang of [null, 'javanese', 'indonesian']) {
                 const opts = { task: 'transcribe', chunk_length_s: 30, stride_length_s: 5, return_timestamps: false };
                 if (lang) opts.language = lang;
                 const out = await asr(probe, opts);
-                res[model.split('/')[1]][lang || 'auto'] = (out.text || '').slice(0, 110);
+                res[eng][lang || 'auto'] = (out.text || '').slice(0, 110);
               }
             }
             return res;
@@ -446,7 +569,15 @@ function handleAppScheme(request) {
     }
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
     const data = fs.readFileSync(file);
-    return new Response(data, { headers: { 'Content-Type': type } });
+    return new Response(data, {
+      headers: {
+        'Content-Type': type,
+        /* v2.3: cross-origin isolation → ONNX WASM multithread (AI 3-6x lebih cepat) */
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Resource-Policy': 'same-origin'
+      }
+    });
   } catch (e) {
     return new Response('error: ' + e.message, { status: 500 });
   }
@@ -487,8 +618,61 @@ function handleModelsScheme(request) {
     if (!file) return new Response('model file not found: ' + rel, { status: 404 });
     const buf = fs.readFileSync(file);
     return new Response(buf, {
-      headers: { 'Content-Type': 'application/octet-stream' }
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(buf.length),   /* penting: reader efisien di transformers.js */
+        'Cross-Origin-Resource-Policy': 'same-origin'
+      }
     });
+  } catch (e) {
+    return new Response('error: ' + e.message, { status: 500 });
+  }
+}
+
+/* ---------- Handler kfile:// (v2.3: media DISK streaming + Range) ----------
+   kfile://media/?p=<path terenkode> — dipakai thumbnail kotak video &
+   preview supaya 100 video tak perlu dibaca utuh ke memori. */
+function handleKFileScheme(request) {
+  try {
+    const u = new URL(request.url);
+    if (u.hostname !== 'media') return new Response('bad host', { status: 400 });
+    const p = decodeURIComponent(u.searchParams.get('p') || '');
+    if (!p) return new Response('no path', { status: 400 });
+    let st;
+    try { st = fs.statSync(p); } catch (e) { return new Response('not found', { status: 404 }); }
+    if (!st.isFile()) return new Response('not a file', { status: 404 });
+    const size = st.size;
+    const baseHeaders = {
+      'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream',
+      'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Resource-Policy': 'cross-origin'
+    };
+    const range = request.headers.get('Range') || '';
+    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m) {
+      let a = m[1] === '' ? NaN : parseInt(m[1], 10);
+      let b = m[2] === '' ? size - 1 : Math.min(parseInt(m[2], 10), size - 1);
+      if (Number.isNaN(a)) { a = Math.max(0, size - parseInt(m[2] || '0', 10)); b = size - 1; }
+      if (a > b || a >= size) {
+        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+      }
+      const len = b - a + 1;
+      const buf = Buffer.alloc(len);
+      const fd = fs.openSync(p, 'r');
+      try { fs.readSync(fd, buf, 0, len, a); } finally { fs.closeSync(fd); }
+      return new Response(buf, {
+        status: 206,
+        headers: {
+          ...baseHeaders,
+          'Content-Range': `bytes ${a}-${b}/${size}`,
+          'Content-Length': String(len)
+        }
+      });
+    }
+    const buf = fs.readFileSync(p);
+    return new Response(buf, { status: 200, headers: { ...baseHeaders, 'Content-Length': String(size) } });
   } catch (e) {
     return new Response('error: ' + e.message, { status: 500 });
   }
@@ -665,6 +849,15 @@ ipcMain.handle('fs:abortWrite', async (e, { id }) => {
   return true;
 });
 
+ipcMain.handle('fs:stat', async (e, p) => {
+  try {
+    const st = await fsp.stat(p);
+    return { ok: true, size: st.size, mtime: st.mtimeMs };
+  } catch (err) {
+    return { ok: false, size: 0, error: err.message };
+  }
+});
+
 ipcMain.handle('fs:readMediaFiles', async (e, paths) => {
   // Untuk batch: baca file media dari disk jadi ArrayBuffer
   const out = [];
@@ -708,6 +901,7 @@ if (!gotLock) {
   app.whenReady().then(() => {
     protocol.handle('app', handleAppScheme);
     protocol.handle('kmodels', handleModelsScheme);
+    protocol.handle('kfile', handleKFileScheme);
     createWindow();
 
     app.on('activate', () => {

@@ -21,7 +21,31 @@ function addBatchPath(p, via = 'batch') {
   queueBatchThumb();
   return it;
 }
-function addBatchPaths(paths, via) { (paths || []).forEach(p => addBatchPath(p, via)); }
+/* v2.3: impor massal — maksimal 100 video sekali tambah, urutan tetap atas→bawah */
+function addBatchPaths(paths, via) {
+  const list = (paths || []).filter(Boolean);
+  if (list.length > 100) {
+    toast(`Maksimal 100 video sekali impor — ${list.length - 100} file terakhir dilewati`, 'warn');
+  }
+  const capped = list.slice(0, 100);
+  capped.forEach(p => addBatchPath(p, via));
+  return capped.length;
+}
+
+/* v2.3: URL streaming disk (thumbnail tanpa memuat seluruh file ke memori) */
+function kfileURL(p) { return 'kfile://media/?p=' + encodeURIComponent(p); }
+
+/* v2.3: setelah impor massal (≥2 video baru), langsung proses berurutan */
+function autoBatchArmed(count) {
+  const el = $('#autoRun');
+  return count >= 2 && el && el.checked && !state.busy &&
+    state.batch.some(b => b.status !== 'done');
+}
+function maybeAutoBatch(count) {
+  if (!autoBatchArmed(count)) return false;
+  setTimeout(() => { if (!state.busy && !state.abort) runBatch(); }, 350);
+  return true;
+}
 
 /* pindah urutan (naik/turun) */
 function moveQueueItem(i, dir) {
@@ -56,17 +80,15 @@ function queueBatchThumb() {
 
 async function makeThumb(it) {
   try {
-    const [item] = await window.kinostra.readMediaFiles([it.path]);
-    if (!item || item.error) return;
-    it.size = item.size;
+    /* v2.3: streaming via kfile:// — video 2 GB pun tak dibaca utuh ke memori */
+    const st = await window.kinostra.stat(it.path);
+    if (st && st.ok) it.size = st.size;
     const ext = (it.name.split('.').pop() || '').toLowerCase();
     if (['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(ext)) { it.thumb = 'audio'; return; }
-    const blob = new Blob([item.data]);
-    const url = URL.createObjectURL(blob);
     const v = document.createElement('video');
     v.muted = true; v.playsInline = true; v.preload = 'auto';
     v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2px;height:2px';
-    v.src = url; document.body.appendChild(v);
+    v.src = kfileURL(it.path); document.body.appendChild(v);
     try {
       await new Promise((res, rej) => {
         const ok = () => { clean(); res(); }, bad = () => { clean(); rej(new Error('meta')); };
@@ -90,7 +112,6 @@ async function makeThumb(it) {
     } finally {
       try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) { }
       try { v.remove(); } catch (e) { }
-      URL.revokeObjectURL(url);
     }
   } catch (e) { /* file tak terbaca — biarkan placeholder */ }
 }

@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.2 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.3 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.2</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.3</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -106,7 +106,14 @@
       <button class="mod-h"><span class="no">02</span><span class="t">JUDUL &amp; PART OTOMATIS</span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
         <label class="chk"><input type="checkbox" id="titleOn" checked><span>TAMPILKAN JUDUL DI VIDEO</span></label>
+        <label class="chk"><input type="checkbox" id="titleAuto" checked><span>JUDUL OTOMATIS DARI NAMA FILE</span></label>
         <input class="in" id="inTitle" placeholder="Judul — otomatis dari nama file">
+        <div class="row">
+          <div><div class="lbl">FONT JUDUL</div>
+            <select class="in" id="selTitleFont"></select></div>
+          <div><div class="lbl">UKURAN JUDUL <b id="tszV">40</b></div>
+            <input type="number" class="in mono" id="inTitleSize" min="14" max="160" step="2" value="40"></div>
+        </div>
         <div class="lbl">DURASI SPLIT PER PART</div>
         <div class="seg wrap" id="segSplit">
           <button data-v="20">20 dtk</button><button data-v="30" class="on">30 dtk</button>
@@ -140,35 +147,26 @@
     </div>
 
     <div class="mod" id="m3">
-      <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI</span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI · VOCALIS v3 <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
         <div class="row">
           <div><div class="lbl">BAHASA VIDEO <b id="vmLang">AUTO</b></div>
             <select class="in" id="asrLang">
-              <option value="auto">DETEKSI OTOMATIS · IKUT SUARA</option><option value="indonesian">INDONESIA</option>
-              <option value="english">INGGRIS</option><option value="chinese">MANDARIN</option>
-              <option value="japanese">JEPANG</option><option value="korean">KOREA</option>
-              <option value="arabic">ARAB</option><option value="hindi">HINDI</option>
-              <option value="spanish">SPANYOL</option><option value="french">PRANCIS</option>
-              <option value="german">JERMAN</option><option value="thai">THAI</option>
-              <option value="vietnamese">VIETNAM</option><option value="russian">RUSIA</option>
-              <option value="portuguese">PORTUGIS</option><option value="italian">ITALIA</option>
-              <option value="dutch">BELANDA</option><option value="turkish">TURKI</option>
+              <option value="auto">OTOMATIS · JAWA / INDONESIA</option>
+              <option value="javanese">JAWA</option>
+              <option value="indonesian">INDONESIA</option>
             </select></div>
-          <div><div class="lbl">MODEL</div>
+          <div><div class="lbl">MESIN VOCALIS</div>
             <select class="in" id="asrModel">
-              <option value="tiny">TINY · CEPAT</option><option value="base">BASE · AKURAT</option>
+              <option value="turbo">TURBO · PALING AKURAT (±724 MB)</option>
+              <option value="small">SEDANG · SEIMBANG (±254 MB)</option>
+              <option value="base">RINGAN · CEPAT (±80 MB)</option>
             </select></div>
         </div>
-        <div class="lbl">TARGET SUBTITEL</div>
-        <div class="seg wrap" id="segTarget">
-          <button data-v="src" class="on">BAHASA ASLI</button>
-          <button data-v="id">INDONESIA · TRANSLATE</button>
-          <button data-v="en">INGGRIS · TRANSLATE</button>
-        </div>
-        <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> GENERATE SUBTITEL</button>
-        <div class="substat" id="subStat">VOICEMATCH v2 siap · 100% lokal (model diunduh sekali, lalu offline permanen)</div>
-        <div class="note"><b>VOICEMATCH v2</b>: mendeteksi bahasa yang diucapkan lalu menulis teks <b>dalam bahasa yang sama</b> dengan video, <b>melewati bagian hening/musik</b> (jauh lebih cepat), dan membuang baris hallucination. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
+        <label class="chk"><input type="checkbox" id="singMode" checked><span>MODE LAGU / VOKAL (VIDEO BERNYANYI)</span></label>
+        <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> BUAT SUBTITEL DARI VOKAL</button>
+        <div class="substat" id="subStat">VOCALIS v3 siap · 100% lokal (model diunduh sekali, lalu offline permanen)</div>
+        <div class="note"><b>VOCALIS v3 — mesin baru fokus Bahasa Jawa &amp; Indonesia.</b> Teks dibuat <b>dalam bahasa yang diucapkan/dinyanyikan</b> di video (Jawa tetap Jawa, Indonesia tetap Indonesia) — tanpa terjemahan, tanpa bahasa lain. Mesin <b>TURBO</b> paling akurat untuk ucapan &amp; lirik lagu. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
         <label class="chk"><input type="checkbox" id="subsOn" checked><span>BURN-IN SUBTITEL KE VIDEO</span></label>
         <div class="lbl">UKURAN SUBTITEL <b id="subSizeV">1.0×</b></div>
         <input type="range" id="subSize" min="0.6" max="1.8" step="0.05" value="1">
@@ -295,11 +293,13 @@
     <div class="mod" id="m10">
       <button class="mod-h"><span class="no">10</span><span class="t">BATCH PROSES <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Tidak ada antrian terpisah lagi — video yang ditambahkan di sini <b>masuk ke KOTAK VIDEO (modul 00)</b> bersama semua video yang diimpor. Saat MULAI BATCH, seluruh isi kotak diproses <b>berurutan dari atas ke bawah</b> memakai setelan saat ini (rasio, split, judul, deskripsi, efek, watermark, musik &amp; kualitas). Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
+        <div class="note">Bisa <b>sekaligus banyak</b>: pilih sampai <b>100 video</b> dalam satu dialog impor (Ctrl+A untuk semua). Semua masuk <b>KOTAK VIDEO (modul 00)</b> berurutan atas→bawah, lalu diproses <b>satu per satu berurutan</b> memakai setelan saat ini (rasio, split, judul otomatis, deskripsi, efek, watermark, musik &amp; kualitas). Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
         <div class="row">
           <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE KE KOTAK…</button>
           <button class="btn sm" id="btnBatchClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>
         </div>
+        <label class="chk"><input type="checkbox" id="massImport" checked><span>IMPOR MASSAL — PILIH SAMPAI <b>100 VIDEO</b> SEKALIGUS</span></label>
+        <label class="chk"><input type="checkbox" id="autoRun" checked><span>LANGSUNG PROSES BERURUTAN SETELAH IMPOR MASSAL</span></label>
         <button class="btn acc wide" id="btnBatchRun"><i data-lucide="layers"></i> MULAI BATCH — PROSES KOTAK DARI ATAS</button>
         <div class="substat" id="batchStat">0 file dalam kotak</div>
       </div></div></div>
