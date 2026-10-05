@@ -46,6 +46,28 @@ async function pickACodec() {
   }
   return null;
 }
+/* v2.5: konfigurasi encoder SOFTWARE (tanpa GPU) — dipakai untuk percobaan
+   ulang otomatis saat encoder GPU (Media Foundation) macet/berhenti */
+async function pickSWCfg(W, H, br, fps) {
+  for (const c of ['avc1.640028', 'avc1.4D0028', 'avc1.42002A']) {
+    try {
+      const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps };
+      const s = await VideoEncoder.isConfigSupported(cfg);
+      if (s.supported) return cfg;
+    } catch (e) { }
+  }
+  return null;
+}
+/* v2.5: bungkus promise dengan batas waktu — mencegah MACET TANPA PESAN
+   (flush encoder / tulis disk / finalize muxer yang tidak pernah selesai) */
+function withTimeout(p, ms, msg) {
+  return new Promise((res, rej) => {
+    const tm = setTimeout(() => rej(new Error(msg)), ms);
+    Promise.resolve(p).then(
+      v => { clearTimeout(tm); res(v); },
+      e => { clearTimeout(tm); rej(e); });
+  });
+}
 async function renderMix(start, dur) {
   const sr = 48000, len = Math.max(1, Math.ceil(dur * sr));
   const oc = new OfflineAudioContext(2, len, sr);
@@ -67,6 +89,7 @@ async function encodeAudioTo(muxer, abuf, codec) {
   aenc.configure({ codec, sampleRate: sr, numberOfChannels: chs, bitrate: 160000 });
   const L = abuf.getChannelData(0), R2 = chs > 1 ? abuf.getChannelData(1) : L, BLK = sr;
   for (let off = 0; off < abuf.length; off += BLK) {
+    if (state.abort) throw new Error('Dibatalkan');
     const n = Math.min(BLK, abuf.length - off);
     const data = new Float32Array(n * chs);
     data.set(L.subarray(off, off + n), 0);
@@ -74,7 +97,8 @@ async function encodeAudioTo(muxer, abuf, codec) {
     const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs,
       timestamp: Math.round(off / sr * 1e6), data });
     aenc.encode(ad); ad.close();
-    while (aenc.encodeQueueSize > 10) await sleep(2);
+    let drainMs = 0;
+    while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
   }
   await aenc.flush(); aenc.close();
 }
@@ -154,8 +178,8 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     });
     if (aCodec) {
       _stage = 'audio';
-      const mix = await renderMix(seg.start, durS);
-      await encodeAudioTo(muxer, mix, aCodec);
+      const mix = await withTimeout(renderMix(seg.start, durS), 120000, 'mix audio macet');
+      await withTimeout(encodeAudioTo(muxer, mix, aCodec), 300000, 'encoding audio macet');
     }
     _stage = 'configure';
     const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
@@ -174,17 +198,48 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     };
 
     if (RVFC_OK && !state.isAudio) {
-      /* ============ v2.2: CAPTURE PLAYBACK (tanpa seek per frame) ============ */
+      /* ============ v2.2: CAPTURE PLAYBACK (tanpa seek per frame) ============
+         v2.5: + WATCHDOG ANTI-MACET. Penyebab lama ekspor "macet di bagian
+         akhir tanpa pesan": frame callback (rVFC) berhenti memicu di frame
+         terakhir & event ended tidak sampai, atau encoder GPU berhenti
+         mengeluarkan output → promise render tidak pernah selesai.
+         Sekarang interval 250 ms memantau: video selesai? waktu media
+         sudah mencapai akhir part? video error? encoder diam terlalu
+         lama? → semua diarahkan SELESAI atau GAGAL DENGAN PESAN JELAS. */
       _stage = 'stream';
       let capRate = 2, dAcc = 0, dN = 0, lastM = -1;
       v.playbackRate = capRate;
+      let lastAct = Date.now(), qStallSince = 0;
       await new Promise((resolve, rej) => {
         let finished = false;
         const stop = () => { try { v.pause(); } catch (e) { } };
-        const fin = () => { if (finished) return; finished = true; stop(); resolve(); };
-        const fail = (err) => { if (finished) return; finished = true; stop(); rej(err); };
+        const fin = () => { if (finished) return; finished = true; stop(); clearInterval(watch); resolve(); };
+        const fail = (err) => { if (finished) return; finished = true; stop(); clearInterval(watch); rej(err); };
+        /* --- v2.5: WATCHDOG (detak 250 ms) --- */
+        const watch = setInterval(() => {
+          if (finished) { clearInterval(watch); return; }
+          if (state.abort) return fail(new Error('Dibatalkan'));
+          if (v.error) return fail(new Error('video rusak/tak terbaca: ' + (v.error.message || ('kode ' + v.error.code))));
+          /* KUNCI FIX: tangani akhir video walau frame callback mati —
+             inilah yang dulu bikin macet selamanya di bagian akhir */
+          if (v.ended || v.currentTime >= seg.end - 0.004) return fin();
+          const now = Date.now();
+          if (venc.encodeQueueSize > CAP) {
+            if (!qStallSince) qStallSince = now;
+            else if (now - qStallSince > 45000)
+              return fail(new Error('encoder video macet (antrean tidak mengalir 45 dtk) — akan dicoba ulang otomatis dengan encoder software'));
+          } else qStallSince = 0;
+          if (now - lastAct > 30000)
+            return fail(new Error('render diam total 30 dtk — akan dicoba ulang otomatis dengan encoder software'));
+          /* dorong ulang bila video diam padahal encoder tidak penuh */
+          if (v.paused && !v.seeking && venc.encodeQueueSize <= CAP && !v.ended) {
+            try { const p = v.play(); if (p && p.catch) p.catch(err => fail(new Error('video tidak bisa dilanjut: ' + (err.message || err)))); }
+            catch (err) { fail(new Error('video tidak bisa dilanjut: ' + (err.message || err))); }
+          }
+        }, 250);
         const onFrame = (now, meta) => {
           if (finished) return;
+          lastAct = Date.now();
           if (state.abort) return fail(new Error('Dibatalkan'));
           const m = meta.mediaTime;
           if (v.ended || m >= seg.end - 0.004) return fin();
@@ -220,6 +275,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           try { v.requestVideoFrameCallback(onFrame); } catch (e) { fin(); }
         };
         v.addEventListener('ended', fin, { once: true });
+        v.addEventListener('error', () => fail(new Error('video error saat dirender')), { once: true });
         pump();
       });
       if (n === 0) {
@@ -236,12 +292,20 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     }
 
     _stage = 'flush';
-    await venc.flush(); venc.close(); venc = null;
+    slot.stage = 'flush';
+    /* v2.5: flush dengan batas waktu — encoder yang hang tidak lagi
+       membuat ekspor macet selamanya tanpa pesan */
+    await withTimeout(venc.flush(), 60000, 'encoder video tidak selesai (flush macet 60 dtk)');
+    venc.close(); venc = null;
     _stage = 'finalize';
-    muxer.finalize();
+    slot.stage = 'finalize';
+    await withTimeout(Promise.resolve().then(() => muxer.finalize()), 30000, 'penulisan header MP4 macet');
     _stage = 'save';
+    slot.stage = 'save';
     const nm = partFileName(state.title, state.partPrefix, seg.i + 1);
-    const wr = await saveBufferToDir(muxer.target.buffer, slot.dir, nm);
+    const wr = await withTimeout(
+      saveBufferToDir(muxer.target.buffer, slot.dir, nm, (w, t) => { slot.saveProg = w / t; }),
+      180000, 'menyimpan file ke disk macet (cek ruang kosong disk)');
     slot.prog = 1; slot.fr = slot.total = Math.max(slot.total, n);
     return { name: nm, path: wr.path, size: wr.size };
   } catch (err) {
@@ -263,6 +327,8 @@ async function exportPartsToDir(dir, ui) {
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
   const vCfg = await pickVCodecCfg(W, H, br, fps);
   if (!vCfg) throw new Error('Tidak ada codec video yang didukung engine');
+  /* v2.5: cadangan encoder SOFTWARE untuk percobaan ulang otomatis */
+  const swCfg = await pickSWCfg(W, H, br, fps);
   const wantAudio = !!(state.audioBuffer || state.music.buffer);
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
@@ -271,7 +337,7 @@ async function exportPartsToDir(dir, ui) {
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
   /* slot progres per part */
-  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) * fps)), working: false }));
+  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) * fps)), working: false, stage: null, saveProg: 0 }));
   const totalFr = slots.reduce((a, s) => a + s.total, 0);
   const t0 = performance.now();
   let lastUi = 0;
@@ -286,7 +352,9 @@ async function exportPartsToDir(dir, ui) {
       const rt = (done / fps / el);
       const parts = slots.map(s => {
         const pct = Math.round(100 * Math.min(s.fr, s.total) / s.total);
-        return s.working ? `P${String(s.seg.i + 1).padStart(2, '0')} ${pct}%` : null;
+        const stg = s.stage === 'flush' ? '· FLUSH' : s.stage === 'finalize' ? '· FINAL' : s.stage === 'save' ? '· SIMPAN' : '';
+        const tag = s.retried && s.working ? ' (ULANGI-SW)' : '';
+        return s.working ? `P${String(s.seg.i + 1).padStart(2, '0')} ${pct}%${tag}${stg}` : null;
       }).filter(Boolean).join(' · ');
       ui.sub(`${parts || 'menunggu…'}${rt > 0.05 ? ` · ${rt.toFixed(1)}× realtime` : ''}`);
     }
@@ -309,25 +377,57 @@ async function exportPartsToDir(dir, ui) {
         try {
           results[idx] = await renderPartWorker(slot.seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, () => uiTick(false));
         } catch (e) {
-          const det = e && (e.name + ' | ' + e.message + ' | ' + String(e.stack || '').split('\n')[1] || '') || String(e);
-          console.error(`part ${idx + 1} GAGAL: ${det}`);
-          if (!state.abort) { abortErr = e; state.abort = true; }
-          slot.working = false; uiTick(true);
-          return;
+          /* v2.5: RETRY OTOMATIS 1× dengan encoder SOFTWARE — penyembuh
+             utama "ekspor macet di bagian akhir" (encoder GPU berhenti).
+             Jangan ulangi bila user membatalkan sendiri. */
+          if (!state.abort && swCfg) {
+            console.warn(`part ${idx + 1} gagal (${e && e.message || e}) — ulangi 1× dengan encoder software`);
+            slot.fr = 0; slot.stage = null; slot.saveProg = 0; slot.retried = true; slot.working = true; uiTick(true);
+            try {
+              results[idx] = await renderPartWorker(slot.seg, srcUrl, W, H, fps, br, swCfg, aCodec, slot, () => uiTick(false));
+              console.info(`part ${idx + 1} sukses pada percobaan ke-2 (encoder software)`);
+            } catch (e2) {
+              const det2 = e2 && (e2.name + ' | ' + e2.message) || String(e2);
+              console.error(`part ${idx + 1} GAGAL juga di percobaan ke-2: ${det2}`);
+              if (!state.abort) { abortErr = e2; state.abort = true; }
+              slot.working = false; uiTick(true);
+              return;
+            }
+          } else {
+            const det = e && (e.name + ' | ' + e.message + ' | ' + String(e.stack || '').split('\n')[1] || '') || String(e);
+            console.error(`part ${idx + 1} GAGAL: ${det}`);
+            if (!state.abort) { abortErr = e; state.abort = true; }
+            slot.working = false; uiTick(true);
+            return;
+          }
         }
         slot.working = false; uiTick(true);
       }
     };
     const runners = [];
     for (let k = 0; k < par; k++) runners.push(launch());
-    /* pantau progres selagi worker jalan */
+    /* pantau progres selagi worker jalan
+       v2.5: + WATCHDOG GLOBAL — bila TIDAK ADA kemajuan apa pun dari semua
+       worker selama 45 dtk, hentikan dengan pesan jelas (bukan macam) */
     await new Promise(res => {
+      let lastSig = '', lastSigAt = Date.now();
       const iv = setInterval(() => {
         uiTick(false);
-        if (state.abort || results.every(r => r)) { clearInterval(iv); res(); }
+        if (state.abort || results.every(r => r)) { clearInterval(iv); res(); return; }
+        const sig = slots.map(s => `${s.fr}:${s.working ? 1 : 0}:${s.stage || ''}:${Math.round((s.saveProg || 0) * 100)}`).join('|');
+        const now = Date.now();
+        if (sig !== lastSig) { lastSig = sig; lastSigAt = now; }
+        else if (now - lastSigAt > 45000) {
+          clearInterval(iv);
+          if (!state.abort) {
+            abortErr = new Error('Render berhenti merespons 45 detik — dihentikan otomatis. Coba set PARALEL 1× atau kualitas lebih rendah lalu ulangi.');
+            state.abort = true;
+          }
+          res();
+        }
       }, 150);
     });
-    await Promise.all(runners);
+    await Promise.all(runners).catch(() => { });
     if (abortErr) throw abortErr;
     if (state.abort && !results.every(r => r)) {
       const made = results.filter(Boolean);

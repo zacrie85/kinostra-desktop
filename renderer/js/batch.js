@@ -217,8 +217,8 @@ async function runBatch() {
 
         /* --- render semua part (paralel via mesin TURBO) --- */
         const results = await exportPartsToDir(dir, {
-          title(seg, segs) {
-            showModal({ title: `BATCH ${it.name.slice(0, 26)} · PART ${String(seg.i + 1).padStart(2, '0')}/${String(segs.length).padStart(2, '0')}`,
+          title(segs) {
+            showModal({ title: `BATCH ${it.name.slice(0, 26)} · ${segs.length} PART`,
               sub: 'Rendering lokal — bisa dibatalkan', cancel: true, onCancel() { state.abort = true; } });
           },
           prog: p => setProg(p),

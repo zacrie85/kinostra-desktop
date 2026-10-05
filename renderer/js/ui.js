@@ -133,6 +133,14 @@ $('#subsOn').onchange = e => { state.subsOn = e.target.checked; };
   } catch (e) { }
 })();
 $('#subSize').oninput = e => { state.subScale = parseFloat(e.target.value); $('#subSizeV').textContent = state.subScale.toFixed(2) + '×'; };
+/* v2.5: geser posisi subtitel atas/bawah */
+function syncSubPosY() {
+  const p = Math.round(clamp(state.subPosY, 0.45, 0.97) * 100);
+  const hint = p <= 62 ? 'TENGAH LAYAR' : p <= 80 ? 'AGAK BAWAH' : p <= 89 ? 'RENDAH' : 'BAWAH';
+  $('#subPosYV').textContent = p + '% · ' + hint;
+}
+$('#subPosY').oninput = e => { state.subPosY = clamp(parseFloat(e.target.value) || 0.9, 0.45, 0.97); syncSubPosY(); };
+syncSubPosY();
 $('#btnGen').onclick = generateSubs;
 $('#btnSrt').onclick = async () => {
   if (!state.subs.length) { toast('Belum ada subtitel', 'err'); return; }

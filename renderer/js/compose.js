@@ -204,7 +204,11 @@ function drawComposition(x, W, H, t) {
       const fs = Math.round(38 * u * state.subScale);
       x.font = `600 ${fs}px "${F}"`;
       const lines = wrapLines(x, sub.text, W * 0.62).slice(0, 3);
-      const lh = fs * 1.3, baseY = H * 0.9 - (lines.length - 1) * lh;
+      /* v2.5: POSISI SUBTITEL BISA DIGESER — state.subPosY 0.45 (tengah)
+         sampai 0.97 (bawah). Default 0.90 = posisi lama. Digeser ke atas
+         agar tidak berdempetan dengan label PART / deskripsi. */
+      const posY = clamp(state.subPosY == null ? 0.9 : state.subPosY, 0.08, 0.97);
+      const lh = fs * 1.3, baseY = posY * H - (lines.length - 1) * lh;
       x.textAlign = 'center'; x.lineJoin = 'round'; x.strokeStyle = 'rgba(0,0,0,.88)'; x.lineWidth = 7 * u;
       lines.forEach((ln, i) => { x.strokeText(ln, W / 2, baseY + i * lh); x.fillStyle = '#F5F3ED'; x.fillText(ln, W / 2, baseY + i * lh); });
       x.restore();

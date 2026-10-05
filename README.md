@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.2.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.5.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -19,7 +19,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 |---|-------|-----------|
 | 1 | **Media Import** | Drag & drop MP4 / MKV / TS / WEBM / MP3 |
 | 2 | **Auto Split** | Pemecahan otomatis klip 20–60 detik berdasarkan adegan |
-| 3 | **Subtitle AI** | Transkripsi otomatis lokal dengan **Whisper** (OpenAI) — tanpa internet |
+| 3 | **Subtitle AI — VOCALIS v4** ⭐v2.4 | Mesin **whisper.cpp native** fokus **Bahasa Jawa & Indonesia** — teks sesuai yang diucapkan/dinyanyikan, mode lagu/vokal, unduhan model resume, tanpa internet |
 | 4 | **Object Tracking** | Pelacakan objek gaya MotoGP — algoritma NCC + adaptive template |
 | 5 | **Musik Prosedural** | Soundtrack otomatis 4 mood: EPIC · NEON · LO-FI · TENSION |
 | 6 | **10 Font Sinematik** | Koleksi font title & subtitle siap pakai |
@@ -31,14 +31,15 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 12 | **VOICEMATCH AI v2** ⭐v2.2 | Subtitel mengikuti bahasa yang diucapkan (deteksi token bahasa kanonik), lompat bagian hening (proses lebih cepat), filter halusinasi |
 | 13 | **Judul Multi-Baris** ⭐v2.2 | Judul panjang otomatis bersambung ke baris berikutnya — tidak terpotong kiri/kanan |
 | 14 | **Batch Proses** ⭐v2.1 | Antrean render otomatis berurutan dari atas ke bawah Kotak Video |
-| 15 | **Subtitle Translate** | Terjemahan subtitle lokal (opus-mt) + geser waktu ±0.5s + export SRT |
+| 15 | **Posisi Subtitel** ⭐v2.5 | Geser posisi subtitel ke atas/bawah lewat slider — tidak lagi berdempetan dengan tulisan PART |
+| 16 | **Ekspor Anti-Macet** ⭐v2.5 | Watchdog 3 lapis + timeout flush/simpan + **ulang otomatis dengan encoder software** saat encoder GPU berhenti — ekspor tidak lagi macet di bagian akhir |
 
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
 
 - Semua pemrosesan (video, audio, AI) berjalan **lokal di komputer kamu**.
-- Whisper model (~40MB) hanya diunduh **sekali** saat pemakaian pertama, setelah itu permanen offline (`%APPDATA%/KINOSTRA/models`).
+- Model VOCALIS (31–547 MB) hanya diunduh **sekali** saat pemakaian pertama (unduhan bisa lanjut bila terputus), setelah itu **permanen offline** (`%APPDATA%/KINOSTRA/whisper`).
 - Tidak ada data yang dikirim ke server manapun.
 
 ## 📥 Install
@@ -47,8 +48,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-2.2.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-2.2.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-2.5.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-2.5.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 
@@ -98,5 +99,5 @@ MIT — bebas dipakai, dimodifikasi, dan didistribusikan.
 ---
 
 <div align="center">
-<sub>KINOSTRA v2.1.0 · Dibangun dengan ⚡ oleh KINOSTRA</sub>
+<sub>KINOSTRA v2.5.0 · Dibangun dengan ⚡ oleh KINOSTRA</sub>
 </div>
