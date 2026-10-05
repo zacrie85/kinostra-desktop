@@ -27,6 +27,18 @@ contextBridge.exposeInMainWorld('kinostra', {
     ipcRenderer.on('models:progress', (e, info) => cb(info));
   },
 
+  /* v2.4: mesin subtitel native (whisper.cpp) */
+  whisperStatus: () => ipcRenderer.invoke('whisper:status'),
+  whisperEnsure: (engine) => ipcRenderer.invoke('whisper:ensure', { engine }),
+  whisperTranscribe: (payload) => ipcRenderer.invoke('whisper:transcribe', payload),
+  whisperCancel: () => ipcRenderer.invoke('whisper:cancel'),
+  onWhisperProgress: (cb) => {
+    ipcRenderer.on('whisper:progress', (e, info) => cb(info));
+  },
+
+  /* v2.4: info sistem (RAM asli) */
+  sysInfo: () => ipcRenderer.invoke('sys:info'),
+
   /* shell */
   showInFolder: (p) => ipcRenderer.invoke('shell:showInFolder', p),
   openPath: (p) => ipcRenderer.invoke('shell:openPath', p),

@@ -23,6 +23,7 @@ protocol.registerSchemesAsPrivileged([
 let win = null;
 
 function createWindow() {
+  console.log('MAIN-CREATEWINDOW v' + app.getVersion());
   win = new BrowserWindow({
     width: 1560,
     height: 940,
@@ -768,6 +769,278 @@ ipcMain.handle('models:openFolder', async () => {
 });
 
 /* ================================================================
+   MESIN SUBTITEL NATIVE — whisper.cpp v1.9.4 (v2.4)
+   ================================================================
+   Menggantikan TOTAL mesin VOCALIS v3 (transformers.js WASM di
+   renderer) yang rapuh: sering OOM / gagal unduh model 724MB.
+   Sekarang: proses native terpisah (whisper-cli) —
+   1. Binari whisper-cli.exe DIBUNDEL dalam aplikasi (MIT License)
+      + runtime VC++ app-local → tanpa unduh runtime.
+   2. Model ggml diunduh SEKALI (31/181/547 MB — dengan RESUME,
+      tidak lagi mulai dari nol saat koneksi gagal).
+   3. Bahasa JAWA (jw) & INDONESIA (id) saja: probe ganda pendek +
+      skor leksikon (auto-detect bawaan whisper terbukti salah
+      untuk pasangan jw/id — selalu menebak bahasa lain).
+   4. Filter hallusinasi: split baris -ml 42 -sow, tanpa konteks
+      (-mc 0), baris non-Latin (aksara asing) dibuang.
+   100% LOKAL setelah model terunduh. */
+
+const os = require('os');
+const { spawn } = require('child_process');
+
+const GGML_HOST = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/';
+const WHISPER_MODELS_DIR = path.join(app.getPath('userData'), 'whisper');
+const WHISPER_TMP_DIR = path.join(WHISPER_MODELS_DIR, 'tmp');
+
+const WHISPER_MODELS = {
+  turbo: { file: 'ggml-large-v3-turbo-q5_0.bin', sizeMB: 547, label: 'TURBO' },
+  small: { file: 'ggml-small-q5_1.bin', sizeMB: 181, label: 'SEDANG' },
+  tiny: { file: 'ggml-tiny-q5_1.bin', sizeMB: 32, label: 'RINGAN' }
+};
+
+function whisperBinPath() {
+  if (process.env.KINOSTRA_WHISPER_BIN) return process.env.KINOSTRA_WHISPER_BIN;
+  const exe = process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli';
+  /* app.getAppPath(): dev = folder proyek; packaged = <resources>/app */
+  return path.join(app.getAppPath(), 'bin', 'whisper', exe);
+}
+
+const wSleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- unduh model ggml dengan RESUME (HTTP Range) ---------- */
+async function downloadWhisperModel(file, emit) {
+  const dest = path.join(WHISPER_MODELS_DIR, file);
+  if (fs.existsSync(dest) && fs.statSync(dest).size > 0) {
+    return { cached: true, size: fs.statSync(dest).size };
+  }
+  await fsp.mkdir(WHISPER_MODELS_DIR, { recursive: true });
+  const url = GGML_HOST + file;
+  const tmp = dest + '.part';
+  let lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let offset = 0;
+    try { offset = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0; } catch (_) { offset = 0; }
+    try {
+      const headers = {};
+      if (offset > 0) headers.Range = `bytes=${offset}-`;
+      const res = await fetch(url, { headers, redirect: 'follow' });
+      if (res.status !== 200 && res.status !== 206) throw new Error('HTTP ' + res.status);
+      const total = res.status === 206 ? offset + Number(res.headers.get('content-length') || 0)
+        : Number(res.headers.get('content-length') || 0);
+      let loaded = res.status === 206 ? offset : 0;
+      const ws = fs.createWriteStream(tmp, { flags: res.status === 206 ? 'a' : 'w' });
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        loaded += value.byteLength;
+        ws.write(Buffer.from(value));
+        if (total) emit({ phase: 'model', file, loaded, total, pct: loaded / total });
+      }
+      await new Promise((r, j) => { ws.end(() => r()); ws.on('error', j); });
+      fs.renameSync(tmp, dest);
+      return { cached: false, size: loaded };
+    } catch (err) {
+      lastErr = err;
+      try { if (fs.existsSync(tmp) && fs.statSync(tmp).size < 1024) fs.unlinkSync(tmp); } catch (_) { }
+      await wSleep(700 * (attempt + 1));   /* jeda lalu lanjut dari posisi terakhir */
+    }
+  }
+  throw new Error(`Gagal unduh ${file}: ${lastErr && lastErr.message || 'tidak dikenal'} (berhasil dilanjutkan dari ${Math.round((fs.existsSync(tmp) ? fs.statSync(tmp).size : 0) / 1048576)} MB)`);
+}
+
+/* ---------- leksikon pembeda Jawa / Indonesia (untuk probe ganda) ---------- */
+const W_ID_HINTS = ['yang', 'dan', 'di', 'ini', 'itu', 'dengan', 'untuk', 'tidak', 'saya', 'kami', 'kita',
+  'adalah', 'akan', 'sudah', 'dari', 'pada', 'bisa', 'karena', 'juga', 'para', 'orang', 'ke', 'dalam',
+  'ada', 'apa', 'saat', 'oleh', 'agar', 'banyak', 'sekali', 'belum', 'kalau', 'memang', 'begini',
+  'semuanya', 'selamat', 'malam', 'pagi', 'datang', 'kembali', 'video', 'hari', 'belajar',
+  'memotong', 'beberapa', 'bagian', 'cepat', 'mudah', 'jangan', 'lupa', 'tekan', 'tombol', 'suka',
+  'langganan', 'gratis', 'channel'];
+const W_JV_HINTS = ['aku', 'awak', 'dhewe', 'iku', 'iki', 'kowe', 'arep', 'ora', 'nggih', 'ingkang',
+  'menika', 'meniko', 'mawon', 'saged', 'badhe', 'dados', 'kangge', 'inggih', 'panjenengan', 'sami',
+  'wonten', 'punika', 'puniko', 'sinau', 'enggal', 'gampil', 'aja', 'lali', 'seneng', 'sugeng',
+  'rawuh', 'kumbali', 'kanthi', 'dinten', 'kepengin', 'lakoni', 'nggeh', 'tembang', 'kusumaning',
+  'motong', 'vidio', 'sapanunggalane', 'dumadi', 'mesthine', 'kedah', 'boten', 'aja', 'saking'];
+function wScoreLex(text, hints) {
+  const w = (text || '').toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  if (!w.length) return 0;
+  let h = 0;
+  for (const x of w) {
+    /* cocokkan persis ATAU prefiks 4 huruf — tahan distorsi ejaan model kecil
+       (wontun~wonten, kanti~kanthi, engal~enggal, punika~punako dst) */
+    for (const hint of hints) {
+      if (x === hint ||
+        (hint.length >= 4 && x.length >= 4 &&
+          (x.startsWith(hint.slice(0, 4)) || hint.startsWith(x.slice(0, 4))))) { h++; break; }
+    }
+  }
+  return h / w.length;
+}
+
+/* ---------- spawn whisper-cli dengan pembatalan & progres ---------- */
+const whisperChildren = new Set();
+function runWhisper(args, emit, onStderr) {
+  return new Promise((resolve, reject) => {
+    const bin = whisperBinPath();
+    let child;
+    try { child = spawn(bin, args, { windowsHide: true }); } catch (err) {
+      return reject(new Error('Mesin subtitel tidak bisa dijalankan: ' + err.message));
+    }
+    whisperChildren.add(child);
+    let stderr = '';
+    let killed = false;
+    child.on('error', err => { whisperChildren.delete(child); reject(new Error('Binari mesin tidak ditemukan: ' + err.message)); });
+    child.stderr.on('data', d => {
+      const s = d.toString();
+      stderr = (stderr + s).slice(-4000);
+      if (onStderr) onStderr(s);
+      const m = /progress\s*=\s*(\d+)/g;
+      let mm; let last = -1;
+      while ((mm = m.exec(s))) last = parseInt(mm[1], 10);
+      if (last >= 0 && emit) emit({ phase: 'transcribe', pct: last / 100 });
+    });
+    child.on('close', code => {
+      whisperChildren.delete(child);
+      if (killed) return reject(new Error('Dibatalkan'));
+      if (code === 0) return resolve();
+      if (code === -1073741515 || code === 0xC0000135) {
+        return reject(new Error('Komponen runtime sistem (VC++) tidak ada. Pasang Microsoft Visual C++ Redistributable x64 lalu buka lagi KINOSTRA.'));
+      }
+      reject(new Error(`Mesin subtitel keluar dengan kode ${code}. ${stderr.split('\n').filter(l => l.trim()).slice(-3).join(' | ')}`));
+    });
+    child._kill = () => { killed = true; try { child.kill('SIGKILL'); } catch (_) { } };
+  });
+}
+
+function whisperThreads() {
+  const c = os.cpus().length || 4;
+  return Math.max(2, Math.min(8, Math.round(c / 2)));
+}
+
+/* ---------- IPC: status mesin ---------- */
+ipcMain.handle('whisper:status', async () => {
+  const models = {};
+  for (const [k, m] of Object.entries(WHISPER_MODELS)) {
+    const p = path.join(WHISPER_MODELS_DIR, m.file);
+    const part = p + '.part';
+    models[k] = {
+      file: m.file, label: m.label, sizeMB: m.sizeMB,
+      ready: fs.existsSync(p) && fs.statSync(p).size > 0,
+      sizeOnDiskMB: fs.existsSync(p) ? +(fs.statSync(p).size / 1048576).toFixed(1) : 0,
+      partialMB: fs.existsSync(part) ? +(fs.statSync(part).size / 1048576).toFixed(1) : 0
+    };
+  }
+  return {
+    binOk: fs.existsSync(whisperBinPath()),
+    binPath: whisperBinPath(),
+    modelsDir: WHISPER_MODELS_DIR,
+    tmpDir: WHISPER_TMP_DIR,
+    models
+  };
+});
+
+/* ---------- IPC: unduh model (sekali, dengan resume) ---------- */
+ipcMain.handle('whisper:ensure', async (e, payload) => {
+  const engine = (payload && payload.engine) || 'small';
+  const m = WHISPER_MODELS[engine] || WHISPER_MODELS.small;
+  const emit = info => { if (win && !win.isDestroyed()) win.webContents.send('whisper:progress', info); };
+  try {
+    await fsp.mkdir(WHISPER_TMP_DIR, { recursive: true });
+    /* rapikan file sementara lama (WAV/probe/JSON dari sesi sebelumnya) */
+    try {
+      for (const f of await fsp.readdir(WHISPER_TMP_DIR)) {
+        const fp = path.join(WHISPER_TMP_DIR, f);
+        if (fs.statSync(fp).isFile()) { try { fs.unlinkSync(fp); } catch (_) { } }
+      }
+    } catch (_) { }
+    const r = await downloadWhisperModel(m.file, emit);
+    return { ok: true, ...r, file: m.file };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+/* ---------- IPC: transkrip lengkap ---------- */
+ipcMain.handle('whisper:transcribe', async (e, payload) => {
+  const { wavPath, probePath, engine = 'small', lang = 'auto', song = false } = payload || {};
+  const emit = info => { if (win && !win.isDestroyed()) win.webContents.send('whisper:progress', info); };
+  try {
+    const m = WHISPER_MODELS[engine] || WHISPER_MODELS.small;
+    const modelPath = path.join(WHISPER_MODELS_DIR, m.file);
+    if (!fs.existsSync(modelPath)) throw new Error('Model belum terunduh — klik BUAT SUBTITEL lagi untuk melanjutkan unduhan');
+    if (!fs.existsSync(wavPath)) throw new Error('File audio 16 kHz tidak ditemukan');
+    await fsp.mkdir(WHISPER_TMP_DIR, { recursive: true });
+    const threads = whisperThreads();
+
+    const transcribeOnce = async (wav, langCode, outBase) => {
+      const args = ['-m', modelPath, '-f', wav, '-l', langCode,
+        '-ojf', '-of', outBase, '-pp', '-np',
+        '-t', String(threads), '-ml', '42', '-sow', '-mc', '0'];
+      if (song) args.push('-nth', '0.35');
+      await runWhisper(args, emit);
+      const jsonPath = outBase + '.json';
+      if (!fs.existsSync(jsonPath)) throw new Error('Mesin tidak menghasilkan keluaran JSON');
+      const raw = fs.readFileSync(jsonPath, 'utf8');   /* byte invalid → U+FFFD otomatis */
+      let d; try { d = JSON.parse(raw); } catch (err) { throw new Error('Keluaran JSON rusak: ' + err.message); }
+      try { fs.unlinkSync(jsonPath); } catch (_) { }
+      const segs = (d.transcription || []).map(t => ({
+        s: t.offsets.from / 1000, e: t.offsets.to / 1000,
+        text: (t.text || '').replace(/\[.*?\]|\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim()
+      })).filter(t => t.text && t.e > t.s);
+      return { language: (d.result && d.result.language) || langCode, segments: segs };
+    };
+
+    /* --- LANGKAH 1: bahasa — probe ganda Jawa vs Indonesia + leksikon ---
+       auto-detect bawaan whisper tidak andal untuk jw/id (uji: menebak en),
+       jadi 10 detik awal ditranskrip dua kali (paksa jw, paksa id) lalu
+       dipilih lewat skor kata-kata khas. */
+    let chosen = lang;
+    if (lang === 'auto') {
+      const probe = probePath && fs.existsSync(probePath) ? probePath : wavPath;
+      const baseJ = path.join(WHISPER_TMP_DIR, `probe_jw_${Date.now()}`);
+      const baseI = path.join(WHISPER_TMP_DIR, `probe_id_${Date.now()}`);
+      emit({ phase: 'detect' });
+      let textJ = '', textI = '';
+      try { textJ = (await transcribeOnce(probe, 'jw', baseJ)).segments.map(s => s.text).join(' '); } catch (_) { }
+      try { textI = (await transcribeOnce(probe, 'id', baseI)).segments.map(s => s.text).join(' '); } catch (_) { }
+      const sJ = Math.max(wScoreLex(textJ, W_JV_HINTS), wScoreLex(textI, W_JV_HINTS));
+      const sI = Math.max(wScoreLex(textI, W_ID_HINTS), wScoreLex(textJ, W_ID_HINTS));
+      chosen = sJ > sI + 0.02 ? 'jw' : 'id';
+      emit({ phase: 'detected', language: chosen, scoreJv: sJ, scoreId: sI });
+    }
+
+    /* --- LANGKAH 2: transkrip penuh --- */
+    const outBase = path.join(WHISPER_TMP_DIR, `tr_${Date.now()}`);
+    const r = await transcribeOnce(wavPath, chosen, outBase);
+    /* rapikan WAV sementara setelah selesai */
+    try { fs.unlinkSync(wavPath); } catch (_) { }
+    try { if (probePath !== wavPath) fs.unlinkSync(probePath); } catch (_) { }
+    return { ok: true, language: r.language, chosen, segments: r.segments };
+  } catch (err) {
+    try { if (wavPath) fs.unlinkSync(wavPath); } catch (_) { }
+    try { if (probePath && probePath !== wavPath) fs.unlinkSync(probePath); } catch (_) { }
+    return { ok: false, error: err.message };
+  }
+});
+
+/* ---------- IPC: batalkan transkrip ---------- */
+ipcMain.handle('whisper:cancel', async () => {
+  for (const c of whisperChildren) { try { c._kill(); } catch (_) { } }
+  whisperChildren.clear();
+  return true;
+});
+
+/* ---------- IPC: info sistem (RAM asli untuk pilih mesin) ---------- */
+ipcMain.handle('sys:info', async () => {
+  return {
+    platform: process.platform,
+    ramGB: +(os.totalmem() / 1073741824).toFixed(1),
+    ramFreeGB: +(os.freemem() / 1073741824).toFixed(1),
+    cpus: os.cpus().length
+  };
+});
+
+/* ================================================================
    DIALOG FILE & PENYIMPANAN
    ================================================================ */
 ipcMain.handle('dialog:openMedia', async () => {
@@ -899,6 +1172,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    console.log('MAIN-READY');
     protocol.handle('app', handleAppScheme);
     protocol.handle('kmodels', handleModelsScheme);
     protocol.handle('kfile', handleKFileScheme);

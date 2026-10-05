@@ -1,118 +1,65 @@
 /* ================================================================
-   KINOSTRA DESKTOP — subs.js (v2.3 · MESIN VOCALIS v3)
+   KINOSTRA DESKTOP — subs.js (v2.4 · MESIN VOCALIS v4 NATIVE)
    ================================================================
    AI SUBTITEL BARU — FOKUS BAHASA JAWA & BAHASA INDONESIA SAJA.
 
-   VOCALIS v3 menggantikan total mesin VOICEMATCH lama:
-   1. Model baru whisper-large-v3-turbo (quant Q4) — model open-source
-      TERBAIK untuk Bahasa Jawa & Bahasa Indonesia, jauh lebih akurat
-      daripada whisper tiny/base lama, termasuk untuk VOKAL/NYANYIAN.
-   2. Bahasa DIPAKSA konsisten: OTOMATIS (deteksi Jawa/Indonesia),
-      JAWA, atau INDONESIA — teks selalu ditulis DALAM BAHASA YANG
-      DIUCAPKAN di video (Jawa tetap Jawa, Indonesia tetap Indonesia).
-      Tidak ada lagi terjemahan yang mengubah isi ucapan.
-   3. Mode LAGU/VOKAL: VAD disetel lebih peka agar bagian yang
-      DINYANYIKAN (sering lebih pelan dari musik) ikut ditranskrip.
-   4. Multithread ONNX WASM (cross-origin isolated) — 3-6x lebih cepat.
-   5. Filter halusinasi & anti-pengulangan tetap aktif.
+   VOCALIS v4 menggantikan TOTAL mesin v3 (transformers.js WASM)
+   yang sering gagal (kehabisan memori renderer / unduhan putus).
+   Sekarang memakai mesin native whisper.cpp sebagai proses
+   terpisah di luar browser:
+   1. TANPA BATAS MEMORI BROWSER — proses native, stabil di semua
+      mesin (4GB pun aman). Tidak ada lagi WebGPU/WASM crash.
+   2. UNDUHAN DENGAN RESUME — model ggml (31/181/547 MB) lanjut
+      dari posisi terakhir bila koneksi terputus. Tidak mulai
+      dari nol lagi → tidak ada lagi "gagal terus".
+   3. BINARI DIBUNDEL — whisper-cli + DLL di dalam aplikasi,
+      tanpa unduhan runtime tambahan.
+   4. BAHASA JAWA & INDONESIA SAJA: probe ganda pendek (paksa Jawa
+      vs paksa Indonesia) + skor leksikon kata khas — deteksi
+      bawaan whisper terbukti keliru untuk pasangan jw/id.
+   5. Teks selalu DALAM BAHASA YANG DIUCAPKAN/DINYANYIKAN — tanpa
+      terjemahan. Jawa tetap Jawa, Indonesia tetap Indonesia.
+   6. MODE LAGU/VOKAL: ambang no-speech diturunkan agar vokal di
+      balik musik tetap ditranskrip.
+   7. FILTER HALLUSINASI: baris non-Latin (aksara asing) dibuang,
+      anti-pengulangan, dedupe.
    100% LOKAL — model diunduh sekali ke AppData, lalu offline permanen.
    ================================================================ */
 'use strict';
 
-/* ---------- KATALOG MESIN VOCALIS (unduh sekali ke AppData) ---------- */
+/* ---------- KATALOG MESIN VOCALIS v4 (ggml, unduh sekali) ---------- */
 const VOCALIS_ENGINES = {
-  turbo: { model: 'onnx-community/whisper-large-v3-turbo', dtype: 'q4' },
-  small: { model: 'Xenova/whisper-small', dtype: 'q8' },
-  base: { model: 'Xenova/whisper-base', dtype: 'q8' }
+  turbo: { engine: 'turbo', label: 'TURBO', sizeMB: 547 },
+  small: { engine: 'small', label: 'SEDANG', sizeMB: 181 },
+  tiny: { engine: 'tiny', label: 'RINGAN', sizeMB: 32 }
 };
 
-const MODEL_FILES = {
-  'onnx-community/whisper-large-v3-turbo': {
-    required: ['config.json', 'generation_config.json', 'preprocessor_config.json', 'tokenizer.json',
-      'onnx/encoder_model_q4.onnx', 'onnx/decoder_model_merged_q4.onnx'],
-    optional: ['tokenizer_config.json', 'special_tokens_map.json', 'added_tokens.json',
-      'merges.txt', 'vocab.json', 'normalizer.json', 'quantize_config.json']
-  },
-  'Xenova/whisper-small': {
-    required: ['config.json', 'preprocessor_config.json', 'tokenizer.json',
-      'onnx/encoder_model_quantized.onnx', 'onnx/decoder_model_merged_quantized.onnx'],
-    optional: ['generation_config.json', 'tokenizer_config.json', 'special_tokens_map.json',
-      'added_tokens.json', 'merges.txt', 'vocab.json', 'quantize_config.json']
-  },
-  'Xenova/whisper-base': {
-    required: ['config.json', 'preprocessor_config.json', 'tokenizer.json',
-      'onnx/encoder_model_quantized.onnx', 'onnx/decoder_model_merged_quantized.onnx'],
-    optional: ['generation_config.json', 'tokenizer_config.json', 'special_tokens_map.json',
-      'added_tokens.json', 'merges.txt', 'vocab.json', 'quantize_config.json']
-  }
-};
+let _whisperTmpDir = null;
+let _whisperBusy = false;
 
-let _asr = null, _asrKey = '';
-
-function xfLib() {
-  if (!window.transformers) throw new Error('Library transformers.js tidak termuat');
-  const env = window.transformers.env;
-  env.allowLocalModels = true;
-  env.useBrowserCache = false;           // cache bawaan browser dimatikan — pakai disk
-  env.localModelPath = 'kmodels://';     // dibaca dari AppData via protokol lokal
-  env.allowRemoteModels = false;         // 100% offline: semua file sudah diunduh ke disk
-  if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
-    // runtime WASM onnxruntime juga lokal (folder vendor/ort)
-    env.backends.onnx.wasm.wasmPaths = 'app://localhost/vendor/ort/';
-    /* v2.3: SINGLE-THREAD — hasil uji penuh: thread ganda pada sesi model besar
-       (small/turbo) memicu lonjakan memori WASM sampai OOM. Mode 1 thread
-       stabil untuk semua mesin & varian opsi (terverifikasi matriks uji). */
-    env.backends.onnx.wasm.numThreads = 1;
-  }
-  return window.transformers;
+async function whisperTmpDir() {
+  if (_whisperTmpDir) return _whisperTmpDir;
+  const st = await window.kinostra.whisperStatus();
+  if (!st.binOk) throw new Error('Binari mesin subtitel tidak ditemukan di folder aplikasi');
+  _whisperTmpDir = st.tmpDir;
+  return _whisperTmpDir;
 }
 
-/* pastikan semua file model ada di disk (unduh yang kurang, sekali saja) */
-async function ensureModel(modelId, onInfo) {
-  const man = MODEL_FILES[modelId];
-  if (!man) throw new Error('Model tidak dikenal: ' + modelId);
-  onInfo && onInfo(`Memeriksa model ${modelId.split('/')[1]}…`);
-  const r = await window.kinostra.ensureModel(modelId, man);
-  if (!r.ok) throw new Error(r.error || 'Gagal mengunduh model');
-  return r;
-}
-
-async function getASR(engineKey, pc) {
-  const eng = VOCALIS_ENGINES[engineKey] || VOCALIS_ENGINES.turbo;
-  const key = eng.model + '|' + eng.dtype;
-  if (_asr && _asrKey === key) return _asr;
-  /* v2.3 WAJIB dispose: tanpa ini, sesi ort lama menahan pthread-pool & memori
-     WASM → memuat mesin lain bisa memunculkan memori sampai OOM (terbukti uji). */
-  if (_asr) {
-    try { await _asr.dispose(); } catch (e) { }
-    _asr = null; _asrKey = '';
-    await sleep(150);
-  }
-  const lib = xfLib();
-  _asr = await lib.pipeline('automatic-speech-recognition', eng.model, {
-    dtype: eng.dtype, progress_callback: pc
-  });
-  _asrKey = key; return _asr;
-}
-
+/* ---------- EKSTRAK AUDIO 16 kHz MONO ---------- */
 async function getMono16k() {
   if (!state.audioBuffer) await decodeFileAudio();
   if (!state.audioBuffer) throw new Error('Audio tidak terbaca');
-  const sr = 16000, len = Math.ceil(state.duration * sr);
+  const sr = 16000, len = Math.ceil((state.duration || state.audioBuffer.duration) * sr);
   const oc = new OfflineAudioContext(1, len, sr);
   const s = oc.createBufferSource(); s.buffer = state.audioBuffer; s.connect(oc.destination); s.start(0);
   return (await oc.startRendering()).getChannelData(0);
 }
 
-/* ================================================================
-   VOCALIS v3 — PENERJEMAH VOKAL JAWA · INDONESIA
-   ================================================================ */
-
-/* ---------- 1) VAD: temukan bagian yang berbicara / bernyanyi ----------
-   singMode=true → ambang lebih rendah, jeda antar frasa dijembatani
-   lebih panjang, dan bagian pelan (vokal di balik musik) tetap diambil. */
+/* ---------- VAD ringan: cari bagian berbicara/bernyanyi ----------
+   dipakai untuk memilih potongan PROBE bahasa (3-12 dtk pertama
+   yang benar-benar berisi vokal). */
 function speechWindows(pcm, sr = 16000, singMode = false) {
-  const win = Math.round(sr * 0.25);            // jendela 250 ms
+  const win = Math.round(sr * 0.25);
   const n = Math.max(1, Math.floor(pcm.length / win));
   const en = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -124,87 +71,81 @@ function speechWindows(pcm, sr = 16000, singMode = false) {
   const sorted = Float32Array.from(en).sort();
   const hi = sorted[Math.min(n - 1, Math.floor(n * 0.92))] || 0;
   const med = sorted[Math.min(n - 1, Math.floor(n * 0.55))] || 0;
-  const thr = singMode
-    ? Math.max(0.003, Math.min(0.045, Math.max(med * 0.32, hi * 0.028)))
-    : Math.max(0.006, Math.min(0.06, Math.max(med * 0.6, hi * 0.055)));
-  const pad = singMode ? 2 : 1;
-  const gapBridge = singMode ? 1.3 : 0.75;      // detik
-  const minRun = singMode ? 0.4 : 0.5;          // detik
-  /* tandai aktif + pad ke tiap sisi */
+  const thr = Math.max(0.004, Math.min(0.05, Math.max(med * 0.45, hi * 0.04)));
   const act = new Uint8Array(n);
-  for (let i = 0; i < n; i++) {
-    if (en[i] > thr) {
-      for (let k = -pad; k <= pad; k++) act[clamp(i + k, 0, n - 1)] = 1;
-    }
-  }
-  /* gabung run, bridge gap, buang run terlalu pendek */
+  for (let i = 0; i < n; i++) if (en[i] > thr) act[i] = 1;
   const runs = [];
   let s = -1;
   for (let i = 0; i < n; i++) {
     if (act[i] && s < 0) s = i;
-    if ((!act[i] || i === n - 1) && s >= 0) {
-      const e = act[i] ? i + 1 : i;
-      runs.push([s, e]); s = -1;
-    }
+    if ((!act[i] || i === n - 1) && s >= 0) { const e = act[i] ? i + 1 : i; runs.push([s, e]); s = -1; }
   }
   const merged = [];
   for (const r of runs) {
-    if (merged.length && (r[0] - merged[merged.length - 1][1]) * 0.25 < gapBridge) merged[merged.length - 1][1] = r[1];
+    if (merged.length && (r[0] - merged[merged.length - 1][1]) * 0.25 < 1.0) merged[merged.length - 1][1] = r[1];
     else merged.push(r);
   }
   const out = [];
   for (const [a, b] of merged) {
     const dur = (b - a) * 0.25;
-    if (dur < minRun) continue;
+    if (dur < 0.5) continue;
     out.push({ s: a * 0.25, e: Math.min(state.duration || b * 0.25, b * 0.25) });
   }
   return out;
 }
 
-/* ---------- 2) LEKSIKON JAWA / INDONESIA (pembeda bahasa) ---------- */
-const ID_HINTS = ['yang', 'dan', 'di', 'ini', 'itu', 'dengan', 'untuk', 'tidak', 'saya', 'kami', 'kita',
-  'adalah', 'akan', 'sudah', 'dari', 'pada', 'bisa', 'karena', 'juga', 'para', 'orang', 'ke', 'dalam',
-  'ada', 'apa', 'saat', 'oleh', 'agar', 'banyak', 'sekali', 'belum', 'kalau', 'memang', 'begini',
-  'semuanya', 'selamat', 'malam', 'pagi', 'datang', 'kembali', 'video', 'hari', 'ini', 'belajar',
-  'memotong', 'beberapa', 'bagian', 'cepat', 'mudah', 'jangan', 'lupa', 'tekan', 'tombol', 'suka',
-  'langganan', 'gratis', 'hari ini', 'channel'];
-const JV_HINTS = ['aku', 'awak', 'dhewe', 'iku', 'iki', 'kowe', 'arep', 'ora', 'nggih', 'ingkang',
-  'menika', 'meniko', 'mawon', 'saged', 'badhe', 'dados', 'kangge', 'inggih', 'panjenengan', 'sami',
-  'wonten', 'punika', 'puniko', 'sinau', 'enggal', 'gampil', 'aja', 'lali', 'seneng', 'sugeng',
-  'rawuh', 'kumbali', 'salebetipun', 'sapérangan', 'kanthi', 'dinten', 'puniko', 'sapanunggalane',
-  'motong', 'vidio', 'kepengin', 'baked', 'nembe', 'укara', 'lakoni', 'nggeh', 'yoo', 'req'];
-function scoreLex(text, hints) {
-  const w = (text || '').toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).filter(Boolean);
-  if (!w.length) return 0;
-  let h = 0;
-  for (const x of w) if (hints.includes(x)) h++;
-  return h / w.length;
+/* ---------- WRITER WAV 16-bit PCM (masukan mesin native) ---------- */
+function encodeWav16(f32, sr = 16000) {
+  const n = f32.length;
+  const buf = new ArrayBuffer(44 + n * 2);
+  const dv = new DataView(buf);
+  const wstr = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+  wstr(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); wstr(8, 'WAVE');
+  wstr(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  wstr(36, 'data'); dv.setUint32(40, n * 2, true);
+  let o = 44;
+  for (let i = 0; i < n; i++, o += 2) {
+    let v = Math.max(-1, Math.min(1, f32[i]));
+    dv.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+  }
+  return new Uint8Array(buf);
 }
 
-/* stub kompatibilitas uji lama (aksara Latin tidak lagi dipetakan bahasa) */
-function detectLang(text) {
-  const s = text || '';
-  if (/[\u4E00-\u9FFF]/.test(s)) return 'chinese';
-  if (/[\u3040-\u30FF]/.test(s)) return 'japanese';
-  if (/[\uAC00-\uD7AF]/.test(s)) return 'korean';
-  return null;
+async function saveWav(bytes, dir, name) {
+  const { id, path: p } = await window.kinostra.beginWrite(dir, name);
+  try {
+    const CHUNK = 8 * 1024 * 1024;
+    for (let off = 0; off < bytes.length; off += CHUNK) {
+      await window.kinostra.writeChunk(id, bytes.subarray(off, Math.min(off + CHUNK, bytes.length)));
+    }
+    await window.kinostra.endWrite(id);
+    return p;
+  } catch (e) {
+    try { await window.kinostra.abortWrite(id); } catch (_) { }
+    throw e;
+  }
 }
 
-/* ---------- 3) FILTER HALLUSINASI ---------- */
+/* ---------- FILTER HALLUSINASI ---------- */
+/* baris yang memuat aksara BUKAN Latin (Sinhala/CJK/Arab dst —
+   pola hallusasi khas whisper di bagian hening/musik) dibuang */
+const LATIN_OK = /[\p{Script=Latin}\p{N}\s.,!?'"“”‘’\-–—:;()…&/+%°]/u;
 function cleanLine(t) {
   t = (t || '').replace(/\s+/g, ' ').trim();
   if (t.replace(/[^\p{L}\p{N}]/gu, '').length < 2) return '';
+  const bad = t.replace(/[\p{Script=Latin}\p{N}\s.,!?'"“”‘’\-–—:;()…&/+%°]/gu, '');
+  if (bad.length > Math.max(1, t.replace(/\s/g, '').length * 0.12)) return '';
+  if (!LATIN_OK.test(t[0] || 'a')) return '';
   const w = t.split(' ');
   if (w.length > 6) {
     let rep = 0;
     for (let i = 2; i < w.length; i++) if (w[i].toLowerCase() === w[i - 2].toLowerCase()) rep++;
     if (rep > w.length * 0.45) return '';
   }
-  /* token raksasa = pola berulang tanpa spasi (mis. A.K.A.K.A.K.A…) */
   for (const tok of w) {
     if (tok.replace(/[^\p{L}\p{N}]/gu, '').length > 18) return '';
   }
-  /* paruh baris yang sama persis diulang ("Hello Samoa! Hello Samoa!") */
   if (w.length >= 6) {
     const half = Math.floor(w.length / 2);
     const a = w.slice(0, half).join(' ').toLowerCase(), b = w.slice(half, half * 2).join(' ').toLowerCase();
@@ -222,136 +163,134 @@ function dedupeLines(subs) {
   return out;
 }
 
-/* ---------- PIPELINE UTAMA VOCALIS v3 ---------- */
+/* stub kompatibilitas uji lama */
+function detectLang(text) {
+  const s = text || '';
+  if (/[\u4E00-\u9FFF]/.test(s)) return 'chinese';
+  if (/[\u3040-\u30FF]/.test(s)) return 'japanese';
+  if (/[\uAC00-\uD7AF]/.test(s)) return 'korean';
+  return null;
+}
+
+/* ---------- LISTENER PROGRES GLOBAL (didftar SEKALI, tidak menumpuk) ----------
+   Kejadian dikirim main process: model (unduh), detect/detected (bahasa),
+   transcribe (persen menulis). Modal yang tampil otomatis diperbarui. */
+window.kinostra.onWhisperProgress(info => {
+  if (!info) return;
+  if (info.phase === 'model' && info.total) {
+    const p = info.loaded / info.total;
+    setSub(`Mengunduh model · ${fmtMB(info.loaded)} / ${fmtMB(info.total)} (terputus? lanjut otomatis)`);
+    setProg(clamp(0.01 + p * 0.07, 0, 0.09));
+  } else if (info.phase === 'detect') {
+    setSub('Mendeteksi: Bahasa Jawa atau Bahasa Indonesia…');
+  } else if (info.phase === 'detected') {
+    const lb = info.language === 'jw' ? 'JAWA' : 'INDONESIA';
+    setSub(`Bahasa terdeteksi: ${lb} — mulai menulis…`);
+    const srcLang = $('#asrLang') ? $('#asrLang').value : 'auto';
+    $('#vmLang').textContent = (srcLang === 'auto' ? 'AUTO · ' : '') + lb;
+  } else if (info.phase === 'transcribe') {
+    setSub(`VOCALIS menulis · ${Math.round((info.pct || 0) * 100)}%`);
+    setProg(clamp(0.1 + (info.pct || 0) * 0.88, 0, 0.985));
+  }
+});
+
+/* ================================================================
+   PIPELINE UTAMA VOCALIS v4 (mesin native)
+   ================================================================ */
 async function generateSubs() {
   if (!state.file) { toast('Impor media dulu', 'err'); return; }
-  if (state.busy) return; state.busy = true;
+  if (state.busy || _whisperBusy) return;
+  state.busy = true; _whisperBusy = true; state.abort = false;   /* reset batal lama */
   try {
-    const engineKey = $('#asrModel').value || 'turbo';
-    const eng = VOCALIS_ENGINES[engineKey];
-    const engLabel = engineKey.toUpperCase();
+    const engineKey = $('#asrModel').value || 'small';
+    const eng = VOCALIS_ENGINES[engineKey] || VOCALIS_ENGINES.small;
+    const engLabel = eng.label;
     const singMode = $('#singMode').checked;
     const srcLang = $('#asrLang').value;      // auto | javanese | indonesian
 
-    showModal({ title: 'MESIN VOCALIS v3', sub: 'Menyiapkan model…' });
-    setProg(0.02);
-    /* unduh sekali ke disk (AppData) — dengan progres nyata dari main process */
-    await ensureModel(eng.model, s => setSub(s));
-    setSub('Model siap — memuat mesin…');
+    showModal({ title: 'MESIN VOCALIS v4', sub: 'Menyiapkan mesin native…', cancel: true, onCancel: cancelSubs });
 
-    const files = {};
-    const pc = p => {
-      if (p.status === 'progress' && p.total) {
-        files[p.file] = { l: p.loaded, t: p.total };
-        let L = 0, T = 0; for (const f of Object.values(files)) { L += f.l; T += f.t; }
-        if (T) setSub(`Menyiapkan bobot model · ${fmtMB(L)} / ${fmtMB(T)}`);
-      }
-    };
-    console.log('VOCALIS: memuat pipeline', eng.model, eng.dtype);
-    const asr = await getASR(engineKey, pc);
-    console.log('VOCALIS: pipeline siap');
+    /* --- 1) pastikan model ggml ada di disk (unduh dengan RESUME) --- */
+    const st0 = await window.kinostra.whisperStatus();
+    if (!st0.binOk) throw new Error('Binari mesin tidak ditemukan — instal ulang aplikasi');
+    _whisperTmpDir = st0.tmpDir;
+    if (!st0.models[engineKey] || !st0.models[engineKey].ready) {
+      setSub(`Mengunduh model ${engLabel} (${eng.sizeMB} MB) — sekali saja, dilanjutkan otomatis bila terputus…`);
+      setProg(0.01);
+      const r = await window.kinostra.whisperEnsure(engineKey);
+      if (!r.ok) throw new Error(r.error || 'Gagal mengunduh model');
+    }
+    setProg(0.1);
 
-    setSub('Mengekstrak audio 16 kHz…'); setProg(0.02);
+    /* --- 2) ekstrak audio 16 kHz mono → WAV --- */
+    setSub('Mengekstrak audio 16 kHz…');
     const pcm = await getMono16k();
+    if (!pcm || pcm.length < 1600) throw new Error('Audio kosong / tidak terbaca');
+
+    /* --- 3) potongan PROBE bahasa: 3-12 dtk pertama yang berisi vokal --- */
+    let wins = speechWindows(pcm, 16000, singMode);
     const sr = 16000;
-
-    /* --- LANGKAH 1: peta bagian berbicara / bernyanyi (VAD) --- */
-    setSub(singMode ? 'Memetakan vokal (mode lagu — peka suara pelan)…'
-      : 'Memetakan bagian yang berbicara (lompat hening)…');
-    let wins = speechWindows(pcm, sr, singMode);
-    const totalSpeech = wins.reduce((a, w) => a + (w.e - w.s), 0);
-    const totalDur = state.duration || pcm.length / sr;
-    if (!wins.length) {
-      /* tidak ada ucapan terdeteksi — proses penuh sebagai fallback */
-      wins = [{ s: 0, e: totalDur }];
-      toast('Tidak ada vokal terdeteksi — memproses audio penuh', 'warn');
-    }
-    /* pecah jendela > 26 dtk */
-    const chunks = [];
-    for (const w of wins) {
-      for (let a = w.s; a < w.e - 0.05; a += 26) chunks.push({ s: a, e: Math.min(w.e, a + 26) });
+    let probePcm = null;
+    if (wins.length) {
+      const w = wins[0];
+      const a = Math.floor(w.s * sr);
+      const b = Math.min(pcm.length, Math.floor((w.s + 12) * sr));
+      probePcm = pcm.slice(a, Math.max(b, a + sr * 3));
+    } else {
+      probePcm = pcm.slice(0, Math.min(pcm.length, 12 * sr));
     }
 
-    /* --- LANGKAH 2: tentukan bahasa — JAWA atau INDONESIA saja ---
-       Metode VOCALIS: transkrip ganda pendek (paksa Jawa vs paksa Indonesia)
-       lalu pilih lewat skor kata-kata khas (leksikon). Jauh lebih andal
-       daripada tebak token bahasa — dan 100% lewat jalur pipeline yang aman. */
-    let lang = srcLang !== 'auto' ? srcLang : null;
-    const autoOn = srcLang === 'auto';
-    if (autoOn) {
-      setSub('Mendeteksi: Bahasa Jawa atau Bahasa Indonesia…'); setProg(0.04);
-      const c0 = chunks[0];
-      const a0 = Math.floor(c0.s * sr), b0 = Math.min(pcm.length, Math.floor((c0.s + 10) * sr));
-      const probe = pcm.slice(a0, Math.max(b0, a0 + sr));
-      console.log('VOCALIS: probe', (probe.length / sr).toFixed(1), 'dtk — deteksi ganda');
-      try {
-        /* WAJIB dibatasi: tanpa max_new_tokens, generasi tanpa EOS bisa berjalan
-           sampai max_length 448 token → memori membengkak (OOM). */
-        const o0 = { chunk_length_s: 30, stride_length_s: 5, return_timestamps: false, task: 'transcribe', no_repeat_ngram_size: 5, max_new_tokens: 72 };
-        console.log('VOCALIS: probe jawa…');
-        const tJv = await asr(probe, { ...o0, language: 'javanese' });
-        console.log('VOCALIS: probe indonesia…');
-        const tId = await asr(probe, { ...o0, language: 'indonesian' });
-        console.log('VOCALIS: probe selesai');
-        const sJv = Math.max(scoreLex(tJv.text, JV_HINTS), scoreLex(tId.text, JV_HINTS));
-        const sId = Math.max(scoreLex(tId.text, ID_HINTS), scoreLex(tJv.text, ID_HINTS));
-        console.log('VOCALIS: skor leksikon jawa', sJv.toFixed(3), 'indonesia', sId.toFixed(3));
-        lang = sJv > sId + 0.02 ? 'javanese' : 'indonesian';
-        setSub(`Probe bahasa: Jawa ${(sJv * 100).toFixed(0)}% vs Indonesia ${(sId * 100).toFixed(0)}% → ${lang === 'javanese' ? 'JAWA' : 'INDONESIA'}`);
-      } catch (e) {
-        console.warn('deteksi bahasa gagal', e);
-        lang = 'indonesian';                // default paling umum
-      }
+    /* --- 4) tulis WAV ke folder kerja mesin --- */
+    setSub('Menulis audio sementara…');
+    const tmp = await whisperTmpDir();
+    const wavPath = await saveWav(encodeWav16(pcm, sr), tmp, 'kinestra_full.wav');
+    let probePath = wavPath;
+    if (srcLang === 'auto' && probePcm && probePcm.length > sr) {
+      try { probePath = await saveWav(encodeWav16(probePcm, sr), tmp, 'kinestra_probe.wav'); } catch (_) { }
     }
-    const langLabel = lang === 'javanese' ? 'JAWA' : 'INDONESIA';
-    $('#vmLang').textContent = autoOn ? `AUTO · ${langLabel}` : langLabel;
-    setSub(`Bahasa ${langLabel} · menulis ${chunks.length} potongan vokal…`);
-    setProg(0.08);
-    console.log('VOCALIS: bahasa', langLabel, '· chunks', chunks.length, '· sing', singMode);
 
-    /* --- LANGKAH 3: transkrip semua potongan vokal ---
-       TANPA TERJEMAHAN: teks ditulis dalam bahasa yang diucapkan. */
-    const speechTotal = chunks.reduce((a, c) => a + (c.e - c.s), 0);
-    let done = 0;
+    /* --- 5) TRANSKRIP NATIVE (proses terpisah, tidak membebani browser) --- */
+    setSub(`VOCALIS ${engLabel} menulis · ${fmtT(pcm.length / sr)} audio · ${srcLang === 'auto' ? 'AUTO' : srcLang === 'javanese' ? 'JAWA' : 'INDONESIA'}`);
+    const r = await window.kinostra.whisperTranscribe({
+      wavPath, probePath, engine: engineKey,
+      lang: srcLang === 'javanese' ? 'jw' : srcLang === 'indonesian' ? 'id' : 'auto',
+      song: singMode
+    });
+    if (!r.ok) throw new Error(r.error || 'Transkrip gagal');
+    if (state.abort) throw new Error('Dibatalkan');
+
+    const langLabel = (r.chosen || r.language || 'id') === 'jw' ? 'JAWA' : 'INDONESIA';
+    if (srcLang === 'auto') $('#vmLang').textContent = `AUTO · ${langLabel}`;
+
+    /* --- 6) bersihkan baris (hallusinasi/aksara asing/ulangan) --- */
     let subs = [];
-    for (const c of chunks) {
-      if (state.abort) throw new Error('Dibatalkan');
-      const a = Math.floor(c.s * sr), b = Math.min(pcm.length, Math.floor(c.e * sr));
-      const slice = pcm.slice(a, b);
-      if (slice.length > sr * 0.3) {
-        try {
-          const out = await asr(slice, {
-            chunk_length_s: 30, stride_length_s: 5,
-            return_timestamps: true, task: 'transcribe',
-            language: lang,                  // selalu dipaksa → konsisten
-            no_repeat_ngram_size: 5,
-            max_new_tokens: Math.min(220, Math.ceil((c.e - c.s) * 6) + 24)   // anti generasi liar
-          });
-          for (const ch of (out.chunks || [])) {
-            const txt = cleanLine(ch.text || '');
-            if (!txt) continue;
-            const s0 = c.s + (ch.timestamp[0] ?? 0), e0 = c.s + (ch.timestamp[1] ?? (c.e - c.s));
-            subs.push({ s: Math.max(0, s0), e: Math.max(s0 + 0.3, e0), text: txt });
-          }
-        } catch (e) { console.warn('chunk gagal', e); }
-      }
-      done += (c.e - c.s);
-      console.log('VOCALIS: chunk selesai', done.toFixed(1), '/', speechTotal.toFixed(1));
-      setProg(clamp(0.08 + 0.88 * done / Math.max(0.01, speechTotal), 0, 0.985));
-      setSub(`VOCALIS menulis · ${fmtT(done)} / ${fmtT(speechTotal)} vokal · ${langLabel} · ${engLabel}`);
-      await sleep(0);
+    for (const s of r.segments || []) {
+      const txt = cleanLine(s.text);
+      if (!txt) continue;
+      subs.push({ s: Math.max(0, s.s), e: Math.max(s.s + 0.3, Math.min(s.e, state.duration || s.e)), text: txt });
     }
     subs = dedupeLines(subs.sort((a, b) => a.s - b.s));
 
     state.subs = subs; state.subsOn = subs.length > 0; $('#subsOn').checked = state.subsOn;
     renderSubList();
-    $('#subStat').textContent = `${subs.length} baris · ${langLabel} · mesin ${engLabel} · vokal ${Math.round(totalSpeech)} dtk dari ${Math.round(totalDur)} dtk`;
-    toast(`${subs.length} baris subtitel dihasilkan (VOCALIS v3 · ${langLabel})`, 'ok');
+    $('#subStat').textContent = `${subs.length} baris · ${langLabel} · mesin ${engLabel} NATIVE · audio ${Math.round(pcm.length / sr)} dtk`;
+    toast(`${subs.length} baris subtitel dihasilkan (VOCALIS v4 · ${langLabel})`, 'ok');
+
+    /* --- 7) rapikan file sementara --- */
+    try { await window.kinostra.whisperCancel(); } catch (_) { }
   } catch (e) {
     console.error(e);
     toast('Subtitel gagal: ' + (e.message || e), 'err');
+    try { await window.kinostra.whisperCancel(); } catch (_) { }
   }
-  state.busy = false; hideModal();
+  state.busy = false; _whisperBusy = false;
+  hideModal();
+}
+
+/* tombol BATAL pada modal proses */
+async function cancelSubs() {
+  state.abort = true;
+  try { await window.kinostra.whisperCancel(); } catch (_) { }
 }
 
 function renderSubList() {

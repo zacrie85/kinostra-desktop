@@ -110,22 +110,25 @@ $('#descOn').onchange = e => { state.descOn = e.target.checked; };
 $('#inDesc').oninput = e => { state.desc = e.target.value; };
 bindSeg('segDescPos', v => { state.descPos = v; });
 
-/* ---------- 04 SUBTITEL AI (VOCALIS v3) ---------- */
+/* ---------- 04 SUBTITEL AI (VOCALIS v4 NATIVE) ---------- */
 $('#asrLang').onchange = e => {
-  /* v2.3: label bahasa ikut pilihan manual; AUTO = menunggu deteksi VOCALIS */
+  /* label bahasa ikut pilihan manual; AUTO = menunggu deteksi VOCALIS */
   $('#vmLang').textContent = e.target.value === 'auto' ? 'AUTO'
     : (e.target.value === 'javanese' ? 'JAWA' : 'INDONESIA');
 };
 $('#subsOn').onchange = e => { state.subsOn = e.target.checked; };
-/* v2.3: mesin default mengikuti RAM — TURBO butuh ±3 GB, SEDANG ±1.5 GB saat inferensi */
-(function pickEngineByRAM() {
+/* v2.4: mesin default mengikuti RAM ASLI (bukan estimasi browser) —
+   TURBO native butuh ±1.5-2 GB saat inferensi (jauh lebih ringan dari v3) */
+(async function pickEngineByRAM() {
   try {
     const sel = $('#asrModel');
-    const mem = navigator.deviceMemory;   // GB (estimasi Chromium, bucket 0.25..8)
-    if (sel.value === 'turbo' && mem && mem < 8) {
+    if (!sel) return;
+    const info = await window.kinostra.sysInfo();
+    const mem = Math.round(info.ramGB || 0);
+    if (sel.value === 'turbo' && mem < 8) {
       sel.value = 'small';
-      if (mem < 4) sel.value = 'base';
-      setTimeout(() => toast('RAM ' + mem + ' GB terdeteksi — mesin VOCALIS disesuaikan agar aman memori (bisa diubah manual)', 'warn'), 1500);
+      if (mem < 4) sel.value = 'tiny';
+      setTimeout(() => toast(`RAM ${mem} GB terdeteksi — mesin VOCALIS disesuaikan agar tetap mulus (bisa diubah manual)`, 'warn'), 1500);
     }
   } catch (e) { }
 })();
@@ -142,15 +145,18 @@ $('#btnShiftB').onclick = () => shiftSubs(-0.5);
 $('#btnShiftF').onclick = () => shiftSubs(0.5);
 $('#modelLink').onclick = () => window.kinostra.openModelsFolder();
 
-/* model status saat start */
+/* v2.4: status mesin subtitel native saat start */
 (async () => {
   try {
-    const st = await window.kinostra.modelStatus();
-    if (st.models.length) {
-      const names = st.models.map(m => `${m.id.split('/')[1]} (${m.sizeMB}MB)`).join(' · ');
-      $('#modelNote').innerHTML = `Model AI tersimpan &amp; siap offline: <b>${names}</b> — <b id="modelLink" style="cursor:pointer;color:var(--acc)">buka folder model →</b>`;
-      $('#modelLink').onclick = () => window.kinostra.openModelsFolder();
-    }
+    const st = await window.kinostra.whisperStatus();
+    if (!st) return;
+    const ready = Object.entries(st.models).filter(([k, m]) => m.ready)
+      .map(([k, m]) => `${m.label} ${m.sizeOnDiskMB}MB`).join(' · ');
+    const bin = st.binOk ? 'mesin native siap' : 'MESIN TIDAK DITEMUKAN';
+    $('#modelNote').innerHTML = `VOCALIS v4 (whisper.cpp) — <b>${bin}</b>` +
+      (ready ? ` · model tersimpan &amp; siap offline: <b>${ready}</b>` : ' · model akan diunduh sekali saat pertama dipakai') +
+      ` — <b id="modelLink" style="cursor:pointer;color:var(--acc)">buka folder model →</b>`;
+    $('#modelLink').onclick = () => window.kinostra.openPath(st.modelsDir);
   } catch (e) { }
 })();
 

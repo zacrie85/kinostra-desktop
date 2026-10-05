@@ -147,7 +147,7 @@
     </div>
 
     <div class="mod" id="m3">
-      <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI · VOCALIS v3 <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI · VOCALIS v4 NATIVE <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
         <div class="row">
           <div><div class="lbl">BAHASA VIDEO <b id="vmLang">AUTO</b></div>
@@ -156,17 +156,17 @@
               <option value="javanese">JAWA</option>
               <option value="indonesian">INDONESIA</option>
             </select></div>
-          <div><div class="lbl">MESIN VOCALIS</div>
+          <div><div class="lbl">MESIN VOCALIS v4</div>
             <select class="in" id="asrModel">
-              <option value="turbo">TURBO · PALING AKURAT (±724 MB)</option>
-              <option value="small">SEDANG · SEIMBANG (±254 MB)</option>
-              <option value="base">RINGAN · CEPAT (±80 MB)</option>
+              <option value="turbo">TURBO · PALING AKURAT (±547 MB)</option>
+              <option value="small">SEDANG · SEIMBANG (±181 MB)</option>
+              <option value="tiny">RINGAN · CEPAT (±31 MB)</option>
             </select></div>
         </div>
         <label class="chk"><input type="checkbox" id="singMode" checked><span>MODE LAGU / VOKAL (VIDEO BERNYANYI)</span></label>
         <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> BUAT SUBTITEL DARI VOKAL</button>
-        <div class="substat" id="subStat">VOCALIS v3 siap · 100% lokal (model diunduh sekali, lalu offline permanen)</div>
-        <div class="note"><b>VOCALIS v3 — mesin baru fokus Bahasa Jawa &amp; Indonesia.</b> Teks dibuat <b>dalam bahasa yang diucapkan/dinyanyikan</b> di video (Jawa tetap Jawa, Indonesia tetap Indonesia) — tanpa terjemahan, tanpa bahasa lain. Mesin <b>TURBO</b> paling akurat untuk ucapan &amp; lirik lagu. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
+        <div class="substat" id="subStat">VOCALIS v4 siap · mesin native (tanpa batas memori browser) · 100% lokal</div>
+        <div class="note"><b>VOCALIS v4 — mesin native baru (whisper.cpp) fokus Bahasa Jawa &amp; Indonesia.</b> Jauh lebih stabil &amp; ringan daripada versi lama: proses terpisah dari aplikasi, unduhan model <b>lanjut otomatis</b> bila koneksi terputus, dan binari sudah terpasang di dalam aplikasi. Teks dibuat <b>dalam bahasa yang diucapkan/dinyanyikan</b> di video (Jawa tetap Jawa, Indonesia tetap Indonesia) — tanpa terjemahan. Mesin <b>TURBO</b> paling akurat untuk ucapan &amp; lirik lagu. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
         <label class="chk"><input type="checkbox" id="subsOn" checked><span>BURN-IN SUBTITEL KE VIDEO</span></label>
         <div class="lbl">UKURAN SUBTITEL <b id="subSizeV">1.0×</b></div>
         <input type="range" id="subSize" min="0.6" max="1.8" step="0.05" value="1">
@@ -180,7 +180,7 @@
           <button class="btn sm" id="btnSubClear"><i data-lucide="trash-2"></i></button>
         </div>
         <div class="sublist" id="subList"><div class="empty">BELUM ADA SUBTITEL</div></div>
-        <div class="note" id="modelNote">Model AI tersimpan di folder data aplikasi (AppData) — unduh sekali, tanpa internet selamanya. <b id="modelLink" style="cursor:pointer;color:var(--acc)">Buka folder model →</b></div>
+        <div class="note" id="modelNote">VOCALIS v4 (whisper.cpp) — mesin native siap · model akan diunduh sekali saat pertama dipakai. <b id="modelLink" style="cursor:pointer;color:var(--acc)">Buka folder model →</b></div>
       </div></div></div>
     </div>
 
