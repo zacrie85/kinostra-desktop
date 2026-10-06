@@ -322,6 +322,9 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
    ui: {title(segs), prog(p), sub(s), canceled()} */
 async function exportPartsToDir(dir, ui) {
   await ensureFontsReady();
+  /* v2.6: pastikan decode audio asli (yang kini berjalan di belakang saat
+     loading) sudah selesai sebelum menentukan ada tidaknya track audio */
+  if (state.audioReady) { try { await state.audioReady; } catch (e) { } }
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
   const dims = outDims(sc), { W, H } = dims;
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
@@ -360,7 +363,9 @@ async function exportPartsToDir(dir, ui) {
     }
   };
 
-  const srcUrl = URL.createObjectURL(state.file);
+  /* v2.6: file virtual (impor/batch streaming) — worker memutar langsung
+     dari disk via kfile:// (Range), tanpa menyalin file ke memori */
+  const srcUrl = state.file.virtual ? state.file.kurl : URL.createObjectURL(state.file);
   const results = new Array(segs.length).fill(null);
   try {
     if (ui.title) ui.title(segs);
@@ -441,7 +446,7 @@ async function exportPartsToDir(dir, ui) {
     if (ui.prog) ui.prog(1);
     return results;
   } finally {
-    URL.revokeObjectURL(srcUrl);
+    if (!state.file.virtual) URL.revokeObjectURL(srcUrl);
   }
 }
 

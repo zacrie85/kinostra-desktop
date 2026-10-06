@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.3 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.6 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.3</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.6</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -87,7 +87,7 @@
           <div class="lbl">LATAR VERTIKAL</div>
           <div class="seg" id="segBg"><button data-v="blur" class="on">BLUR SINEMATIK</button><button data-v="dark">GELAP</button></div>
           <div class="lbl">ZOOM FOKUS <b id="zoomV">1.00×</b></div>
-          <input type="range" id="inZoom" min="1" max="3" step="0.05" value="1">
+          <input type="range" id="inZoom" min="1" max="4" step="0.05" value="1">
           <div class="lbl">GESER KIRI / KANAN <b id="panXV">TENGAH</b></div>
           <input type="range" id="inPanX" min="-1" max="1" step="0.02" value="0">
           <div class="lbl">GESER ATAS / BAWAH <b id="panYV">TENGAH</b></div>
@@ -96,7 +96,7 @@
             <button class="btn sm" id="btnFrameReset"><i data-lucide="rotate-ccw"></i> RESET POSISI</button>
             <span class="mono" style="font-size:9.5px;color:var(--tx3)">atau drag langsung di preview →</span>
           </div>
-          <div class="note">Zoom di atas <b>1.5×</b> gambar menutup penuh frame 9:16 (tanpa latar). Geser untuk memilih sisi kiri/tengah/kanan yang diambil.</div>
+          <div class="note"><b>v2.6 — geser sekarang selalu berfungsi:</b> di zoom 1× geser memindahkan <b>posisi video</b> ke atas/bawah/kiri/kanan di dalam frame 9:16. Zoom ≥ ±3.2× (video landscape) menutup penuh frame tanpa latar, geser memilih bagian yang diambil. Latar <b>BLUR SINEMATIK</b> tampil otomatis selama video belum menutup frame.</div>
         </div>
         <div class="note">Decode lewat engine Chromium: <b>MP4 (H.264), MKV (Matroska), WEBM, TS*</b>, dan <b>MP3</b>. *TS tergantung codec di dalamnya.</div>
       </div></div></div>
@@ -129,6 +129,15 @@
           <option>PART</option><option>EPISODE</option><option>EPS</option>
           <option>BAGIAN</option><option>#</option>
         </select>
+        <div class="lbl">POSISI PART — KIRI ⬅ ➡ KANAN <b id="partXV">TENGAH</b></div>
+        <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
+        <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>
+        <input type="range" id="inPartY" min="-1" max="1" step="0.05" value="0">
+        <div class="lbl">POSISI JUDUL — ATAS ⬆ ⬇ BAWAH <b id="titleYV">TENGAH · DEFAULT</b></div>
+        <input type="range" id="inTitleY" min="-1" max="1" step="0.05" value="0">
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnTextPosReset"><i data-lucide="rotate-ccw"></i> RESET POSISI TEKS</button>
+        </div>
         <div class="lbl">GAYA TAMPIL PART</div>
         <div class="seg" id="segPartShow"><button data-v="intro" class="on">BUMPER INTRO</button><button data-v="always">SELALU TAMPIL</button></div>
         <div class="outfile mono" id="outName">—</div>
@@ -190,7 +199,7 @@
     <div class="mod" id="m4">
       <button class="mod-h"><span class="no">05</span><span class="t">TRACKING OBJEK</span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Seperti grafis balap <b>MotoGP</b>: aktifkan mode bidik, lalu <b>klik objek bergerak</b> di preview. Tracker optik (NCC + template adaptif) akan mengikutinya dengan label yang bisa kamu tulis.</div>
+        <div class="note">Seperti grafis balap <b>MotoGP</b>: aktifkan mode bidik, lalu <b>klik objek bergerak</b> di preview. <b>v2.6 — tracker pintar:</b> prediksi arah gerak + pencarian multi-skala + <b>pencarian ulang otomatis</b> di seluruh frame memakai pencocokan kemiripan dengan template asli target (mesin kemiripan visual lokal, 100% offline) — objek yang berpindah posisi cepat tetap dikejar, tidak lagi tertinggal.</div>
         <label class="chk"><input type="checkbox" id="trackMode"><span>MODE BIDIK TARGET</span></label>
         <input class="in" id="trackLabel" value="TARGET 01" maxlength="24">
         <div class="lbl">WARNA LABEL</div>

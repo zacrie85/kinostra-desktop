@@ -43,35 +43,48 @@ let _compSrc = null;
 function setCompSrc(el) { _compSrc = el || null; }
 function compSrc() { return _compSrc || videoEl; }
 
-/* ---------- UPGRADE v2.1: RECT VIDEO DENGAN ZOOM & GESER ----------
+/* ---------- UPGRADE v2.1 → v2.6: RECT VIDEO DENGAN ZOOM & GESER ----------
    Dipakai preview, ekspor, dan tracking agar semuanya konsisten.
    Mode 9:16: zoom 1 = muat penuh (letterbox), zoom > 1 = membesar
-   hingga menutup frame. panX/panY (−1..1) memilih BAGIAN video yang
-   terlihat: −1 = sisi kiri/atas sumber, +1 = sisi kanan/bawah.
-   Mode 16:9: selalu contain (perilaku lama). */
+   hingga menutup frame (maks 4×).
+   v2.6 FIX — GESER SEKARANG SELALU BERFUNGSI:
+   - panX/panY (−1..1) memposisikan video DI DALAM frame:
+     · video lebih kecil dari frame → geser memindahkan posisi strip
+       video (atas/bawah/kiri/kanan) — berfungsi di zoom 1× pun
+     · video lebih besar (zoom) → geser memilih bagian yang terlihat
+   - Dulu: pan hanya berlaku saat zoom > 1, dan video landscape butuh
+     zoom ≥ 3.16× untuk overflow vertikal (slider mentok 3×) → slider
+     GESER ATAS/BAWAH tidak pernah berfungsi. Sekarang model unified. */
 function videoFrameRect(vw, vh, W, H) {
   const fit = containRect(vw, vh, W, H);
-  if (state.ratio !== '9:16' || state.frame.zoom <= 1.001) return fit;
-  const sw = fit.w * state.frame.zoom, sh = fit.h * state.frame.zoom;
-  const ox = Math.max(0, (sw - W) / 2), oy = Math.max(0, (sh - H) / 2);
+  if (state.ratio !== '9:16') return fit;
+  const z = clamp(state.frame.zoom || 1, 1, 4);
+  const sw = fit.w * z, sh = fit.h * z;
+  /* posisi linear −1..1 → 0..(W−sw): satu rumus untuk DUA mode —
+     video lebih kecil (slack) = memindahkan strip; video lebih besar
+     (crop) = memilih bagian yang terlihat. px/py −1 selalu = ATAS/KIRI. */
+  const px = clamp(state.frame.panX || 0, -1, 1), py = clamp(state.frame.panY || 0, -1, 1);
   return {
-    x: (W - sw) / 2 - clamp(state.frame.panX, -1, 1) * ox,
-    y: (H - sh) / 2 - clamp(state.frame.panY, -1, 1) * oy,
-    w: sw, h: sh
+    x: (px + 1) / 2 * (W - sw),
+    y: (py + 1) / 2 * (H - sh),
+    w: sw, h: sh,
+    covers: sw >= W - 0.6 && sh >= H - 0.6
   };
 }
 
-/* ---------- v2.2: CACHE LAPISAN STATIS (kecepatan render) ----------
+/* ---------- v2.2 → v2.6: CACHE LAPISAN STATIS (kecepatan render) ----------
    Latar blur 9:16 & vignette tidak berubah antar frame — dibangun
    SEKALI lalu di-blit tiap frame (menghemat 50-150ms/frame).
-   Cache LRU kecil: preview & tiap ukuran ekspor punya entrinya. */
+   Cache LRU kecil: preview & tiap ukuran ekspor punya entrinya.
+   v2.6: di PREVIEW latar blur di-refresh tiap ±1.6 dtk dari frame
+   terkini (ikut video berjalan) — di ekspor tetap statis (kecepatan). */
 const _layerCache = new Map();
 function getLayer(key, build) {
   let cv = _layerCache.get(key);
   if (!cv) {
     cv = build();
     _layerCache.set(key, cv);
-    if (_layerCache.size > 6) { const k0 = _layerCache.keys().next().value; _layerCache.delete(k0); }
+    if (_layerCache.size > 10) { const k0 = _layerCache.keys().next().value; _layerCache.delete(k0); }
   }
   return cv;
 }
@@ -86,8 +99,10 @@ function buildBlurBg(vid, W, H) {
   g.fillStyle = 'rgba(4,5,8,.45)'; g.fillRect(0, 0, W, H);
   return c;
 }
-function bgLayerKey(vid, W, H) {
-  return `bg|${state.mediaEpoch || 0}|${vid.videoWidth}x${vid.videoHeight}|${W}x${H}`;
+function bgLayerKey(vid, W, H, tLive) {
+  /* v2.6: preview = bucket waktu ±1.6 dtk (latar ikut video); ekspor = statis */
+  const bucket = tLive == null ? 's' : 'b' + Math.floor(tLive / 1.6);
+  return `bg|${state.mediaEpoch || 0}|${vid.videoWidth}x${vid.videoHeight}|${W}x${H}|${bucket}`;
 }
 function buildVignette(W, H) {
   const c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -107,9 +122,13 @@ function drawComposition(x, W, H, t) {
   } else if (compSrc().videoWidth) {
     const vid = compSrc();
     const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H);
-    if (state.ratio === '9:16' && state.bgMode === 'blur' && fit.w <= W + 1) {
-      /* v2.2: latar blur dari cache — tidak dihitung ulang tiap frame */
-      const bg = getLayer(bgLayerKey(vid, W, H), () => buildBlurBg(vid, W, H));
+    /* v2.6 FIX BLUR SINEMATIK: latar blur digambar SELALU saat video belum
+       menutup frame (zoom berapa pun) — dulu kondisi `fit.w <= W+1` gagal
+       saat zoom > 1 sehingga latar jadi HITAM. Sekarang pakai flag `covers`.
+       Preview: latar blur mengikuti frame terkini (bucket ±1.6 dtk). */
+    if (state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers) {
+      const live = vid === videoEl ? t : null;
+      const bg = getLayer(bgLayerKey(vid, W, H, live), () => buildBlurBg(vid, W, H));
       x.drawImage(bg, 0, 0);
     } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video */
@@ -130,25 +149,30 @@ function drawComposition(x, W, H, t) {
     /* UPGRADE: film grain (murah: noise halus per frame) */
     if (V.grain) drawGrain(x, W, H, t);
   } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
-  /* --- PART --- */
+  /* --- PART (v2.6: posisi bisa digeser kiri/kanan & atas/bawah) --- */
   const total = segmentsCount();
   const seg = Math.min(total - 1, Math.floor(t / state.splitSec));
+  const ppx = clamp(state.partPosX || 0, -1, 1), ppy = clamp(state.partPosY || 0, -1, 1);
   if (state.partShow === 'intro') {
     const tin = t - seg * state.splitSec, a = clamp(1 - tin / 1.6, 0, 1);
     if (a > 0) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
-      const cy = H * 0.42;
-      x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 60 * u, cy - 84 * u, 120 * u, 3 * u);
+      /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal) */
+      const cx = W / 2 + ppx * W * 0.30;
+      const cy = H * clamp(0.42 + ppy * 0.30, 0.10, 0.88);
+      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy - 84 * u, 120 * u, 3 * u);
       x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u)}px "${F}"`;
-      drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, W / 2, cy + 40 * u, 8 * u, 'center');
+      drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, cx, cy + 40 * u, 8 * u, 'center');
       x.fillStyle = 'rgba(239,237,231,.55)'; x.font = `500 ${Math.round(24 * u)}px "JetBrains Mono"`;
-      x.fillText(`SEGMEN ${seg + 1} / ${total} · ${Math.round(state.splitSec)} DTK`, W / 2, cy + 92 * u);
-      x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 60 * u, cy + 116 * u, 120 * u, 3 * u);
+      x.fillText(`SEGMEN ${seg + 1} / ${total} · ${Math.round(state.splitSec)} DTK`, cx, cy + 92 * u);
+      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy + 116 * u, 120 * u, 3 * u);
       x.restore();
     }
   } else {
     x.save();
-    const px = W * 0.05, py = H * 0.925;
+    /* label pojok: geser horizontal 5% → ±35% lebar, vertikal 92.5% → ±22% tinggi */
+    const px = W * clamp(0.05 + ppx * 0.35, 0.02, 0.68);
+    const py = H * clamp(0.925 + ppy * 0.22, 0.045, 0.985);
     x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u, 4 * u, 50 * u);
     x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u)}px "${F}"`;
     const w = drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, px + 16 * u, py, 3 * u, 'left');
@@ -156,11 +180,14 @@ function drawComposition(x, W, H, t) {
     x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
     x.restore();
   }
-  /* --- JUDUL & DESKRIPSI (v2.3: ukuran font judul diatur user, default 40) --- */
+  /* --- JUDUL & DESKRIPSI (v2.3 ukuran · v2.6 posisi bisa digeser atas/bawah) --- */
   let yTitleBase = 0;
   if (state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
-    x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, H * 0.062, 60 * u, 3 * u);
+    /* v2.6: geser vertikal ±14% tinggi layar dari posisi default */
+    const tpy = clamp(state.titlePosY || 0, -1, 1);
+    const yLine = H * clamp(0.062 + tpy * 0.14, 0.012, 0.46);
+    x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yLine, 60 * u, 3 * u);
     x.fillStyle = '#F2F0EA';
     const txt = state.upper ? state.title.toUpperCase() : state.title;
     const szBase = clamp(state.titleSize || 40, 14, 160);
@@ -178,7 +205,7 @@ function drawComposition(x, W, H, t) {
     }
     lines = lines.slice(0, 4);
     const lh = fs * 1.18;
-    const ty0 = H * 0.062 + fs * 1.15;
+    const ty0 = yLine + fs * 1.15;
     lines.forEach((ln, i) => drawSpaced(x, ln, W / 2, ty0 + i * lh, ls, 'center'));
     yTitleBase = ty0 + (lines.length - 1) * lh;
     x.restore();

@@ -30,35 +30,60 @@ window.addEventListener('drop', e => {
   }
 });
 
-/* ---------- MEMUAT DARI PATH (desktop dialog) ---------- */
-async function loadFromPath(p) {
+/* ---------- MEMUAT DARI PATH (desktop dialog) ----------
+   v2.6: STREAMING via protokol kfile:// (Range request) — file TIDAK
+   dibaca utuh ke memori lagi. Video 2 GB pun tampil & berjudul
+   hampir instan; dulu harus menunggu seluruh file disalin via IPC. */
+async function loadFromPath(p, force = false) {
   try {
-    const [item] = await window.kinostra.readMediaFiles([p]);
-    if (!item || item.error) { toast('Gagal membaca file: ' + (item && item.error || p), 'err'); return; }
-    const blob = new Blob([item.data]);
-    blob.name = item.name;
-    loadFileBlob(blob);
+    const name = p.split(/[\\/]/).pop();
+    let size = 0;
+    try { const st = await window.kinostra.stat(p); if (st && st.ok) size = st.size; } catch (e) { }
+    const vf = { name, path: p, size, virtual: true, kurl: kfileURL(p) };
+    await loadFileBlob(vf, force);
   } catch (e) {
     toast('Gagal membuka file: ' + e.message, 'err');
   }
 }
 
-/* ---------- MEMUAT FILE (Blob + nama) ---------- */
+/* v2.6: judul bersih dari nama file (dipakai loadFileBlob & modul 02) */
+function fileBaseTitle(name) {
+  return (name || 'VIDEO').replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
+}
+
+/* ---------- MEMUAT FILE (Blob / deskriptor virtual + nama) ----------
+   v2.6:
+   - JUDUL dari nama file dipasang PALING AWAL (sebelum metadata &
+     decode audio) → muncul instan, tidak menunggu decode lagi.
+   - file virtual (kfile://) diputar streaming dari disk.
+   - decode audio video TIDAK menahan loading (jalan di belakang). */
 async function loadFileBlob(file, force = false) {
   if (state.busy && !force) { toast('Tunggu proses lain selesai', 'warn'); return; }
   file.name = file.name || 'media.mp4';
+  const isVirtual = !!file.virtual;
   stopMusicPreview();
   state.mediaEpoch = (state.mediaEpoch || 0) + 1;   /* v2.2: invalidasi cache lapisan komposisi */
   // reset
   Object.assign(state, { subs: [], peaks: null });
-  state.track = { active: false, points: [], tpl: null, tw: 26, th: 26, stats: null, label: state.track.label, color: state.track.color };
+  state.track = { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: state.track.label, color: state.track.color, vx: 0, vy: 0, scale: 1, lost: 0 };
   $('#trackStat').textContent = '0 titik terlacak';
   state.file = file;
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   state.isAudio = ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(ext);
-  const url = URL.createObjectURL(file);
-  videoEl.srcObject = null; videoEl.src = url;
+  /* v2.6: JUDUL LANGSUNG — instan dari nama file */
+  if (state.autoTitle) {
+    state.title = fileBaseTitle(file.name);
+    $('#inTitle').value = state.title;
+    updateAll();
+  }
+  $('#fName').textContent = file.name;
+  $('#fSize').textContent = file.size ? fmtMB(file.size) : '—';
+  $('#fFmt').textContent = ext.toUpperCase();
+  $('#hudName').textContent = file.name.slice(0, 42).toUpperCase();
   $('#emptyMsg').style.display = 'none';
+  const url = isVirtual ? file.kurl : URL.createObjectURL(file);
+  videoEl.srcObject = null; videoEl.src = url;
   try {
     await new Promise((res, rej) => {
       const ok = () => { clean(); res(); }, bad = () => { clean(); rej(); };
@@ -70,23 +95,19 @@ async function loadFileBlob(file, force = false) {
     toast(`Format .${ext} tidak bisa diputar engine Chromium — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
-  state.duration = state.isAudio ? (await new Promise(async res => {
-    await decodeFileAudio(); res(state.audioBuffer ? state.audioBuffer.duration : videoEl.duration || 0);
-  })) : (videoEl.duration || 0);
-  if (!state.isAudio) await decodeFileAudio();
-  if (state.audioBuffer && state.isAudio) buildPeaks();
-  // judul otomatis dari nama file (v2.3: bisa dimatikan di modul 02)
-  if (state.autoTitle) {
-    state.title = file.name.replace(/\.[^.]+$/, '').replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim()
-      .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
-    $('#inTitle').value = state.title;
+  if (state.isAudio) {
+    state.duration = await new Promise(async res => {
+      await decodeFileAudio(); res(state.audioBuffer ? state.audioBuffer.duration : videoEl.duration || 0);
+    });
+    if (state.audioBuffer) buildPeaks();
+  } else {
+    state.duration = videoEl.duration || 0;
+    /* v2.6: decode audio asli jalan DI BELAKANG — loading tidak menunggu;
+       ekspor otomatis menunggu lewat state.audioReady */
+    state.audioReady = decodeFileAudio();
   }
-  $('#fName').textContent = file.name;
   $('#fDur').textContent = fmtT(state.duration);
   $('#fRes').textContent = state.isAudio ? 'AUDIO ONLY' : `${videoEl.videoWidth}×${videoEl.videoHeight}`;
-  $('#fSize').textContent = fmtMB(file.size);
-  $('#fFmt').textContent = ext.toUpperCase();
-  $('#hudName').textContent = file.name.slice(0, 42).toUpperCase();
   $('#tInfo').textContent = `SPLIT ${state.splitSec} DTK/PART`;
   renderTimeline(); updateAll();
   toast(`Dimuat: ${file.name}`, 'ok');
@@ -95,7 +116,9 @@ async function loadFileBlob(file, force = false) {
 async function decodeFileAudio() {
   if (!state.file) return;
   try {
-    const ab = await state.file.arrayBuffer();
+    /* v2.6: file virtual dibaca lewat fetch kfile:// (streaming disk) */
+    const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
+      : await state.file.arrayBuffer();
     state.audioBuffer = await getActx().decodeAudioData(ab);
     buildPeaks();
   } catch (e) { state.audioBuffer = null; toast('Track audio tidak terbaca — ekspor mungkin tanpa suara asli', 'warn'); }

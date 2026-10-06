@@ -200,13 +200,11 @@ async function runBatch() {
         sub: `Memuat ${it.name}…`, cancel: true, onCancel() { state.abort = true; } });
       setProg(0.02);
       try {
-        /* --- muat file dari disk (langsung tampil di preview utama) --- */
-        const [item] = await window.kinostra.readMediaFiles([it.path]);
-        if (!item || item.error) throw new Error(item && item.error || 'gagal baca file');
-        it.size = item.size;
-        const blob = new Blob([item.data]); blob.name = it.name;
-        await loadFileBlob(blob, true);   /* force: abaikan guard busy */
+        /* --- v2.6: muat STREAMING via kfile:// — tanpa membaca seluruh
+               file ke memori (video besar langsung siap, hemat RAM) --- */
+        await loadFromPath(it.path, true);   /* force: abaikan guard busy */
         if (!state.file) throw new Error('media tidak bisa diputar engine');
+        if (state.file.size) it.size = state.file.size;
         setSub(`Media siap · ${fmtT(state.duration)} · ${segmentsCount()} part`);
 
         /* --- skor musik dirender ulang untuk durasi file ini --- */

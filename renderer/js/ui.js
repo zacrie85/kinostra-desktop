@@ -25,7 +25,7 @@ function syncFrameLabels() {
   $('#panYV').textContent = Math.abs(py) < 0.02 ? 'TENGAH' : (py < 0 ? `ATAS ${Math.round(-py * 100)}%` : `BAWAH ${Math.round(py * 100)}%`);
   $('#inZoom').value = state.frame.zoom; $('#inPanX').value = state.frame.panX; $('#inPanY').value = state.frame.panY;
 }
-$('#inZoom').oninput = e => { state.frame.zoom = clamp(parseFloat(e.target.value), 1, 3); syncFrameLabels(); };
+$('#inZoom').oninput = e => { state.frame.zoom = clamp(parseFloat(e.target.value), 1, 4); syncFrameLabels(); };
 $('#inPanX').oninput = e => { state.frame.panX = clamp(parseFloat(e.target.value), -1, 1); syncFrameLabels(); };
 $('#inPanY').oninput = e => { state.frame.panY = clamp(parseFloat(e.target.value), -1, 1); syncFrameLabels(); };
 $('#btnFrameReset').onclick = () => { state.frame = { zoom: 1, panX: 0, panY: 0 }; syncFrameLabels(); toast('Posisi fokus direset', 'ok'); };
@@ -45,9 +45,10 @@ cv.addEventListener('pointermove', e => {
   const dy = (e.clientY - _frameDrag.y) / _frameDrag.r.height * 2;
   if (Math.abs(e.clientX - _frameDrag.x) + Math.abs(e.clientY - _frameDrag.y) > 6) _frameDragMoved = true;
   if (!_frameDragMoved) return;
-  /* geser gambar ke kiri → melihat bagian kanan video (rasa drag natural) */
-  state.frame.panX = clamp(_frameDrag.px - dx, -1, 1);
-  state.frame.panY = clamp(_frameDrag.py - dy, -1, 1);
+  /* v2.6: gambar mengikuti jari (direct manipulation) — berlaku baik saat
+     memposisikan strip video (zoom 1×) maupun memilih area crop (zoom) */
+  state.frame.panX = clamp(_frameDrag.px + dx, -1, 1);
+  state.frame.panY = clamp(_frameDrag.py + dy, -1, 1);
   syncFrameLabels();
 });
 cv.addEventListener('pointerup', () => { setTimeout(() => { _frameDrag = null; }, 0); });
@@ -61,6 +62,19 @@ bindSeg('segSplit', v => {
   else { state.splitCustom = false; $('#splitCustom').style.display = 'none'; state.splitSec = parseInt(v); }
   updateAll();
 });
+/* v2.6: posisi PART (kiri/kanan & atas/bawah) + posisi JUDUL (atas/bawah) */
+function syncTextPosLabels() {
+  const pc = v => Math.round(Math.abs(v) * 100) + '%';
+  $('#partXV').textContent = Math.abs(state.partPosX) < 0.03 ? 'TENGAH' : (state.partPosX < 0 ? `KIRI ${pc(state.partPosX)}` : `KANAN ${pc(state.partPosX)}`);
+  $('#partYV').textContent = Math.abs(state.partPosY) < 0.03 ? 'TENGAH' : (state.partPosY < 0 ? `ATAS ${pc(state.partPosY)}` : `BAWAH ${pc(state.partPosY)}`);
+  $('#titleYV').textContent = Math.abs(state.titlePosY) < 0.03 ? 'TENGAH · DEFAULT' : (state.titlePosY < 0 ? `KE ATAS ${pc(state.titlePosY)}` : `KE BAWAH ${pc(state.titlePosY)}`);
+  $('#inPartX').value = state.partPosX; $('#inPartY').value = state.partPosY; $('#inTitleY').value = state.titlePosY;
+}
+$('#inPartX').oninput = e => { state.partPosX = clamp(parseFloat(e.target.value) || 0, -1, 1); syncTextPosLabels(); };
+$('#inPartY').oninput = e => { state.partPosY = clamp(parseFloat(e.target.value) || 0, -1, 1); syncTextPosLabels(); };
+$('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.value) || 0, -1, 1); syncTextPosLabels(); };
+$('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
+syncTextPosLabels();
 $('#inSplit').oninput = e => { state.splitSec = clamp(parseInt(e.target.value) || 3, 3, 600); updateAll(); };
 $('#selPrefix').onchange = e => { state.partPrefix = e.target.value; updateAll(); };
 bindSeg('segPartShow', v => { state.partShow = v; });
@@ -69,9 +83,8 @@ $('#titleOn').onchange = e => { state.titleOn = e.target.checked; };
 $('#titleAuto').onchange = e => {
   state.autoTitle = e.target.checked;
   if (state.autoTitle && state.file) {
-    /* terapkan langsung dari nama file yang sedang dimuat */
-    state.title = state.file.name.replace(/\.[^.]+$/, '').replace(/[_.\-]+/g, ' ').replace(/\s+/g, ' ').trim()
-      .replace(/\b\p{Ll}/gu, c => c.toUpperCase());
+    /* terapkan langsung dari nama file yang sedang dimuat (v2.6: helper bersama) */
+    state.title = fileBaseTitle(state.file.name);
     $('#inTitle').value = state.title; updateAll();
   }
   toast(state.autoTitle ? 'Judul otomatis dari nama file: AKTIF' : 'Judul manual: teks kamu dipertahankan', 'ok');
@@ -173,7 +186,7 @@ $('#trackMode').onchange = syncTrackUI;
 $('#trackLabel').oninput = e => { state.track.label = e.target.value; };
 $('#btnScan').onclick = scanTrack;
 $('#btnTrackClear').onclick = () => {
-  state.track = { active: false, points: [], tpl: null, tw: 26, th: 26, stats: null, label: state.track.label, color: state.track.color };
+  state.track = { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: state.track.label, color: state.track.color, vx: 0, vy: 0, scale: 1, lost: 0 };
   $('#trackStat').textContent = '0 titik terlacak'; toast('Target dihapus');
 };
 function syncTrackUI() {

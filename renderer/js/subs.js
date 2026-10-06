@@ -47,7 +47,9 @@ async function whisperTmpDir() {
 
 /* ---------- EKSTRAK AUDIO 16 kHz MONO ---------- */
 async function getMono16k() {
-  if (!state.audioBuffer) await decodeFileAudio();
+  /* v2.6: decode audio kini berjalan di belakang saat loading —
+     tunggu promise-nya, jangan decode dua kali */
+  if (!state.audioBuffer) await (state.audioReady || decodeFileAudio());
   if (!state.audioBuffer) throw new Error('Audio tidak terbaca');
   const sr = 16000, len = Math.ceil((state.duration || state.audioBuffer.duration) * sr);
   const oc = new OfflineAudioContext(1, len, sr);

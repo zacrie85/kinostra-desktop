@@ -41,12 +41,14 @@ const state = {
   /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
   frame: { zoom: 1, panX: 0, panY: 0 },
   splitSec: 30, splitCustom: false, partPrefix: 'PART', partShow: 'intro',
+  /* v2.6: posisi teks bisa digeser (−1..1, 0 = posisi default) */
+  titlePosY: 0, partPosX: 0, partPosY: 0,
   font: 'Bebas Neue', titleScale: 1, subScale: 1, upper: true,
   subs: [], subsOn: true, subTarget: 'src',
   /* v2.5: posisi vertikal subtitel (0.45=tengah … 0.97=bawah; default 0.90) */
   subPosY: 0.9,
   trackMode: false,
-  track: { active: false, points: [], tpl: null, tw: 26, th: 26, stats: null, label: 'TARGET 01', color: '#F7A600' },
+  track: { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: 'TARGET 01', color: '#F7A600', vx: 0, vy: 0, scale: 1, lost: 0 },
   music: { buffer: null, mood: 'epic', intensity: 0.6, gain: 0.6, seed: (Math.random() * 1e9) | 0 },
   audioGain: 0.9, quality: 'balanced', scale: 1, fps: 30,
   /* UPGRADE v2.1: jumlah render paralel (0 = otomatis) */
