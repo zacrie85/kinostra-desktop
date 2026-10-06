@@ -80,6 +80,18 @@ function createWindow() {
             turbo: typeof renderFramesBySeek === 'function' && typeof wrapSpaced === 'function' && typeof getLayer === 'function',
             frameRect: typeof videoFrameRect === 'function',
             compSrc: typeof compSrc === 'function',
+            /* v2.7: modal selalu bisa ditutup (× / ESC / klik luar) */
+            modalX: !!document.querySelector('#mClose'),
+            modalFlow: (function () {
+              try {
+                showModal({ title: 'UJI', body: '<b>x</b>' });           /* tanpa cancel → × tetap ada */
+                const xVisible = document.querySelector('#mClose').offsetParent !== null;
+                const openOk = !document.querySelector('#modal').classList.contains('hidden');
+                document.querySelector('#mClose').click();
+                const closedOk = document.querySelector('#modal').classList.contains('hidden');
+                return xVisible && openOk && closedOk;
+              } catch (e) { return 'ERR:' + e.message; }
+            })(),
             title: document.title
           };
         })()`);
@@ -147,6 +159,24 @@ function createWindow() {
         console.log('FUNC-EXPORT time=' + secs + 's ' + JSON.stringify(result));
         const files = fsx.readdirSync(outDir).filter(f => f.endsWith('.mp4'));
         console.log('FUNC-VERIFY files=' + files.length + ' [' + files.join(', ') + ']');
+
+        /* --- v2.7: RONDE B — ekspor via jalur kfile:// (streaming disk),
+               jalur utama v2.6+. Memastikan worker ekspor paralel tetap
+               merender frame bergerak saat memutar dari protokol kfile. --- */
+        const outDirB = '/home/z/my-project/testmedia/out_kfile';
+        fsx.rmSync(outDirB, { recursive: true, force: true }); fsx.mkdirSync(outDirB, { recursive: true });
+        await win.webContents.executeJavaScript(`(async () => {
+          await loadFromPath('/home/z/my-project/testmedia/test_video.mp4', true);
+          state.splitSec = 2; state.parallel = 2;
+          return { virtual: state.file.virtual, dur: state.duration, parts: segmentsCount() };
+        })()`).then(r => console.log('FUNC-KFILE-LOAD ' + JSON.stringify(r)));
+        const t0b = Date.now();
+        const resultB = await win.webContents.executeJavaScript(`(async () => {
+          const r = await exportPartsToDir('${outDirB}', { prog: () => {}, sub: () => {} });
+          return { parts: r.map(x => ({ name: x.name, size: x.size })) };
+        })()`);
+        console.log('FUNC-EXPORT-B time=' + ((Date.now() - t0b) / 1000).toFixed(1) + 's ' + JSON.stringify(resultB));
+        console.log('FUNC-VERIFY-B files=' + fsx.readdirSync(outDirB).filter(f => f.endsWith('.mp4')).length);
 
         /* --- UJI THUMBNAIL KOTAK VIDEO (v2.2) --- */
         const thumbTest = await win.webContents.executeJavaScript(`(async () => {
@@ -553,7 +583,14 @@ const MIME = {
   '.mjs': 'text/javascript', '.woff2': 'font/woff2', '.woff': 'font/woff',
   '.png': 'image/png', '.ico': 'image/x-icon', '.svg': 'image/svg+xml',
   '.json': 'application/json', '.jpg': 'image/jpeg', '.gif': 'image/gif',
-  '.wasm': 'application/wasm'
+  '.wasm': 'application/wasm',
+  /* v2.7: tipe MIME media — kfile:// dulu menyajikan video sebagai
+     application/octet-stream; sebagian pipeline media Chromium lebih
+     stabil dengan Content-Type yang benar (buffering/Range playback) */
+  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime',
+  '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.ts': 'video/mp2t',
+  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac', '.ogg': 'audio/ogg', '.flac': 'audio/flac'
 };
 
 function handleAppScheme(request) {

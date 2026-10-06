@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.6
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.7
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.6.0.exe`
+1. Jalankan `KINOSTRA-Setup-2.7.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.6.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-2.7.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -32,6 +32,38 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.7
+
+### 1. FIX: video hasil ekspor suaranya jalan tapi GAMBAR BEKU
+- **Penyebab ditemukan:** encoder GPU Windows (Media Foundation) dengan
+  mode `latency` lama bisa mengeluarkan frame dengan **urutan waktu
+  bolak-balik** (B-frame). Muxer MP4 menolaknya diam-diam di dalam
+  callback — pengecualian tertelan tanpa pesan — sehingga file MP4
+  selesai “sukses” tetapi hanya berisi beberapa frame pertama:
+  **gambar beku + suara normal + tidak ada error**.
+- **Perisai 4 lapis (semua otomatis):**
+  1. Semua encoder kini memakai mode `realtime` — tanpa pengacakan
+     urutan frame di sumbernya.
+  2. Timestamp yang turun terdeteksi saat merender → part langsung
+     dianggap gagal → **diulang otomatis dengan encoder software**.
+  3. Error encoder kini diteruskan ke alur ekspor (dulu hanya masuk log).
+  4. Setelah render, **jumlah frame diverifikasi** (≥ 90% dari yang
+     dirender) sebelum file dianggap sah.
+- Ekspor yang dulu “berhasil tapi bekunya” sekarang **selalu menghasilkan
+  video bergerak** — bila encoder GPU bermasalah, part itu di-render ulang
+  senyap dengan encoder software.
+
+### 2. FIX: pop-up “EKSPOR SELESAI” tidak bisa ditutup
+- **Penyebab ditemukan:** modal hasil dilayar tanpa opsi `cancel`, jadi
+  tombol TUTUP disembunyikan — tidak ada satu pun cara menutup pop-up,
+  aplikasi terasa macet selamanya.
+- **Perbaikan — kini ada 4 jalan keluar:**
+  1. Tombol **TUTUP** di pop-up hasil kembali tampil.
+  2. Tombol **×** di kanan atas judul modal (selalu ada di semua modal).
+  3. Tombol **Esc** di keyboard.
+  4. Klik area gelap di luar kotak (hanya untuk pop-up info — proses
+     render sengaja tidak bisa terbatalkan lewat klik luar).
 
 ## Yang Baru di v2.6
 
@@ -155,6 +187,7 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 ## Pintasan Keyboard
 - `Spasi` — Play / Pause
 - `Ctrl+O` — Impor media
+- `Esc` — Tutup / batalkan dialog (modal)
 - Drag di preview (mode 9:16) — geser posisi fokus
 
 ## Catatan Teknis
@@ -162,4 +195,4 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 - Output MP4 H.264 + AAC/Opus, faststart (siap streaming)
 - Data model AI: `%APPDATA%\KINOSTRA\whisper` (bisa dibuka dari panel Subtitel)
 - Mesin subtitel: whisper.cpp v1.9.4 (MIT) — binari dibundel di `bin/whisper`
-- Versi: 2.5.0 · Engine: Electron 33 (Chromium 130)
+- Versi: 2.7.0 · Engine: Electron 33 (Chromium 130)

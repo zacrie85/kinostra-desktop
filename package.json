@@ -1,7 +1,7 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline",
   "main": "main/main.js",
   "author": "KINOSTRA",

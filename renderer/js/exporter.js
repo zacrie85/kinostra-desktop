@@ -183,8 +183,33 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     }
     _stage = 'configure';
     const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
-    venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => console.error('venc', e) });
-    venc.configure({ ...vCfg, latencyMode: hw ? 'quality' : 'realtime' });
+    /* v2.7 FIX "SUARA JALAN, GAMBAR BEKU": encoder GPU Windows (Media
+       Foundation) dengan latencyMode 'quality' dapat mengeluarkan chunk
+       B-frame berurutan DECODE (timestamp bolak-balik). mp4-muxer melempar
+       error monotonic DI DALAM callback output → pengecualian tertelan
+       diam-diam → hanya beberapa frame pertama masuk MP4 → gambar beku +
+       audio normal + ekspor "berhasil". Perisai 4 lapis:
+       1) latencyMode 'realtime' utk SEMUA encoder (tanpa reorder B-frame)
+       2) timestamp turun > 5 ms terdeteksi → gagal cepat → auto-retry SW
+       3) error encoder diteruskan ke promise (bukan hanya console)
+       4) verifikasi jumlah chunk video setelah flush (≥ 90% frame) */
+    let vChunks = 0, lastVts = -Infinity, vencErrMsg = null;
+    venc = new VideoEncoder({
+      output: (c, m) => {
+        const ts = typeof c.timestamp === 'number' ? c.timestamp : 0;
+        if (vChunks > 0 && ts <= lastVts) {
+          if (lastVts - ts > 5000) {
+            vencErrMsg = `encoder mengeluarkan frame dengan urutan waktu tidak naik (${Math.round(lastVts / 1000)} → ${Math.round(ts / 1000)} ms)`;
+            console.error('venc-stream', vencErrMsg);
+          }
+          return; /* jangan masukkan chunk rusak/nol-durasi ke muxer */
+        }
+        lastVts = ts; vChunks++;
+        muxer.addVideoChunk(c, m);
+      },
+      error: e => { vencErrMsg = (e && e.message) || String(e); console.error('venc', vencErrMsg); }
+    });
+    venc.configure({ ...vCfg, latencyMode: 'realtime' });
     const CAP = hw ? 40 : 14;
 
     /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata */
@@ -219,6 +244,8 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         const watch = setInterval(() => {
           if (finished) { clearInterval(watch); return; }
           if (state.abort) return fail(new Error('Dibatalkan'));
+          /* v2.7: error encoder terdeteksi → gagal cepat → retry software */
+          if (vencErrMsg) return fail(new Error('encoder video bermasalah: ' + vencErrMsg));
           if (v.error) return fail(new Error('video rusak/tak terbaca: ' + (v.error.message || ('kode ' + v.error.code))));
           /* KUNCI FIX: tangani akhir video walau frame callback mati —
              inilah yang dulu bikin macet selamanya di bagian akhir */
@@ -297,6 +324,15 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
        membuat ekspor macet selamanya tanpa pesan */
     await withTimeout(venc.flush(), 60000, 'encoder video tidak selesai (flush macet 60 dtk)');
     venc.close(); venc = null;
+    /* v2.7: VERIFIKASI ALIRAN VIDEO — tangkap dua mode kegagalan encoder
+       GPU yang "diam": (a) error/reorder terdeteksi saat merender,
+       (b) output kurang dari 90% frame yang dirender. Tanpa ini MP4 tetap
+       tersimpan tapi isinya gambar beku. Gagal di sini → auto-retry dengan
+       encoder software oleh exportPartsToDir. */
+    if (vencErrMsg) throw new Error('aliran video tidak valid: ' + vencErrMsg);
+    const minChunks = Math.max(1, Math.ceil(n * 0.9));
+    if (vChunks < minChunks)
+      throw new Error(`encoder hanya mengeluarkan ${vChunks} dari ${n} frame (gambar akan beku)`);
     _stage = 'finalize';
     slot.stage = 'finalize';
     await withTimeout(Promise.resolve().then(() => muxer.finalize()), 30000, 'penulisan header MP4 macet');
@@ -485,7 +521,11 @@ function showResults(results, dir) {
     `<div class="rrow"><span class="rn">${r.name}</span><span class="rs">${fmtMB(r.size)}</span></div>`).join('')
     + `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Folder: ${dir}</span></div>
        <button class="btn acc wide" id="openFolder" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>`;
-  showModal({ title: 'EKSPOR SELESAI', body });
+  /* v2.7 FIX: modal hasil harus selalu bisa ditutup — dulu showModal tanpa
+     `cancel:true` menyembunyikan tombol TUTUP sehingga pop-up tidak bisa
+     ditutup dan aplikasi terasa macet. Sekarang: TUTUP tampil + tombol ×
+     di header + tombol ESC + klik area luar (semua dari core.js). */
+  showModal({ title: 'EKSPOR SELESAI', body, cancel: true });
   if (window.lucide) lucide.createIcons();
   M.c.textContent = 'TUTUP';
   const of = M.b.querySelector('#openFolder');

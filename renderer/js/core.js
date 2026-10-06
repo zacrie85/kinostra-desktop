@@ -69,7 +69,7 @@ function toast(msg, type = 'info') {
   const d = document.createElement('div'); d.className = 'toast ' + type; d.textContent = msg;
   $('#toasts').appendChild(d); setTimeout(() => { d.style.opacity = '0'; d.style.transition = '.4s'; setTimeout(() => d.remove(), 400); }, 4200);
 }
-const M = { el: $('#modal'), t: $('#mTitle'), b: $('#mBody'), bar: $('#mBar'), f: $('#mFill'), s: $('#mSub'), c: $('#mCancel'), onCancel: null };
+const M = { el: $('#modal'), t: $('#mTitle'), b: $('#mBody'), bar: $('#mBar'), f: $('#mFill'), s: $('#mSub'), c: $('#mCancel'), x: $('#mClose'), onCancel: null };
 function showModal({ title, sub = '', cancel = false, onCancel = null, body = null }) {
   M.t.textContent = title; M.s.textContent = sub; M.onCancel = onCancel;
   M.c.style.display = cancel ? '' : 'none';
@@ -82,6 +82,20 @@ function setProg(p) { M.f.style.width = (clamp(p, 0, 1) * 100).toFixed(1) + '%';
 function setSub(s) { M.s.textContent = s; }
 function hideModal() { M.el.classList.add('hidden'); M.onCancel = null; }
 M.c.onclick = () => { if (M.onCancel) M.onCancel(); else hideModal(); };
+/* v2.7: MODAL SELALU BISA DITUTUP — dulu pop-up hasil ekspor tanpa tombol
+   close membuat aplikasi tidak bisa dipakai. Sekarang 3 jalan keluar:
+   1) tombol × di header (selalu tampil) — saat proses berjalan berfungsi
+      seperti BATAL, saat pop-up info langsung menutup
+   2) tombol ESC di keyboard
+   3) klik area gelap di luar kotak (hanya utk pop-up info, bukan proses —
+      agar render yang berjalan lama tidak terbatalkan tak sengaja) */
+M.x.onclick = () => { if (M.onCancel) M.onCancel(); hideModal(); };
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !M.el.classList.contains('hidden')) {
+    if (M.onCancel) M.onCancel(); else hideModal();
+  }
+});
+M.el.addEventListener('pointerdown', e => { if (e.target === M.el && !M.onCancel) hideModal(); });
 
 /* ---------- WEB AUDIO CONTEXT ---------- */
 let _actx = null;
