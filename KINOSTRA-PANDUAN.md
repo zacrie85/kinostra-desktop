@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.5
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.6
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.5.0.exe`
+1. Jalankan `KINOSTRA-Setup-2.6.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.5.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-2.6.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -22,16 +22,63 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 | No | Modul | Fungsi |
 |----|-------|--------|
 | 00 | **Kotak Video · Urutan** ⭐v2.2 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH FILE batch. Berurutan dari atas ke bawah. Thumbnail otomatis, tombol naik/turun urutan, hapus & pratinjau |
-| 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. Zoom Fokus 1–3× + geser kiri/kanan/atas/bawah (slider atau drag langsung di preview) |
-| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **BARU v2.3: judul terisi otomatis dari nama file tiap video, font Bebas Neue ukuran 40 (bisa diganti)** |
+| 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. **v2.6: geser KIRI/KANAN/ATAS/BAWAH selalu berfungsi** (termasuk zoom 1× — memindahkan posisi video di dalam frame 9:16), Zoom Fokus 1–4×, latar BLUR SINEMATIK tampil otomatis (tidak hitam lagi) |
+| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah** — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
 | 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
-| 05 | Tracking Objek | Grafis label ala MotoGP (NCC + template adaptif) — kotak target ikut zoom/pan |
+| 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.6
+
+### 1. Geser 9:16 selalu berfungsi + latar BLUR SINEMATIK tidak hitam lagi
+- **Penyebab ditemukan:** dulu geser hanya aktif saat zoom > 1, sementara
+  video landscape butuh zoom ≥ 3.16× supaya ada ruang geser vertikal —
+  slider mentok di 3× → GESER ATAS/BAWAH tidak pernah berfungsi.
+  Selain itu, begitu zoom disentuh sedikit saja, latar blur dinonaktifkan
+  → yang tampil cuma background hitam.
+- **Perbaikan:** geser sekarang **dua mode otomatis** — di zoom 1× geser
+  **memindahkan posisi video** di dalam frame 9:16 (naik/turun/kiri/kanan,
+  praktis untuk mengatur ruang judul & subtitel); di zoom tinggi geser
+  **memilih bagian video yang diambil** (crop). Zoom Fokus naik sampai
+  **4×** (video landscape menutup penuh frame mulai ±3.2×).
+- Latar **BLUR SINEMATIK** kini tampil **selalu** selama video belum
+  menutup frame, dan di preview mengikuti isi video (refresh ±1.6 dtk).
+- Drag langsung di preview kini "gambar mengikuti jari".
+
+### 2. Tracking objek PINTAR — objek yang berpindah posisi tetap dikejar
+- **Penyebab ditemukan:** template kecil berisi banyak latar belakang,
+  template adaptif melebur (drift), tidak ada prediksi gerak, dan begitu
+  target hilang tidak pernah dicari ulang.
+- **Perbaikan (semua lokal, 100% offline):**
+  - **Prediksi arah & kecepatan gerak** — jendela pencarian selalu di
+    depan objek.
+  - **Pencarian multi-skala** (0.82× / 1× / 1.22×) — objek mendekat /
+    menjauh tetap terkunci.
+  - **NCC berbobot pusat** — latar belakang tidak lagi mendominasi skor.
+  - **Re-identifikasi otomatis**: saat skor rendah, seluruh frame
+    dipindai memakai **template asli** target (mesin kemiripan visual
+    lokal — semacam "AI pengenal kemiripan objek" yang ringan) → objek
+    yang lompat posisi langsung ditemukan lagi dan tracking menyambung.
+
+### 3. Posisi PART & JUDUL bisa digeser bebas
+- Modul 02 ada **3 slider baru**: POSISI PART (kiri/kanan & atas/bawah —
+  berlaku untuk bumper intro maupun label pojok) dan POSISI JUDUL
+  (atas/bawah). Ada tombol RESET POSISI TEKS.
+- Default = posisi lama, jadi tampilan lama tidak berubah.
+
+### 4. Judul dari nama file muncul INSTAN
+- **Penyebab ditemukan:** judul baru dipasang setelah seluruh file video
+  disalin ke memori + track audio didekode penuh — untuk video besar bisa
+  menunggu beberapa detik.
+- **Perbaikan:** judul dipasang **paling awal** (sebelum metadata), dan
+  impor kini **streaming** lewat protokol `kfile://` (Range request) —
+  file tidak disalin utuh ke memori lagi. Video 2 GB pun tampil & berjudul
+  hampir seketika; mode batch juga jauh lebih hemat RAM & cepat mulai.
 
 ## Yang Baru di v2.5
 
