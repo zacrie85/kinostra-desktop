@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.8
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.8.1
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.8.0.exe`
+1. Jalankan `KINOSTRA-Setup-2.8.1.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.8.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-2.8.1-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -32,6 +32,20 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.8.1
+
+### TIMELINE SPLIT ANTI-OVERFLOW — video panjang tidak lagi merusak tampilan
+- **Bug lama**: video berdurasi lebih dari ±60 menit membuat timeline split
+  melar sangat panjang → **semua menu di panel kanan hilang** dari layar.
+- **Sekarang**: timeline selalu **pas selebar layar** — panel menu kanan tidak
+  akan pernah terdorong keluar lagi.
+- Video sangat panjang → timeline **bisa discrol ke samping** (muncul
+  scrollbar horizontal), setiap part tetap terbaca jelas.
+- Video pendek → tampilan proporsional penuh **seperti sebelumnya**.
+- **Playhead otomatis mengikuti**: saat video diputar, timeline menggulir
+  sendiri mengikuti posisi playhead; saat pause bebas menelusuri manual.
+- Klik/drag pada timeline tetap akurat meski sedang discrol.
 
 ## Yang Baru di v2.8
 
@@ -224,4 +238,4 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 - Output MP4 H.264 + AAC/Opus, faststart (siap streaming)
 - Data model AI: `%APPDATA%\KINOSTRA\whisper` (bisa dibuka dari panel Subtitel)
 - Mesin subtitel: whisper.cpp v1.9.4 (MIT) — binari dibundel di `bin/whisper`
-- Versi: 2.8.0 · Engine: Electron 33 (Chromium 130)
+- Versi: 2.8.1 · Engine: Electron 33 (Chromium 130)

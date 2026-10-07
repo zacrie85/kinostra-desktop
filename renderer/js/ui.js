@@ -318,19 +318,27 @@ $('#btnQClear').onclick = clearQueue;
 
 /* ---------- TIMELINE ---------- */
 function renderTimeline() {
-  const inn = $('#tlInner'); inn.innerHTML = '';
-  if (!state.file) { $('#tlMeta').textContent = '—'; return; }
+  /* v2.8.1: ambil referensi playhead SEBELUM innerHTML='' — setelah terdetach,
+     document.querySelector('#tlPlay') tidak bisa menemukannya lagi (null) */
+  const inn = $('#tlInner'), ph = $('#tlPlay');
+  inn.innerHTML = '';
+  if (!state.file) { $('#tlMeta').textContent = '—'; inn.appendChild(ph); return; }
   segments().forEach(s => {
     const d = document.createElement('div'); d.className = 'tlseg'; d.dataset.i = s.i;
     d.style.flexGrow = (s.end - s.start).toFixed(2);
     d.innerHTML = `<span>PART ${String(s.i + 1).padStart(2, '0')}</span><em>${fmtT(s.start)}–${fmtT(s.end)}</em>`;
     inn.appendChild(d);
   });
+  /* playhead ditempel lagi di akhir tlInner → posisi %-nya relatif ke lebar
+     konten penuh, tetap akurat saat timeline panjang discrol ke samping */
+  inn.appendChild(ph);
   $('#tlMeta').textContent = `${segmentsCount()} PART · SPLIT ${state.splitSec} DTK · TOTAL ${fmtT(state.duration)}`;
 }
 let tlDrag = false;
 function tlSeek(e) {
-  const r = $('#timeline').getBoundingClientRect();
+  /* v2.8.1: ukur tlInner (bukan #timeline) → klik/drag tetap akurat saat
+     timeline panjang sedang discrol ke samping */
+  const r = $('#tlInner').getBoundingClientRect();
   videoEl.currentTime = clamp((e.clientX - r.left) / r.width, 0, 1) * (state.duration || 0);
 }
 $('#timeline').addEventListener('pointerdown', e => {
@@ -357,6 +365,19 @@ $('#btnNext').onclick = () => { if (state.duration) { const c = Math.floor(video
 videoEl.addEventListener('play', () => { getActx().resume(); startMusicSync(); setPlayIcon(); });
 videoEl.addEventListener('pause', () => { stopMusicPreview(); setPlayIcon(); });
 videoEl.addEventListener('seeked', () => { if (!videoEl.paused) startMusicSync(); });
+
+/* v2.8.1: auto-scroll horizontal timeline mengikuti playhead (hanya saat play,
+   hanya jika konten lebih lebar dari layar, dan hanya saat playhead keluar view) */
+function tlFollow(t) {
+  const tl = $('#timeline'), inn = $('#tlInner');
+  if (inn.scrollWidth <= tl.clientWidth + 4) return;   /* muat di layar → tak perlu scroll */
+  if (videoEl.paused || tlDrag) return;                 /* pause / sedang drag → jangan ganggu */
+  const x = (t / (state.duration || 1)) * inn.scrollWidth;
+  const L = tl.scrollLeft, R = L + tl.clientWidth;
+  if (x < L + 24 || x > R - 24) {
+    tl.scrollLeft = clamp(x - tl.clientWidth * 0.35, 0, inn.scrollWidth - tl.clientWidth);
+  }
+}
 window.addEventListener('keydown', e => {
   if (e.code === 'Space' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
     e.preventDefault(); togglePlay();
@@ -419,7 +440,10 @@ function loop() {
       const seg = Math.min(segmentsCount() - 1, Math.floor(t / state.splitSec));
       $('#hudPart').textContent = `PART ${String(seg + 1).padStart(2, '0')}/${String(segmentsCount()).padStart(2, '0')}`;
       $('#tlPlay').style.left = (t / (state.duration || 1) * 100) + '%';
-      [...$('#tlInner').children].forEach(c => c.classList.toggle('cur', +c.dataset.i === seg));
+      [...$('#tlInner').children].forEach(c => { if (c.id !== 'tlPlay') c.classList.toggle('cur', +c.dataset.i === seg); });
+      /* v2.8.1: timeline panjang yang sedang discrol — ikuti playhead otomatis
+         saat video diputar, berhenti mengikuti saat pause (bebas menelusuri) */
+      tlFollow(t);
     }
   }
 }
