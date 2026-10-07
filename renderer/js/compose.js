@@ -245,6 +245,103 @@ function drawComposition(x, W, H, t) {
   drawTrack(x, W, H, t, u);
   /* --- UPGRADE: WATERMARK --- */
   drawWatermark(x, W, H, u);
+  /* --- v2.8: FRAME NEON BERPUTAR (di lapisan paling atas) --- */
+  if (state.neon && state.neon.on) drawNeonFrame(x, W, H, t, u, compSrc() === videoEl);
+}
+
+/* ================================================================
+   v2.8 — FRAME NEON BERPUTAR (9:16 & 16:9)
+   Garis neon mengelilingi pinggir video (rounded rect) dan terus
+   berputar otomatis seperti gambar referensi: ada track redup
+   mengikuti bingkai + pendar komet bercahaya yang menembus sudut.
+   - PREVIEW  : fase memakai jam nyata → tetap berputar saat pause.
+   - EKSPOR   : fase memakai waktu media (deterministik per frame,
+     mulus & kontinu antar part paralel).
+   Performa: track statis di-cache; pendar = 4 goresan dash aditif
+   TANPA shadowBlur → aman untuk render per frame.
+   ================================================================ */
+const _neonTrackCache = new Map();
+function neonRGBA(hex, a) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function neonHue(phase, per, extra) {
+  return `hsl(${((phase / per) * 360 + extra) % 360} 100% 62%)`;
+}
+function roundedRectPath(x, X, Y, W, H, r) {
+  r = Math.min(r, W / 2 - 1, H / 2 - 1);
+  x.beginPath();
+  x.moveTo(X + r, Y);
+  x.lineTo(X + W - r, Y); x.arcTo(X + W, Y, X + W, Y + r, r);
+  x.lineTo(X + W, Y + H - r); x.arcTo(X + W, Y + H, X + W - r, Y + H, r);
+  x.lineTo(X + r, Y + H); x.arcTo(X, Y + H, X, Y + H - r, r);
+  x.lineTo(X, Y + r); x.arcTo(X, Y, X + r, Y, r);
+  x.closePath();
+}
+/* dash dengan panjang tepat = keliling path → tepat SATU segmen per loop,
+   mulus melintasi keempat sudut (dash berlanjut di seam path tertutup) */
+function strokeDashSeg(x, per, start, len, style, width) {
+  x.setLineDash([Math.max(1, len), Math.max(1, per - len)]);
+  x.lineDashOffset = -((start % per) + per) % per;
+  x.strokeStyle = style; x.lineWidth = width; x.stroke();
+}
+function buildNeonTrack(W, H, wpx, colKey, r, pad) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const col = colKey === 'rainbow' ? '#9fd4ff' : colKey;
+  roundedRectPath(g, pad, pad, W - pad * 2, H - pad * 2, r);
+  g.lineCap = 'round';
+  g.shadowColor = col; g.shadowBlur = wpx * 2.4;
+  g.strokeStyle = neonRGBA(col, 0.30); g.lineWidth = Math.max(1, wpx * 0.7);
+  g.stroke(); g.stroke();
+  g.shadowBlur = 0;
+  g.strokeStyle = neonRGBA(col, 0.17); g.lineWidth = Math.max(1, wpx * 0.45);
+  g.stroke();
+  return c;
+}
+function drawNeonFrame(x, W, H, t, u, live) {
+  const N = state.neon;
+  const wpx = Math.max(2, Math.round((N.width || 7) * u * 1.2));
+  const pad = wpx * 1.6 + 8 * u;
+  const r = Math.round(Math.min(W, H) * 0.045);
+  const rectW = W - pad * 2, rectH = H - pad * 2;
+  const per = 2 * (rectW - 2 * r) + 2 * (rectH - 2 * r) + 2 * Math.PI * r;
+  const speed = clamp(N.speed || 1, 0.2, 3);
+  const now = live ? performance.now() / 1000 : (t || 0);
+  const phase = ((now * speed * (per / 6.5)) % per + per) % per;  /* 1 putaran ± 6.5 dtk */
+
+  /* 1) track statis (cache per ukuran+warna) */
+  const ck = `nt|${W}x${H}|${wpx}|${N.color}|${r}|${Math.round(pad)}`;
+  let track = _neonTrackCache.get(ck);
+  if (!track) {
+    track = buildNeonTrack(W, H, wpx, N.color, r, pad);
+    _neonTrackCache.set(ck, track);
+    if (_neonTrackCache.size > 8) _neonTrackCache.delete(_neonTrackCache.keys().next().value);
+  }
+  x.save();
+  x.globalCompositeOperation = 'source-over';
+  x.drawImage(track, 0, 0);
+
+  /* 2) pendar komet berputar (aditif, tanpa shadowBlur — cepat) */
+  const rainbow = N.color === 'rainbow';
+  const col = rainbow ? '#ffffff' : N.color;
+  const beam = per * 0.16, tail = per * 0.11;
+  x.globalCompositeOperation = 'lighter';
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  roundedRectPath(x, pad, pad, rectW, rectH, r);
+  const drawBeam = (ph) => {
+    /* ekor komet (3 lapis, makin dekat kepala makin terang) */
+    strokeDashSeg(x, per, ph - tail * 2 - beam, beam + tail * 2, rainbow ? neonHue(ph, per, 0) : neonRGBA(col, 0.10), wpx * 2.6);
+    strokeDashSeg(x, per, ph - tail - beam * 0.55, beam * 0.55 + tail, rainbow ? neonHue(ph, per, 0) : neonRGBA(col, 0.26), wpx * 1.8);
+    /* kepala utama */
+    strokeDashSeg(x, per, ph - beam, beam, rainbow ? neonHue(ph, per, 0) : neonRGBA(col, 0.72), wpx * 1.35);
+    /* inti putih panas */
+    strokeDashSeg(x, per, ph - beam * 0.55, beam * 0.55, rainbow ? neonHue(ph, per, 0) : 'rgba(255,255,255,.9)', Math.max(1.2, wpx * 0.5));
+  };
+  drawBeam(phase);
+  if (N.dual) drawBeam((phase + per / 2) % per);
+  x.restore();
 }
 
 /* ---------- UPGRADE: FILM GRAIN (v2.2: 6 tile pre-generate, di-cycle) ---------- */

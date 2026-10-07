@@ -1,18 +1,18 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.7
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.8
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
-Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
+Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.7.0.exe`
+1. Jalankan `KINOSTRA-Setup-2.8.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.7.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-2.8.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -29,9 +29,38 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 | 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
-| 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo |
-| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel |
+| 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
+| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.8
+
+### 1. FRAME NEON BERPUTAR (9:16 & 16:9) — sesuai gambar referensi
+- **Garis neon bercahaya mengelilingi pinggir video** dalam bingkai membulat
+  (rounded corners), dan garis itu **terus berputar otomatis** sepanjang video —
+  videomu tampil di bagian dalam bingkai.
+- Ada **jejak komet**: kepala pendar paling terang + ekor memudar di belakangnya,
+  melintas mulus menembus keempat sudut.
+- **7 pilihan warna**: CYAN · AMBER · MAGENTA · HIJAU · BIRU · PUTIH ·
+  **RAINBOW** (warna pelangi ikut berubah selagi garis berputar).
+- **Ketebalan** (2–16) dan **kecepatan putar** (0.2–3×) bisa diatur, plus opsi
+  **dua garis berlawanan** sekaligus.
+- Berlaku untuk rasio **9:16 DAN 16:9**, tampil di preview dan **terbakar ke
+  video saat ekspor** — termasuk saat Batch Ekspor.
+- Lokasi: modul **08 — EFEK VISUAL & WATERMARK → FRAME NEON BERPUTAR**.
+- Ringan: track statis di-cache dan pendar digambar tanpa efek blur berat,
+  kecepatan render ekspor tetap terjaga.
+
+### 2. BATCH EKSPOR di menu EKSPOR & KOMPRESI
+- Tombol baru **“BATCH EKSPOR — SEMUA VIDEO DI KOTAK”** di modul 09:
+  semua video dalam Kotak Video diekspor **berurutan satu per satu**
+  otomatis ke **satu folder pilihan** — tanpa mengulang klik per video.
+- Memakai setelan yang aktif saat itu: rasio, split part, judul otomatis,
+  deskripsi, efek visual, **frame neon**, musik & kualitas.
+- Setelah selesai muncul **ringkasan per video** (OK/GAGAL) + tombol
+  **BUKA FOLDER OUTPUT**.
+- Berbeda dengan modul 10 (Batch Proses) yang melanjutkan video yang belum
+  selesai — tombol di modul 09 memproses ulang **semua** video di kotak.
 
 ## Yang Baru di v2.7
 
@@ -195,4 +224,4 @@ Porting setia dari KINOSTRA v1.0 (web) + 13 upgrade.
 - Output MP4 H.264 + AAC/Opus, faststart (siap streaming)
 - Data model AI: `%APPDATA%\KINOSTRA\whisper` (bisa dibuka dari panel Subtitel)
 - Mesin subtitel: whisper.cpp v1.9.4 (MIT) — binari dibundel di `bin/whisper`
-- Versi: 2.7.0 · Engine: Electron 33 (Chromium 130)
+- Versi: 2.8.0 · Engine: Electron 33 (Chromium 130)

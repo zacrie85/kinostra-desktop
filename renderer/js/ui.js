@@ -253,12 +253,45 @@ $('#btnWmLogo').onclick = async () => {
   img.src = 'data:image/' + (r.name.toLowerCase().endsWith('svg') ? 'svg+xml' : 'png') + ';base64,' + r.data;
 };
 
+/* ---------- v2.8: FRAME NEON BERPUTAR (9:16 & 16:9) ---------- */
+function syncNeonLabels() {
+  $('#neonWV').textContent = String(state.neon.width);
+  $('#neonSV').textContent = state.neon.speed.toFixed(1) + '×';
+  $('#inNeonW').value = state.neon.width; $('#inNeonS').value = state.neon.speed;
+  $('#neonOn').checked = !!state.neon.on; $('#neonDual').checked = !!state.neon.dual;
+}
+$('#neonOn').onchange = e => { state.neon.on = e.target.checked; toast(state.neon.on ? 'Frame neon berputar: AKTIF — ikut terbakar ke video saat ekspor' : 'Frame neon: MATI', 'ok'); };
+$('#neonDual').onchange = e => { state.neon.dual = e.target.checked; };
+$('#inNeonW').oninput = e => { state.neon.width = clamp(parseInt(e.target.value) || 7, 2, 16); syncNeonLabels(); };
+$('#inNeonS').oninput = e => { state.neon.speed = clamp(parseFloat(e.target.value) || 1, 0.2, 3); syncNeonLabels(); };
+NEONCOLORS.forEach(([name, val]) => {
+  const b = document.createElement('button');
+  if (val === 'rainbow') {
+    b.style.background = 'linear-gradient(90deg,#ff4fa3,#f7a600,#9be15d,#2ee6ff,#4d7cff)';
+    b.title = 'RAINBOW — warna pelangi ikut berputar';
+  } else { b.style.background = val; b.title = name; }
+  if (state.neon.color === val) b.classList.add('on');
+  b.onclick = () => {
+    state.neon.color = val;
+    $$('#neonColors button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    if (!state.neon.on) { state.neon.on = true; syncNeonLabels(); }
+    toast('Warna neon: ' + name, 'ok');
+  };
+  $('#neonColors').appendChild(b);
+});
+syncNeonLabels();
+
 /* ---------- 09 EKSPOR ---------- */
 bindSeg('segQual', v => { state.quality = v; updateAll(); });
 bindSeg('segScale', v => { state.scale = v; updateAll(); });
 bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
 bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
 $('#btnExport').onclick = doExport;
+/* v2.8: BATCH EKSPOR dari menu EKSPOR & KOMPRESI — semua video di kotak
+   diekspor berurutan memakai setelan saat ini (paksa proses ulang yang
+   berstatus selesai — nama tombol memang "SEMUA VIDEO DI KOTAK") */
+$('#btnExportAll').onclick = () => runBatch(true);
 
 /* ---------- 10 BATCH (v2.3: impor massal 100 + proses berurutan otomatis) ---------- */
 $('#btnBatchAdd').onclick = async () => {

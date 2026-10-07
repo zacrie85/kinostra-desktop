@@ -32,6 +32,12 @@ const FONTS = [
   { n: 'Cormorant Garamond', d: 'GARAMOND ELEGAN · ARTHA DRAMA' }
 ];
 const TRACKCOLORS = ['#F7A600', '#3EE6C1', '#FF4FA3', '#9BE15D'];
+/* v2.8: palet frame neon — key 'rainbow' = warna mengikuti putaran */
+const NEONCOLORS = [
+  ['CYAN', '#2EE6FF'], ['AMBER', '#F7A600'], ['MAGENTA', '#FF4FA3'],
+  ['HIJAU', '#9BE15D'], ['BIRU', '#4D7CFF'], ['PUTIH', '#F5F3ED'],
+  ['RAINBOW', 'rainbow']
+];
 
 const state = {
   file: null, duration: 0, isAudio: false, audioBuffer: null, peaks: null,
@@ -56,6 +62,9 @@ const state = {
   /* UPGRADE: efek visual & watermark */
   vfx: { bright: 1, contrast: 1, saturate: 1, vignette: false, grain: false },
   wm: { mode: 'off', text: '@KINOSTRA', img: null, imgName: '', pos: 'br', opacity: 0.6, scale: 1 },
+  /* v2.8: FRAME NEON BERPUTAR — garis neon mengelilingi pinggir video,
+     terus berputar otomatis, berlaku untuk rasio 9:16 & 16:9 */
+  neon: { on: false, color: '#2EE6FF', width: 7, speed: 1, dual: true },
   /* UPGRADE: batch */
   batch: [],
   busy: false, abort: false, scanAbort: false

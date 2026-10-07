@@ -172,14 +172,22 @@ function renderQueue() {
   const n = state.batch.length, done = state.batch.filter(b => b.status === 'done').length;
   $('#qStat').textContent = `${n} video dalam kotak · ${done} selesai · klik baris untuk menonton`;
   $('#batchStat').textContent = `${n} file dalam kotak · ${done} selesai`;
+  /* v2.8: status juga tampil di menu EKSPOR & KOMPRESI (batch ekspor) */
+  const ea = $('#expAllStat');
+  if (ea) ea.textContent = n
+    ? `${n} video dalam kotak · ${done} selesai · siap diekspor berurutan`
+    : 'Kotak kosong — impor video dulu (modul 00 / IMPOR MEDIA)';
 }
 /* alias kompatibilitas */
 const renderBatchList = renderQueue;
 
-/* ---------- BATCH: proses isi kotak berurutan dari atas ---------- */
-async function runBatch() {
+/* ---------- BATCH: proses isi kotak berurutan dari atas ----------
+   v2.8: forceAll = true (dipakai tombol BATCH EKSPOR di menu EKSPOR &
+   KOMPRESI) → video berstatus SELESAI ikut diproses ulang dari awal. */
+async function runBatch(forceAll = false) {
   if (!state.batch.length) { toast('Kotak kosong — tambah video dulu', 'warn'); return; }
   if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
+  if (forceAll) state.batch.forEach(b => { if (b.status === 'done') { b.status = 'wait'; b.msg = ''; } });
   const pending = state.batch.filter(b => b.status !== 'done');
   if (!pending.length) { toast('Semua video dalam kotak sudah selesai', 'ok'); return; }
   const dir = await window.kinostra.pickOutputDir(_lastOutDir || undefined);
@@ -235,6 +243,23 @@ async function runBatch() {
     hideModal();
     if (state.abort) toast('Batch dihentikan', 'warn');
     else toast(`Batch selesai — ${ok} berhasil${fail ? `, ${fail} gagal` : ''}`, fail ? 'warn' : 'ok');
+    /* v2.8: ringkasan akhir + tombol buka folder output (modal selalu bisa
+       ditutup — × / TUTUP / ESC / klik luar) */
+    if (ok + fail > 0 && !state.abort) {
+      const rows = state.batch.filter(b => b.status === 'done' || b.status === 'err').map(b =>
+        `<div class="rrow"><span class="rn">${b.name}</span><span class="rs" style="color:${b.status === 'done' ? 'var(--acc)' : '#ff6b6b'}">${b.status === 'done' ? 'OK · ' + b.msg : 'GAGAL · ' + b.msg}</span></div>`).join('');
+      showModal({
+        title: `BATCH EKSPOR SELESAI · ${ok} OK${fail ? ` · ${fail} GAGAL` : ''}`,
+        body: rows +
+          `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Folder: ${dir}</span></div>
+           <button class="btn acc wide" id="openFolderBatch" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>`,
+        cancel: true
+      });
+      if (window.lucide) lucide.createIcons();
+      M.c.textContent = 'TUTUP';
+      const ofb = M.b.querySelector('#openFolderBatch');
+      if (ofb) ofb.onclick = () => window.kinostra.openPath(dir);
+    }
   } finally {
     state.busy = false;
     renderQueue();

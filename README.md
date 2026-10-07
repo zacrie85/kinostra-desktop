@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.5.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.8.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -33,6 +33,8 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 14 | **Batch Proses** ⭐v2.1 | Antrean render otomatis berurutan dari atas ke bawah Kotak Video |
 | 15 | **Posisi Subtitel** ⭐v2.5 | Geser posisi subtitel ke atas/bawah lewat slider — tidak lagi berdempetan dengan tulisan PART |
 | 16 | **Ekspor Anti-Macet** ⭐v2.5 | Watchdog 3 lapis + timeout flush/simpan + **ulang otomatis dengan encoder software** saat encoder GPU berhenti — ekspor tidak lagi macet di bagian akhir |
+| 17 | **Frame Neon Berputar** ⭐v2.8 | Garis neon bercahaya keliling pinggir video dengan **efek komet berputar otomatis** (9:16 & 16:9) — 7 warna (termasuk RAINBOW), ketebalan & kecepatan bisa diatur, terbakar saat ekspor |
+| 18 | **Batch Ekspor** ⭐v2.8 | Tombol di menu EKSPOR & KOMPRESI: **semua video di Kotak Video diekspor berurutan** ke satu folder — ringkasan per video + buka folder output |
 
 ⭐ = fitur baru/upgrade terbaru
 
@@ -48,8 +50,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-2.5.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-2.5.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-2.8.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-2.8.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 
