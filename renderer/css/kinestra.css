@@ -197,6 +197,13 @@ footer{border-top:1px solid var(--line);background:var(--panel);display:flex;fle
 .tlseg em{display:block;font-style:normal;font-family:var(--mono);font-size:9px;color:var(--tx3);margin-top:3px}
 #tlPlay{position:absolute;top:0;bottom:0;width:2px;background:var(--acc);pointer-events:none;box-shadow:0 0 8px rgba(247,166,0,.7)}
 #tlPlay::before{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top:6px solid var(--acc)}
+/* v2.9: zona TIDAK DIEKSPOR di timeline (sebelum mulai / sesudah berhenti) */
+.tlskip{position:relative;border-right:1px solid var(--line2);overflow:hidden;padding:6px 9px;min-width:0;flex-shrink:0;
+  background:repeating-linear-gradient(45deg,#0A0C0F 0 6px,#12161B 6px 12px)}
+.tlskip span{display:block;font-size:9px;letter-spacing:.14em;color:var(--tx3);white-space:nowrap}
+.tlskip em{display:block;font-style:normal;font-family:var(--mono);font-size:9px;color:var(--tx3);margin-top:3px;opacity:.75;white-space:nowrap}
+/* v2.9: tombol preset massal saat AKTIF */
+.btn.on{border-color:var(--acc);color:var(--acc);background:rgba(247,166,0,.08)}
 
 /* ===== MODAL & TOAST ===== */
 #modal{position:fixed;inset:0;z-index:100;background:rgba(4,5,7,.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}

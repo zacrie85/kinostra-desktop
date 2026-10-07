@@ -65,6 +65,11 @@ const state = {
   /* v2.8: FRAME NEON BERPUTAR — garis neon mengelilingi pinggir video,
      terus berputar otomatis, berlaku untuk rasio 9:16 & 16:9 */
   neon: { on: false, color: '#2EE6FF', width: 7, speed: 1, dual: true },
+  /* v2.9: WAKTU MULAI & BERHENTI EKSPOR (detik; 0 = awal / sampai habis) */
+  rangeStart: 0, rangeEnd: 0,
+  /* v2.9: preset TERAPKAN KE SEMUA VIDEO — detik mulai utk semua video
+     di kotak (null = mati). Durasi split mengikuti state.splitSec global */
+  applyAllStart: null,
   /* UPGRADE: batch */
   batch: [],
   busy: false, abort: false, scanAbort: false

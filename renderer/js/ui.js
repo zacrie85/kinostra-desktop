@@ -76,6 +76,78 @@ $('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.valu
 $('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
 syncTextPosLabels();
 $('#inSplit').oninput = e => { state.splitSec = clamp(parseInt(e.target.value) || 3, 3, 600); updateAll(); };
+
+/* ---------- 02b WAKTU MULAI & BERHENTI EKSPOR (v2.9) ----------
+   Contoh: video 5 menit, mulai 2:00 berhenti 4:00 → hanya 2:00–4:00
+   yang dipecah jadi part & diekspor. Sisanya hanya pratinjau. */
+function fmtClock(t) {
+  t = Math.max(0, Math.round(t || 0));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+           : `${m}:${String(s).padStart(2, '0')}`;
+}
+function syncRangeInputs() {
+  const r = rangeInfo(), dur = state.duration || 0;
+  const rs = $('#inRangeStart'), re = $('#inRangeEnd');
+  if (!rs || !re) return;
+  rs.value = fmtClock(r.start);
+  re.value = (state.rangeEnd > 0 && r.end < dur - 0.01) ? fmtClock(r.end) : '';
+  re.placeholder = 'SAMPAI HABIS';
+  const st = $('#rangeStat');
+  if (st) st.innerHTML = r.start > 0.01 || (state.rangeEnd > 0 && r.end < dur - 0.01)
+    ? `EKSPOR <b>${fmtT(r.start)} → ${fmtT(r.end)}</b> · durasi <b>${fmtT(r.len)}</b> · <b>${segmentsCount()}</b> part`
+    : `PENUH — 0:00 → ${fmtT(dur)} · <b>${segmentsCount()}</b> part`;
+}
+function setRangeStart(sec) {
+  if (!state.file) { toast('Impor media dulu', 'warn'); return; }
+  if (isNaN(sec)) { toast('Format waktu: detik (90) atau 1:30 / 1:02:03', 'warn'); return; }
+  const dur = state.duration || 0;
+  sec = clamp(sec, 0, Math.max(0, dur - 0.5));
+  if (sec > rangeInfo().end - 0.5) { toast('Waktu mulai terlalu dekat/melebihi waktu berhenti', 'warn'); return; }
+  state.rangeStart = sec; updateAll(); syncRangeInputs();
+}
+function setRangeEnd(sec) {
+  if (!state.file) { toast('Impor media dulu', 'warn'); return; }
+  if (isNaN(sec)) { toast('Kosongkan = sampai habis, atau isi 1:30 / 90', 'warn'); return; }
+  const dur = state.duration || 0;
+  sec = clamp(sec, 0, dur);
+  if (sec <= state.rangeStart + 0.5) { toast('Waktu berhenti harus sesudah waktu mulai', 'warn'); return; }
+  state.rangeEnd = (sec >= dur - 0.05) ? 0 : sec;   /* menempel akhir = sampai habis */
+  updateAll(); syncRangeInputs();
+}
+$('#inRangeStart').onchange = e => setRangeStart(parseTimeArg(e.target.value));
+$('#inRangeEnd').onchange = e => setRangeEnd(e.target.value.trim() === '' ? 0 : parseTimeArg(e.target.value));
+$('#btnRangeStartHere').onclick = () => setRangeStart(videoEl.currentTime || 0);
+$('#btnRangeEndHere').onclick = () => setRangeEnd(videoEl.currentTime || 0);
+$('#btnRangeReset').onclick = () => {
+  state.rangeStart = 0; state.rangeEnd = 0;
+  updateAll(); syncRangeInputs(); toast('Rentang kembali penuh — 0:00 sampai habis', 'ok');
+};
+/* TERAPKAN KE SEMUA VIDEO DI KOTAK — menyimpan waktu mulai (video aktif)
+   + durasi split per part (setelan di atas) sebagai preset massal. Semua
+   video berikutnya (batch / batch ekspor) mulai dari waktu itu; berhenti
+   tetap sampai masing-masing video habis. */
+function syncRangeApplyUI() {
+  const st = $('#rangeApplyStat'), on = state.applyAllStart != null;
+  if (st) st.innerHTML = on
+    ? `<b>AKTIF</b> · mulai <b>${fmtClock(state.applyAllStart)}</b> · split <b>${Math.round(state.splitSec)} dtk</b> — berlaku utk semua video di kotak`
+    : 'MATI — setiap video diekspor penuh dari 0:00 sampai habis';
+  const b = $('#btnRangeApplyAll');
+  if (b) b.classList.toggle('on', on);
+}
+$('#btnRangeApplyAll').onclick = () => {
+  if (!state.batch.length) { toast('Kotak masih kosong — impor video dulu (modul 00)', 'warn'); return; }
+  state.applyAllStart = rangeInfo().start;
+  syncRangeApplyUI(); renderQueue(); updateAll();
+  toast(`Diterapkan ke ${state.batch.length} video di kotak: mulai ${fmtClock(state.applyAllStart)} · split ${Math.round(state.splitSec)} dtk`, 'ok');
+};
+$('#btnRangeApplyReset').onclick = () => {
+  if (state.applyAllStart == null) { toast('Penerapan massal memang sedang mati'); return; }
+  state.applyAllStart = null;
+  applyRangePreset(); syncRangeApplyUI(); syncRangeInputs(); renderQueue(); updateAll();
+  toast('Penerapan massal dimatikan — semua video diekspor penuh', 'ok');
+};
+syncRangeApplyUI();
 $('#selPrefix').onchange = e => { state.partPrefix = e.target.value; updateAll(); };
 bindSeg('segPartShow', v => { state.partShow = v; });
 $('#titleOn').onchange = e => { state.titleOn = e.target.checked; };
@@ -323,16 +395,33 @@ function renderTimeline() {
   const inn = $('#tlInner'), ph = $('#tlPlay');
   inn.innerHTML = '';
   if (!state.file) { $('#tlMeta').textContent = '—'; inn.appendChild(ph); return; }
+  const dur = state.duration || 0, r = rangeInfo();
+  /* v2.9: zona TIDAK DIEKSPOR (sebelum mulai & sesudah berhenti) digambar
+     redup bergaris — hanya bagian tengah yang dipecah jadi part */
+  if (r.start > 0.01) {
+    const d = document.createElement('div'); d.className = 'tlskip';
+    d.style.flexGrow = r.start.toFixed(2);
+    d.innerHTML = `<span>MULAI ${fmtT(r.start)}</span><em>TIDAK DIEKSPOR</em>`;
+    inn.appendChild(d);
+  }
   segments().forEach(s => {
     const d = document.createElement('div'); d.className = 'tlseg'; d.dataset.i = s.i;
     d.style.flexGrow = (s.end - s.start).toFixed(2);
     d.innerHTML = `<span>PART ${String(s.i + 1).padStart(2, '0')}</span><em>${fmtT(s.start)}–${fmtT(s.end)}</em>`;
     inn.appendChild(d);
   });
+  if (dur - r.end > 0.01) {
+    const d = document.createElement('div'); d.className = 'tlskip';
+    d.style.flexGrow = (dur - r.end).toFixed(2);
+    d.innerHTML = `<span>BERHENTI ${fmtT(r.end)}</span><em>TIDAK DIEKSPOR</em>`;
+    inn.appendChild(d);
+  }
   /* playhead ditempel lagi di akhir tlInner → posisi %-nya relatif ke lebar
      konten penuh, tetap akurat saat timeline panjang discrol ke samping */
   inn.appendChild(ph);
-  $('#tlMeta').textContent = `${segmentsCount()} PART · SPLIT ${state.splitSec} DTK · TOTAL ${fmtT(state.duration)}`;
+  const rangeTxt = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < dur - 0.01))
+    ? ` · RANGE ${fmtT(r.start)}–${fmtT(r.end)}` : '';
+  $('#tlMeta').textContent = `${segmentsCount()} PART · SPLIT ${state.splitSec} DTK${rangeTxt} · TOTAL ${fmtT(dur)}`;
 }
 let tlDrag = false;
 function tlSeek(e) {
@@ -358,10 +447,12 @@ function togglePlay() {
   if (videoEl.paused) { getActx().resume(); videoEl.play(); } else videoEl.pause();
 }
 $('#btnPlay').onclick = togglePlay;
-$('#btnPrev').onclick = () => { if (state.duration) { const c = Math.floor(videoEl.currentTime / state.splitSec);
-  videoEl.currentTime = clamp(c - 1, 0, segmentsCount() - 1) * state.splitSec + 0.01; } };
-$('#btnNext').onclick = () => { if (state.duration) { const c = Math.floor(videoEl.currentTime / state.splitSec);
-  videoEl.currentTime = clamp(c + 1, 0, segmentsCount() - 1) * state.splitSec + 0.01; } };
+$('#btnPrev').onclick = () => { if (state.duration) { const r = rangeInfo();
+  const c = Math.floor((videoEl.currentTime - r.start) / state.splitSec);
+  videoEl.currentTime = r.start + clamp(c - 1, 0, segmentsCount() - 1) * state.splitSec + 0.01; } };
+$('#btnNext').onclick = () => { if (state.duration) { const r = rangeInfo();
+  const c = Math.floor((videoEl.currentTime - r.start) / state.splitSec);
+  videoEl.currentTime = r.start + clamp(c + 1, 0, segmentsCount() - 1) * state.splitSec + 0.01; } };
 videoEl.addEventListener('play', () => { getActx().resume(); startMusicSync(); setPlayIcon(); });
 videoEl.addEventListener('pause', () => { stopMusicPreview(); setPlayIcon(); });
 videoEl.addEventListener('seeked', () => { if (!videoEl.paused) startMusicSync(); });
@@ -437,7 +528,7 @@ function loop() {
       lastHud = performance.now();
       $('#tTime').textContent = `${fmtT(t)} / ${fmtT(state.duration)}`;
       $('#hudState').textContent = state.busy ? 'WORKING' : (videoEl.paused ? 'PAUSED' : 'PLAYING');
-      const seg = Math.min(segmentsCount() - 1, Math.floor(t / state.splitSec));
+      const seg = currentSegIndex(t);
       $('#hudPart').textContent = `PART ${String(seg + 1).padStart(2, '0')}/${String(segmentsCount()).padStart(2, '0')}`;
       $('#tlPlay').style.left = (t / (state.duration || 1) * 100) + '%';
       [...$('#tlInner').children].forEach(c => { if (c.id !== 'tlPlay') c.classList.toggle('cur', +c.dataset.i === seg); });

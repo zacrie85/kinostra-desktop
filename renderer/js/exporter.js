@@ -535,16 +535,24 @@ function showResults(results, dir) {
 /* ---------- ringkasan ekspor ---------- */
 function updateOutName() {
   if (!state.file) { $('#outName').textContent = '—'; return; }
-  const n = segmentsCount();
-  $('#outName').textContent = `${slug(state.title)}${state.partPrefix !== '#' ? '_' + state.partPrefix : ''}_01 … ${String(n).padStart(2, '0')}.mp4  ·  ${n} part × ${state.splitSec} dtk`;
+  const n = segmentsCount(), r = rangeInfo();
+  /* v2.9: tampilkan rentang bila aktif (mulai > 0 atau berhenti < durasi) */
+  const rangeTxt = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < (state.duration || 0) - 0.01))
+    ? ` · ${fmtT(r.start)}–${fmtT(r.end)}` : '';
+  $('#outName').textContent = `${slug(state.title)}${state.partPrefix !== '#' ? '_' + state.partPrefix : ''}_01 … ${String(n).padStart(2, '0')}.mp4  ·  ${n} part × ${state.splitSec} dtk${rangeTxt}`;
 }
 function updateExportInfo() {
   if (!state.file) { $('#expSum').textContent = 'Impor media untuk melihat ringkasan.'; return; }
   const sc = parseFloat(state.scale), q = QUAL[state.quality];
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
-  const dims = outDims(sc), est = br / 8 * state.duration + 160000 / 8 * state.duration;
+  const dims = outDims(sc);
+  /* v2.9: estimasi & jumlah part memakai rentang ekspor (bukan durasi penuh) */
+  const r = rangeInfo();
+  const est = br / 8 * r.len + 160000 / 8 * r.len;
   const par = pickParallelCount(segmentsCount());
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×
+  const rangeLine = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < (state.duration || 0) - 0.01))
+    ? `<br><b>RANGE ${fmtT(r.start)} → ${fmtT(r.end)}</b> · durasi ekspor ${fmtT(r.len)}` : '';
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }

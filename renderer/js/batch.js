@@ -184,13 +184,16 @@ const renderBatchList = renderQueue;
 /* ---------- BATCH: proses isi kotak berurutan dari atas ----------
    v2.8: forceAll = true (dipakai tombol BATCH EKSPOR di menu EKSPOR &
    KOMPRESI) → video berstatus SELESAI ikut diproses ulang dari awal. */
+/* v2.9: pembungkus pemilih folder output — fungsi global agar pengujian
+   otomatis (CDP) dapat menimpanya tanpa menyentuh dialog native */
+async function pickOutDir() { return window.kinostra.pickOutputDir(_lastOutDir || undefined); }
 async function runBatch(forceAll = false) {
   if (!state.batch.length) { toast('Kotak kosong — tambah video dulu', 'warn'); return; }
   if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
   if (forceAll) state.batch.forEach(b => { if (b.status === 'done') { b.status = 'wait'; b.msg = ''; } });
   const pending = state.batch.filter(b => b.status !== 'done');
   if (!pending.length) { toast('Semua video dalam kotak sudah selesai', 'ok'); return; }
-  const dir = await window.kinostra.pickOutputDir(_lastOutDir || undefined);
+  const dir = await pickOutDir();
   if (!dir) return;
   _lastOutDir = dir;
 

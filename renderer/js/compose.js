@@ -149,12 +149,13 @@ function drawComposition(x, W, H, t) {
     /* UPGRADE: film grain (murah: noise halus per frame) */
     if (V.grain) drawGrain(x, W, H, t);
   } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
-  /* --- PART (v2.6: posisi bisa digeser kiri/kanan & atas/bawah) --- */
+  /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang mulai/berhenti) --- */
   const total = segmentsCount();
-  const seg = Math.min(total - 1, Math.floor(t / state.splitSec));
+  const rInf = rangeInfo();
+  const seg = clamp(Math.floor((t - rInf.start) / state.splitSec), 0, total - 1);
   const ppx = clamp(state.partPosX || 0, -1, 1), ppy = clamp(state.partPosY || 0, -1, 1);
   if (state.partShow === 'intro') {
-    const tin = t - seg * state.splitSec, a = clamp(1 - tin / 1.6, 0, 1);
+    const tin = t - rInf.start - seg * state.splitSec, a = clamp(1 - tin / 1.6, 0, 1);
     if (a > 0) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
       /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal) */
@@ -414,13 +415,15 @@ function drawWaveBg(x, W, H, t, u) {
   x.strokeStyle = 'rgba(120,140,160,.07)'; x.lineWidth = 1;
   for (let gy = 0; gy < H; gy += 64 * u) { x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke(); }
   const mid = H / 2, p = state.peaks || [];
+  /* v2.9: progres waveform relatif terhadap rentang ekspor (bukan durasi penuh) */
+  const rW = rangeInfo(), prog = clamp((t - rW.start) / rW.len, 0, 1);
   const bw = Math.max(2, Math.round(3 * u)), gap = Math.round(2 * u), n = Math.floor(W / (bw + gap));
   for (let i = 0; i < n; i++) {
     const v = p[Math.floor(i / n * p.length)] || 0, h = Math.max(2 * u, v * H * 0.3);
-    x.fillStyle = (i / n) < (t / (state.duration || 1)) ? '#F7A600' : 'rgba(160,175,190,.32)';
+    x.fillStyle = (i / n) < prog ? '#F7A600' : 'rgba(160,175,190,.32)';
     x.fillRect(i * (bw + gap), mid - h / 2, bw, h);
   }
-  x.fillStyle = '#F7A600'; x.fillRect((t / (state.duration || 1)) * W - 1 * u, H * 0.12, 2.5 * u, H * 0.76);
+  x.fillStyle = '#F7A600'; x.fillRect(prog * W - 1 * u, H * 0.12, 2.5 * u, H * 0.76);
   x.font = `500 ${Math.round(20 * u)}px "JetBrains Mono"`; x.fillStyle = 'rgba(239,237,231,.5)';
   x.textAlign = 'left'; x.fillText('AUDIO ONLY · ' + (state.file ? state.file.name.toUpperCase() : ''), 24 * u, H * 0.085);
 }

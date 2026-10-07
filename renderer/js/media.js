@@ -109,6 +109,9 @@ async function loadFileBlob(file, force = false) {
   $('#fDur').textContent = fmtT(state.duration);
   $('#fRes').textContent = state.isAudio ? 'AUDIO ONLY' : `${videoEl.videoWidth}×${videoEl.videoHeight}`;
   $('#tInfo').textContent = `SPLIT ${state.splitSec} DTK/PART`;
+  /* v2.9: terapkan preset TERAPKAN-KE-SEMUA (bila aktif) ke video yang baru dimuat,
+     lalu segarkan input waktu mulai/berhenti di modul 02 */
+  applyRangePreset(); syncRangeInputs();
   renderTimeline(); updateAll();
   toast(`Dimuat: ${file.name}`, 'ok');
 }
@@ -137,11 +140,48 @@ function outDims(sc = 1) {
   let W, H; if (state.ratio === '16:9') { W = 1920; H = 1080; } else { W = 1080; H = 1920; }
   W = Math.round(W * sc / 2) * 2; H = Math.round(H * sc / 2) * 2; return { W, H };
 }
-function segmentsCount() { return state.duration ? Math.max(1, Math.ceil(state.duration / state.splitSec - 1e-6)) : 1; }
+/* ---------- v2.9: WAKTU MULAI & BERHENTI EKSPOR ----------
+   rangeInfo() = rentang efektif video aktif: {start, end, len}.
+   Segmen, timeline, ringkasan & seluruh mesin ekspor memakai ini —
+   part hanya dibuat DI DALAM rentang, sisanya tidak diekspor. */
+function parseTimeArg(str) {
+  /* terima "90", "90.5", "1:30", "1:02:03" → detik (NaN bila tidak valid) */
+  const s = String(str == null ? '' : str).trim(); if (!s) return NaN;
+  if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+  const p = s.split(':').map(x => parseFloat(x.trim()));
+  if (!p.length || p.length > 3 || p.some(isNaN) || p.some(v => v < 0)) return NaN;
+  return p.reverse().reduce((a, v, i) => a + v * Math.pow(60, i), 0);
+}
+function rangeInfo() {
+  const dur = state.duration || 0;
+  let s = clamp(state.rangeStart || 0, 0, Math.max(0, dur - 0.1));
+  let e = state.rangeEnd > 0 ? Math.min(state.rangeEnd, dur) : dur;
+  if (e - s < 0.1) { s = 0; e = dur; }   /* rentang tidak valid → penuh */
+  return { start: s, end: e, len: Math.max(0.1, e - s) };
+}
+function segmentsCount() {
+  if (!state.duration) return 1;
+  const r = rangeInfo();
+  return Math.max(1, Math.ceil(r.len / state.splitSec - 1e-6));
+}
 function segments() {
-  const n = segmentsCount(), arr = [];
-  for (let i = 0; i < n; i++) arr.push({ i, start: i * state.splitSec, end: Math.min(state.duration, (i + 1) * state.splitSec) });
+  const r = rangeInfo(), n = segmentsCount(), arr = [];
+  for (let i = 0; i < n; i++)
+    arr.push({ i, start: r.start + i * state.splitSec, end: Math.min(r.end, r.start + (i + 1) * state.splitSec) });
   return arr;
+}
+/* indeks part saat ini (0-based) relatif dalam rentang — utk HUD & komposisi */
+function currentSegIndex(t) {
+  return clamp(Math.floor((t - rangeInfo().start) / state.splitSec), 0, segmentsCount() - 1);
+}
+/* v2.9: preset massal — dipanggil tiap video dimuat (impor, klik kotak, batch).
+   Waktu mulai video = preset applyAllStart (dipotong bila melebihi durasi);
+   berhenti selalu sampai video habis. Bila preset mati → penuh 0–akhir. */
+function applyRangePreset() {
+  const dur = state.duration || 0;
+  state.rangeStart = (state.applyAllStart != null && dur > 0 && state.applyAllStart < dur)
+    ? state.applyAllStart : 0;
+  state.rangeEnd = 0;   /* 0 = sampai habis */
 }
 function containRect(vw, vh, W, H) { const s = Math.min(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }
 function coverRect(vw, vh, W, H) { const s = Math.max(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }

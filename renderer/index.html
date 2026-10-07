@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.8.1 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.9.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.8.1</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.9.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -124,6 +124,28 @@
           <input type="number" class="in mono" id="inSplit" min="3" max="600" value="45">
           <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">DETIK</span>
         </div>
+        <div class="lbl" style="margin-top:6px">WAKTU MULAI EKSPOR <span class="beta">BARU · v2.9</span></div>
+        <div class="row">
+          <input class="in mono" id="inRangeStart" placeholder="0:00">
+          <button class="btn sm" id="btnRangeStartHere" style="flex:0 0 auto" title="Ambil dari posisi putar sekarang">PAKAI PLAYHEAD</button>
+        </div>
+        <div class="lbl">WAKTU BERHENTI EKSPOR</div>
+        <div class="row">
+          <input class="in mono" id="inRangeEnd" placeholder="SAMPAI HABIS">
+          <button class="btn sm" id="btnRangeEndHere" style="flex:0 0 auto" title="Ambil dari posisi putar sekarang">PAKAI PLAYHEAD</button>
+        </div>
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnRangeReset" style="flex:0 0 auto"><i data-lucide="rotate-ccw"></i> RESET PENUH</button>
+          <span class="substat" id="rangeStat">PENUH</span>
+        </div>
+        <div class="note">Isi <b>detik</b> (90) atau <b>m:ss / h:mm:ss</b> (1:30 · 1:02:03). Contoh: video 5 menit, mulai <b>2:00</b> berhenti <b>4:00</b> → hanya bagian 2:00–4:00 yang dipecah jadi part &amp; diekspor. Zona di luar rentang tampil redup bergaris di TIMELINE SPLIT.</div>
+        <div class="lbl" style="margin-top:8px">PENERAPAN MASSAL — SEMUA VIDEO DI KOTAK <span class="beta">BARU · v2.9</span></div>
+        <div class="row">
+          <button class="btn acc" id="btnRangeApplyAll"><i data-lucide="check-check"></i> TERAPKAN KE SEMUA VIDEO</button>
+          <button class="btn sm" id="btnRangeApplyReset" style="flex:0 0 auto">MATIKAN</button>
+        </div>
+        <div class="substat" id="rangeApplyStat">MATI — setiap video diekspor penuh dari 0:00 sampai habis</div>
+        <div class="note">Yang diterapkan ke video-video berikutnya: <b>waktu mulai</b> &amp; <b>durasi split per part</b> (setelan di atas). Video lain tetap diekspor <b>sampai habis</b> — waktu berhenti hanya berlaku untuk video yang sedang dibuka.</div>
         <div class="lbl">PREFIX NOMOR PART</div>
         <select class="in" id="selPrefix">
           <option>PART</option><option>EPISODE</option><option>EPS</option>
