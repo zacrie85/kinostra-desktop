@@ -33,6 +33,35 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
 
+## Yang Baru di v2.10
+
+### BATCH EKSPOR ANTI-BATAL — antrean tidak lagi berhenti karena satu video
+- **Bug lama (v2.8–v2.9)**: saat batch ekspor, SATU video bermasalah (encoder
+  GPU macet, file korup, format aneh) otomatis **menghentikan seluruh
+  antrean** dengan pesan "Batch dihentikan"/"Ekspor dibatalkan" — padahal
+  pengguna tidak menekan BATAL. Terburuknya bila skor musik aktif: batch
+  hampir selalu berhenti di video pertama/kedua.
+- **Tiga penyebab ditemukan & diperbaiki**:
+  1. **Skor musik tidak dirender ulang di batch** — guard "busy" membuat
+     penyusunan skor melewati tiap video secara diam-diam, sehingga buffer
+     musik video sebelumnya (yang lebih pendek) membuat mesin audio
+     melempar error pada video berikutnya → batch berhenti semua.
+     Sekarang skor **benar-benar disusun ulang untuk setiap video**.
+  2. **Kegagalan internal dianggap "batal"** — error encoder/media memakai
+     flag yang sama dengan tombol BATAL, sehingga seluruh batch berhenti
+     dan penyebab aslinya tersembunyi. Sekarang keduanya dipisah: **hanya
+     tombol BATAL/×/ESC yang menghentikan batch**; video yang gagal
+     ditandai **GAGAL + alasannya** lalu batch **lanjut ke video
+     berikutnya** sampai kotak habis.
+  3. **Musik lebih pendek dari part tidak lagi crash** — skor otomatis
+     **berulang (loop)** mengikuti panjang part; audio asli dilewati bila
+     posisi mulai berada di luar durasinya.
+- **Ringkasan akhir lebih jelas**: video gagal tampil dengan penyebabnya,
+  plus petunjuk: perbaiki sumbernya lalu jalankan batch lagi — video yang
+  sudah SELESAI tidak diulang.
+- Bonus: file yang ternyata tidak bisa diputar kini langsung dilaporkan
+  GAGAL (dulu diam-diam diekspor memakai durasi video sebelumnya).
+
 ## Yang Baru di v2.9
 
 ### WAKTU MULAI & BERHENTI EKSPOR (modul 02)

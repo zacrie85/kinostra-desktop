@@ -92,6 +92,10 @@ async function loadFileBlob(file, force = false) {
       setTimeout(() => { if (videoEl.readyState >= 1) ok(); }, 4000);
     });
   } catch (e) {
+    /* v2.10: muat gagal → bersihkan state agar pemanggil (terutama BATCH)
+       tahu video ini TIDAK termuat. Dulu file & durasi lama tetap terpasang,
+       batch lalu "mengekspor" video rusak memakai durasi video sebelumnya. */
+    state.file = null; state.duration = 0; state.audioBuffer = null;
     toast(`Format .${ext} tidak bisa diputar engine Chromium — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }

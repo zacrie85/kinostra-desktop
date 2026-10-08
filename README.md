@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.9.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.10.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -37,6 +37,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 18 | **Batch Ekspor** ⭐v2.8 | Tombol di menu EKSPOR & KOMPRESI: **semua video di Kotak Video diekspor berurutan** ke satu folder — ringkasan per video + buka folder output |
 | 19 | **Timeline Anti-Overflow** ⭐v2.8.1 | Video panjang (>60 menit) tidak lagi menghilangkan menu kanan: timeline split **pas di layar** & **bisa discrol ke samping** untuk video sangat panjang, playhead otomatis mengikuti |
 | 20 | **Waktu Mulai & Berhenti Ekspor** ⭐v2.9 | Ekspor & split hanya bagian yang diinginkan — mis. video 5 menit diambil menit 2–4 saja. Input `m:ss`, tombol PAKAI PLAYHEAD, zona non-ekspor tampil bergaris di timeline. **Tombol TERAPKAN KE SEMUA VIDEO**: waktu mulai + durasi split diterapkan ke semua video di Kotak Video (masing-masing tetap sampai habis) |
+| 21 | **Batch Anti-Batal** ⭐v2.10 | **Satu video bermasalah tidak lagi membatalkan seluruh batch ekspor** — ditandai GAGAL + penyebabnya, antrean lanjut otomatis. Skor musik kini dirender ulang benar untuk tiap video di batch (dulu memicu berhenti "dibatalkan"), musik otomatis berulang bila part lebih panjang dari skor, dan pesan kegagalan tampil apa adanya — bukan lagi "Ekspor dibatalkan" |
 
 ⭐ = fitur baru/upgrade terbaru
 
@@ -52,8 +53,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-2.9.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-2.9.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-2.10.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-2.10.0-win64.zip` | ±123 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 

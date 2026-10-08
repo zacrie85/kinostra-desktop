@@ -17,6 +17,19 @@
 
 const RVFC_OK = typeof HTMLVideoElement !== 'undefined' && 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
 
+/* v2.10 FIX "BATCH SELALU DIBATALKAN": dulu KEGAGALAN internal (encoder GPU
+   macet, video rusak, watchdog 45 dtk) ikut men-set state.abort — flag yang
+   sama dengan tombol BATAL milik pengguna. Akibatnya satu video bermasalah
+   membatalkan seluruh batch dengan pesan "dihentikan/dibatalkan" tanpa
+   penyebab yang jelas.
+   Sekarang dipisah tegas:
+   - state.abort      = HANYA bila pengguna menekan BATAL / × / ESC
+   - state.exportFatal = alasan kegagalan internal (Error), bukan batal
+   Semua loop render memeriksa keduanya supaya worker lain berhenti cepat,
+   tetapi lapisan batch bisa membedakan "pengguna minta berhenti" vs
+   "video ini gagal → tandai GAGAL lalu lanjut ke video berikutnya". */
+function xAborted() { return state.abort || !!state.exportFatal; }
+
 async function pickVCodecCfg(W, H, br, fps) {
   const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
   /* 1) coba hardware GPU dulu — jauh lebih cepat di Windows (Media Foundation) */
@@ -71,15 +84,24 @@ function withTimeout(p, ms, msg) {
 async function renderMix(start, dur) {
   const sr = 48000, len = Math.max(1, Math.ceil(dur * sr));
   const oc = new OfflineAudioContext(2, len, sr);
-  if (state.audioBuffer) {
+  /* v2.10 FIX: dulu s.start(0, start, durBuffer − start) melempar
+     InvalidStateError ketika start > durasi buffer (mis. WAKTU MULAI 1:05
+     padahal skor musik masih milik video sebelumnya yang lebih pendek) —
+     inilah pemicu utama batch ekspor "selalu dibatalkan" sejak v2.9.
+     Sekarang: audio asli dilewati bila sudah lewat, musik diputar BERULANG
+     (loop) sehingga durasi buffer berapa pun tidak pernah crash. */
+  if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
     const g = oc.createGain(); g.gain.value = state.audioGain;
-    s.connect(g); g.connect(oc.destination); s.start(0, start, Math.min(dur, state.audioBuffer.duration - start));
+    s.connect(g); g.connect(oc.destination);
+    s.start(0, start, Math.max(0.01, Math.min(dur, state.audioBuffer.duration - start)));
   }
-  if (state.music.buffer) {
+  if (state.music.buffer && state.music.buffer.duration > 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.music.buffer;
     const g = oc.createGain(); g.gain.value = state.music.gain;
-    s.connect(g); g.connect(oc.destination); s.start(0, start, Math.min(dur, state.music.buffer.duration - start));
+    s.connect(g); g.connect(oc.destination);
+    s.loop = true;   /* buffer lebih pendek dari part → mengulang, bukan crash */
+    s.start(0, start % state.music.buffer.duration, dur);
   }
   return oc.startRendering();
 }
@@ -90,6 +112,7 @@ async function encodeAudioTo(muxer, abuf, codec) {
   const L = abuf.getChannelData(0), R2 = chs > 1 ? abuf.getChannelData(1) : L, BLK = sr;
   for (let off = 0; off < abuf.length; off += BLK) {
     if (state.abort) throw new Error('Dibatalkan');
+    if (state.exportFatal) throw state.exportFatal;
     const n = Math.min(BLK, abuf.length - off);
     const data = new Float32Array(n * chs);
     data.set(L.subarray(off, off + n), 0);
@@ -98,7 +121,7 @@ async function encodeAudioTo(muxer, abuf, codec) {
       timestamp: Math.round(off / sr * 1e6), data });
     aenc.encode(ad); ad.close();
     let drainMs = 0;
-    while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
+    while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if (state.exportFatal) throw state.exportFatal; if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
   }
   await aenc.flush(); aenc.close();
 }
@@ -129,6 +152,7 @@ async function renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, noSe
   let seekP = null;
   for (let i = 0; i < n; i++) {
     if (state.abort) throw new Error('Dibatalkan');
+    if (state.exportFatal) throw state.exportFatal;
     if (seekP) { await seekP; seekP = null; }
     const t = Math.min(seg.start + i / fps, Math.max(0, (v.duration || seg.end) - 0.011));
     setCompSrc(v);
@@ -244,6 +268,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         const watch = setInterval(() => {
           if (finished) { clearInterval(watch); return; }
           if (state.abort) return fail(new Error('Dibatalkan'));
+          if (state.exportFatal) return fail(state.exportFatal);   /* v2.10: part lain sudah gagal */
           /* v2.7: error encoder terdeteksi → gagal cepat → retry software */
           if (vencErrMsg) return fail(new Error('encoder video bermasalah: ' + vencErrMsg));
           if (v.error) return fail(new Error('video rusak/tak terbaca: ' + (v.error.message || ('kode ' + v.error.code))));
@@ -268,6 +293,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           if (finished) return;
           lastAct = Date.now();
           if (state.abort) return fail(new Error('Dibatalkan'));
+          if (state.exportFatal) return fail(state.exportFatal);   /* v2.10 */
           const m = meta.mediaTime;
           if (v.ended || m >= seg.end - 0.004) return fin();
           if (m >= seg.start - 0.06 && m > lastM) {
@@ -294,6 +320,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         const pump = () => {
           if (finished) return;
           if (state.abort) return fail(new Error('Dibatalkan'));
+          if (state.exportFatal) return fail(state.exportFatal);   /* v2.10 */
           if (v.ended || lastM >= seg.end - 0.004) return fin();
           if (v.paused) {
             try { const p = v.play(); if (p && p.catch) p.catch(err => fail(new Error('video tidak bisa diputar: ' + (err.message || err)))); }
@@ -403,15 +430,20 @@ async function exportPartsToDir(dir, ui) {
      dari disk via kfile:// (Range), tanpa menyalin file ke memori */
   const srcUrl = state.file.virtual ? state.file.kurl : URL.createObjectURL(state.file);
   const results = new Array(segs.length).fill(null);
+  state.exportFatal = null;   /* v2.10: mulai ekspor baru — bersihkan sisa gagal lama */
   try {
     if (ui.title) ui.title(segs);
     if (ui.prog) ui.prog(0);
     if (ui.sub) ui.sub(`menyiapkan ${par} render paralel${hw ? ' · encoder GPU' : ''}${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}…`);
 
-    /* jalankan worker dengan batas `par` sekaligus (antrean) */
-    let cursor = 0, abortErr = null;
+    /* jalankan worker dengan batas `par` sekaligus (antrean)
+       v2.10: kegagalan part TIDAK lagi men-set state.abort (flag batal
+       milik pengguna) — cukup state.exportFatal supaya worker lain berhenti.
+       Penelepon (ekspor tunggal / batch) menerima Error aslinya dan bisa
+       menampilkan penyebabnya; batch menandai video GAGAL lalu LANJUT. */
+    let cursor = 0;
     const launch = async () => {
-      while (cursor < slots.length && !state.abort) {
+      while (cursor < slots.length && !xAborted()) {
         const idx = cursor++;
         const slot = slots[idx];
         slot.working = true; uiTick(true);
@@ -420,8 +452,8 @@ async function exportPartsToDir(dir, ui) {
         } catch (e) {
           /* v2.5: RETRY OTOMATIS 1× dengan encoder SOFTWARE — penyembuh
              utama "ekspor macet di bagian akhir" (encoder GPU berhenti).
-             Jangan ulangi bila user membatalkan sendiri. */
-          if (!state.abort && swCfg) {
+             Jangan ulangi bila user membatalkan sendiri / part lain gagal. */
+          if (!xAborted() && swCfg) {
             console.warn(`part ${idx + 1} gagal (${e && e.message || e}) — ulangi 1× dengan encoder software`);
             slot.fr = 0; slot.stage = null; slot.saveProg = 0; slot.retried = true; slot.working = true; uiTick(true);
             try {
@@ -430,14 +462,14 @@ async function exportPartsToDir(dir, ui) {
             } catch (e2) {
               const det2 = e2 && (e2.name + ' | ' + e2.message) || String(e2);
               console.error(`part ${idx + 1} GAGAL juga di percobaan ke-2: ${det2}`);
-              if (!state.abort) { abortErr = e2; state.abort = true; }
+              if (!xAborted()) state.exportFatal = e2;
               slot.working = false; uiTick(true);
               return;
             }
           } else {
             const det = e && (e.name + ' | ' + e.message + ' | ' + String(e.stack || '').split('\n')[1] || '') || String(e);
             console.error(`part ${idx + 1} GAGAL: ${det}`);
-            if (!state.abort) { abortErr = e; state.abort = true; }
+            if (!xAborted()) state.exportFatal = e;
             slot.working = false; uiTick(true);
             return;
           }
@@ -454,22 +486,22 @@ async function exportPartsToDir(dir, ui) {
       let lastSig = '', lastSigAt = Date.now();
       const iv = setInterval(() => {
         uiTick(false);
-        if (state.abort || results.every(r => r)) { clearInterval(iv); res(); return; }
+        if (xAborted() || results.every(r => r)) { clearInterval(iv); res(); return; }
         const sig = slots.map(s => `${s.fr}:${s.working ? 1 : 0}:${s.stage || ''}:${Math.round((s.saveProg || 0) * 100)}`).join('|');
         const now = Date.now();
         if (sig !== lastSig) { lastSig = sig; lastSigAt = now; }
         else if (now - lastSigAt > 45000) {
           clearInterval(iv);
-          if (!state.abort) {
-            abortErr = new Error('Render berhenti merespons 45 detik — dihentikan otomatis. Coba set PARALEL 1× atau kualitas lebih rendah lalu ulangi.');
-            state.abort = true;
+          /* v2.10: watchdog = kegagalan internal, BUKAN batal pengguna */
+          if (!xAborted()) {
+            state.exportFatal = new Error('Render berhenti merespons 45 detik — dihentikan otomatis. Coba set PARALEL 1× atau kualitas lebih rendah lalu ulangi.');
           }
           res();
         }
       }, 150);
     });
     await Promise.all(runners).catch(() => { });
-    if (abortErr) throw abortErr;
+    if (state.exportFatal) { const err = state.exportFatal; throw err; }
     if (state.abort && !results.every(r => r)) {
       const made = results.filter(Boolean);
       throw new Error(made.length ? `Dibatalkan — ${made.length} part tersimpan` : 'Dibatalkan');
@@ -482,6 +514,7 @@ async function exportPartsToDir(dir, ui) {
     if (ui.prog) ui.prog(1);
     return results;
   } finally {
+    state.exportFatal = null;   /* v2.10: jangan bocor ke ekspor/video berikutnya */
     if (!state.file.virtual) URL.revokeObjectURL(srcUrl);
   }
 }
@@ -511,7 +544,10 @@ async function doExport() {
     toast(`${results.length} file selesai · ${el < 90 ? el.toFixed(0) + ' detik' : (el / 60).toFixed(1) + ' menit'}`, 'ok');
   } catch (e) {
     hideModal();
-    if (state.abort || String(e.message || e).includes('batal')) toast('Ekspor dibatalkan', 'warn');
+    /* v2.10: hanya tampil "dibatalkan" bila BENAR-BENAR dibatalkan pengguna.
+       Kegagalan internal (encoder, media, watchdog) kini menampilkan
+       PENYEBAB aslinya — dulu semuanya tertelan jadi "Ekspor dibatalkan". */
+    if (state.abort || String(e.message || e).includes('Dibatalkan')) toast('Ekspor dibatalkan', 'warn');
     else { console.error(e); toast('Ekspor gagal: ' + (e.message || e), 'err'); }
   }
   state.busy = false;

@@ -72,7 +72,10 @@ const state = {
   applyAllStart: null,
   /* UPGRADE: batch */
   batch: [],
-  busy: false, abort: false, scanAbort: false
+  busy: false, abort: false, scanAbort: false,
+  /* v2.10: kegagalan internal ekspor (bukan batal pengguna) — dipisah agar
+     batch bisa lanjut ke video berikutnya saat satu video gagal */
+  exportFatal: null
 };
 
 const videoEl = $('#vid'), cv = $('#cv'), ctx = cv.getContext('2d');

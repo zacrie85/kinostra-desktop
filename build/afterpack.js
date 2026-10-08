@@ -41,12 +41,12 @@ exports.default = async function afterPack(context) {
   vi.setStringValues({ lang: 1033, id: 1033 }, {
     CompanyName: 'KINOSTRA',
     FileDescription: 'KINOSTRA — Suite Video Otonom (Desktop Offline)',
-    FileVersion: '2.9.0.0',
+    FileVersion: '2.10.0.0',
     InternalName: 'KINOSTRA',
     LegalCopyright: 'MIT License',
     OriginalFilename: exeName,
     ProductName: 'KINOSTRA',
-    ProductVersion: '2.9.0.0'
+    ProductVersion: '2.10.0.0'
   });
   vi.outputToResourceEntries(res.entries);
 

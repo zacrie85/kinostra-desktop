@@ -32,9 +32,16 @@ function startMusicSync() {
   musSrc.connect(musGainNode); musSrc.start(0, videoEl.currentTime % state.music.buffer.duration);
 }
 
-async function composeMusic(reroll, quiet = false) {
+/* v2.10: parameter `force` — dipakai BATCH EKSPOR. Dulu composeMusic
+   menolak jalan ketika state.busy sudah true (yang PASTI terjadi di dalam
+   batch), sehingga skor musik TIDAK PERNAH dirender ulang per video —
+   buffer lama yang lebih pendek bikin renderMix melempar InvalidStateError
+   → batch "selalu dibatalkan" sejak v2.9. Dengan force=true, penyusunan
+   skor berjalan normal tanpa menyentuh flag busy milik batch. */
+async function composeMusic(reroll, quiet = false, force = false) {
   if (!state.file) { toast('Impor media dulu', 'err'); return; }
-  if (state.busy) return; state.busy = true;
+  if (state.busy && !force) return;
+  if (!force) state.busy = true;
   if (reroll) state.music.seed = (Math.random() * 1e9) | 0;
   if (!quiet) showModal({ title: 'MENYUSUN SKOR', sub: 'Mesin komposisi prosedural…' });
   setProg(0.1);
@@ -153,5 +160,6 @@ async function composeMusic(reroll, quiet = false) {
     if (!quiet) toast('Skor musik tersusun', 'ok');
     if (!videoEl.paused) startMusicSync();
   } catch (e) { console.error(e); toast('Gagal menyusun skor: ' + (e.message || e), 'err'); }
-  state.busy = false; if (!quiet) hideModal();
+  if (!force) state.busy = false;
+  if (!quiet) hideModal();
 }

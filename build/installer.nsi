@@ -5,23 +5,23 @@ Unicode true
 ManifestDPIAware true
 
 !define APPNAME "KINOSTRA"
-!define APPVERSION "2.9.0"
+!define APPVERSION "2.10.0"
 !define COMPANY "KINOSTRA"
 !define EXEFILE "KINOSTRA.exe"
 !define UNINST "Uninstall KINOSTRA.exe"
 !define REGKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\{D4F5E9C2-1B7A-4E3F-9C8D-KINOSTRA22}"
 
 Name "${APPNAME} — Suite Video Otonom"
-OutFile "..\dist_out\KINOSTRA-Setup-2.9.0.exe"
+OutFile "..\dist_out\KINOSTRA-Setup-2.10.0.exe"
 InstallDir "$LOCALAPPDATA\Programs\KINOSTRA"
 InstallDirRegKey HKCU "${REGKEY}" "InstallLocation"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "2.9.0.0"
+VIProductVersion "2.10.0.0"
 VIAddVersionKey /LANG=1033 "ProductName" "KINOSTRA"
 VIAddVersionKey /LANG=1033 "FileDescription" "KINOSTRA Setup — Suite Video Otonom"
-VIAddVersionKey /LANG=1033 "FileVersion" "2.9.0.0"
-VIAddVersionKey /LANG=1033 "ProductVersion" "2.9.0.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "2.10.0.0"
+VIAddVersionKey /LANG=1033 "ProductVersion" "2.10.0.0"
 VIAddVersionKey /LANG=1033 "CompanyName" "KINOSTRA"
 VIAddVersionKey /LANG=1033 "LegalCopyright" "MIT License"
 

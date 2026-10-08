@@ -183,7 +183,14 @@ const renderBatchList = renderQueue;
 
 /* ---------- BATCH: proses isi kotak berurutan dari atas ----------
    v2.8: forceAll = true (dipakai tombol BATCH EKSPOR di menu EKSPOR &
-   KOMPRESI) → video berstatus SELESAI ikut diproses ulang dari awal. */
+   KOMPRESI) → video berstatus SELESAI ikut diproses ulang dari awal.
+   v2.10 FIX "BATCH SELALU DIBATALKAN":
+   - Skor musik KINI BENAR-BENAR dirender ulang utk tiap video
+     (composeMusic force) — dulu diam-diam no-op karena guard busy,
+     buffer lama bikin renderMix crash → batch berhenti semua.
+   - SATU video gagal tidak lagi membatalkan seluruh antrean: ditandai
+     GAGAL + penyebabnya, lalu batch LANJUT ke video berikutnya.
+     Batch hanya berhenti bila pengguna menekan BATAL / × / ESC. */
 /* v2.9: pembungkus pemilih folder output — fungsi global agar pengujian
    otomatis (CDP) dapat menimpanya tanpa menyentuh dialog native */
 async function pickOutDir() { return window.kinostra.pickOutputDir(_lastOutDir || undefined); }
@@ -197,13 +204,15 @@ async function runBatch(forceAll = false) {
   if (!dir) return;
   _lastOutDir = dir;
 
-  state.busy = true; state.abort = false;
+  state.busy = true; state.abort = false; state.exportFatal = null;
   const reuseMusic = !!state.music.buffer;
   const total = pending.length;
-  let ok = 0, fail = 0;
+  let ok = 0, fail = 0, stopIdx = 0;
   try {
-    for (const it of pending) {
+    for (let pi = 0; pi < pending.length; pi++) {
+      const it = pending[pi];
       if (state.abort) break;
+      stopIdx = pi + 1;
       it.status = 'working'; it.msg = ''; it.sel = true;
       state.batch.forEach(b => { if (b !== it) b.sel = false; });
       renderQueue();
@@ -214,14 +223,22 @@ async function runBatch(forceAll = false) {
         /* --- v2.6: muat STREAMING via kfile:// — tanpa membaca seluruh
                file ke memori (video besar langsung siap, hemat RAM) --- */
         await loadFromPath(it.path, true);   /* force: abaikan guard busy */
-        if (!state.file) throw new Error('media tidak bisa diputar engine');
+        /* v2.10: pastikan yang termuat BENAR-BENAR video ini & durasinya
+           terbaca — dulu kegagalan muat ditelan diam-diam lalu diekspor
+           memakai durasi video sebelumnya (sumber gagal terselubung) */
+        if (!state.file || state.file.path !== it.path)
+          throw new Error('media tidak bisa dimuat');
+        if (!state.duration)
+          throw new Error('durasi tidak terbaca — format tak didukung engine');
         if (state.file.size) it.size = state.file.size;
         setSub(`Media siap · ${fmtT(state.duration)} · ${segmentsCount()} part`);
 
-        /* --- skor musik dirender ulang untuk durasi file ini --- */
+        /* --- v2.10 FIX: skor musik dirender ulang BENAR-BENAR untuk
+               durasi file ini (dulu no-op karena guard busy — inilah
+               akar batch "selalu dibatalkan") --- */
         if (reuseMusic) {
           setSub('Menyusun ulang skor musik…');
-          await composeMusic(false, true);
+          await composeMusic(false, true, true);
         }
 
         /* --- render semua part (paralel via mesin TURBO) --- */
@@ -236,24 +253,28 @@ async function runBatch(forceAll = false) {
         it.status = 'done'; it.msg = `${results.length} part`;
         ok++;
       } catch (err) {
-        if (state.abort || String(err.message || err).includes('batal')) { it.status = 'wait'; it.msg = ''; break; }
-        console.error(err);
-        it.status = 'err'; it.msg = (err.message || err).slice(0, 40); fail++;
+        const msg = String((err && err.message) || err);
+        /* v2.10: BATAL pengguna (tombol BATAL/×/ESC) → hentikan seluruh
+           batch. Kegagalan internal → tandai GAGAL + lanjut video berikut. */
+        if (state.abort || /^Dibatalkan/.test(msg)) { it.status = 'wait'; it.msg = ''; break; }
+        console.error('batch: gagal proses ' + it.name, err);
+        it.status = 'err'; it.msg = msg.slice(0, 60); fail++;
       }
       it.sel = false;
       renderQueue();
     }
     hideModal();
-    if (state.abort) toast('Batch dihentikan', 'warn');
-    else toast(`Batch selesai — ${ok} berhasil${fail ? `, ${fail} gagal` : ''}`, fail ? 'warn' : 'ok');
+    if (state.abort) toast(`Batch dihentikan di video ${stopIdx}/${total} — ${ok} selesai${fail ? `, ${fail} gagal` : ''}`, 'warn');
+    else toast(`Batch selesai — ${ok} berhasil${fail ? `, ${fail} gagal (lihat kotak)` : ''}`, fail ? 'warn' : 'ok');
     /* v2.8: ringkasan akhir + tombol buka folder output (modal selalu bisa
        ditutup — × / TUTUP / ESC / klik luar) */
-    if (ok + fail > 0 && !state.abort) {
+    if (ok + fail > 0) {
       const rows = state.batch.filter(b => b.status === 'done' || b.status === 'err').map(b =>
         `<div class="rrow"><span class="rn">${b.name}</span><span class="rs" style="color:${b.status === 'done' ? 'var(--acc)' : '#ff6b6b'}">${b.status === 'done' ? 'OK · ' + b.msg : 'GAGAL · ' + b.msg}</span></div>`).join('');
       showModal({
         title: `BATCH EKSPOR SELESAI · ${ok} OK${fail ? ` · ${fail} GAGAL` : ''}`,
         body: rows +
+          (fail ? `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Video gagal dilewati — video lain tetap diproses. Perbaiki sumbernya lalu jalankan batch lagi; video yang sudah selesai tidak diulang.</span></div>` : '') +
           `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Folder: ${dir}</span></div>
            <button class="btn acc wide" id="openFolderBatch" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>`,
         cancel: true
