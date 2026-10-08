@@ -193,6 +193,66 @@ function createWindow() {
     });
   }
 
+  // MODE UJI ANTI-BEKU (v2.11): suntik "lubang frame" ke loop capture —
+  // simulasi decoder/compositor membuang frame sehingga mediaTime LOMPAT
+  // 2.2 dtk di tengah tiap part (persis gejala "kadang beku kadang jalan").
+  // Hasil ekspor diverifikasi eksternal dengan ffprobe: PTS harus RAPAT
+  // (tanpa lompatan) dan jumlah frame ± lengkap → gerakan mulus.
+  if (process.env.KINOSTRA_AF === '1') {
+    win.webContents.once('did-finish-load', async () => {
+      const fsx = require('fs');
+      try {
+        win.webContents.on('console-message', (ev, level, msg) => {
+          const s = String(msg);
+          if (s.includes('diisi-ulang')) console.log('PAGE-LOG ' + s);
+        });
+        await new Promise(r => setTimeout(r, 6000));
+        await win.webContents.executeJavaScript(`(async () => {
+          await loadFromPath('/home/z/my-project/testmedia/test_video.mp4', true);
+          /* --- SUNTIK LUBANG: frame dengan mediaTime di [m0+1.5, m0+3.7)
+                 tidak pernah diteruskan ke loop capture → lompatan 2.2 dtk.
+                 m0 = mediaTime frame pertama per elemen video (per part).
+                 rVFC dibungkus: frame di dalam lubang ditelan (callback TIDAK
+                 dipanggil) tapi rantai rVFC tetap jalan — sama seperti perilaku
+                 compositor asli saat membuang frame. --- */
+          const orig = HTMLVideoElement.prototype.requestVideoFrameCallback;
+          const st = new WeakMap();
+          window.__dropStats = { swallowed: 0, delivered: 0, holes: 0 };
+          HTMLVideoElement.prototype.requestVideoFrameCallback = function (cb) {
+            let s = st.get(this);
+            if (!s) { s = { m0: null, done: new Set() }; st.set(this, s); }
+            const wrapped = (now, meta) => {
+              const m = meta.mediaTime;
+              if (s.m0 == null) s.m0 = m;
+              let inHole = false;
+              const A = s.m0 + 1.5, B = A + 2.2;
+              if (m >= B && !s.done.has(A)) { s.done.add(A); window.__dropStats.holes++; }
+              if (m >= A && m < B && !s.done.has(A)) inHole = true;
+              if (inHole) { window.__dropStats.swallowed++; orig.call(this, wrapped); return; }
+              window.__dropStats.delivered++;
+              cb(now, meta);
+            };
+            return orig.call(this, wrapped);
+          };
+          state.splitSec = 5; state.parallel = 2;
+          return { dur: state.duration, parts: segmentsCount() };
+        })()`).then(r => console.log('AF-LOAD ' + JSON.stringify(r)));
+        const outDir = '/home/z/my-project/testmedia/out_af';
+        fsx.rmSync(outDir, { recursive: true, force: true });
+        fsx.mkdirSync(outDir, { recursive: true });
+        const t0 = Date.now();
+        const result = await win.webContents.executeJavaScript(`(async () => {
+          const r = await exportPartsToDir('/home/z/my-project/testmedia/out_af', { prog: () => { }, sub: () => { } });
+          return { parts: r.map(x => ({ name: x.name, size: x.size })), drop: window.__dropStats };
+        })()`);
+        console.log('AF-EXPORT time=' + ((Date.now() - t0) / 1000).toFixed(1) + 's ' + JSON.stringify(result));
+      } catch (e) {
+        console.error('AF-FAIL', e && e.message || e);
+      }
+      setTimeout(() => app.quit(), 800);
+    });
+  }
+
   // MODE UJI ZOOM: render 9:16 dengan zoom 2 & geser kiri → ekstrak frame
   if (process.env.KINOSTRA_ZOOMTEST === '1') {
     win.webContents.once('did-finish-load', async () => {

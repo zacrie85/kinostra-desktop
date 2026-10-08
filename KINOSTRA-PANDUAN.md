@@ -62,6 +62,35 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 - Bonus: file yang ternyata tidak bisa diputar kini langsung dilaporkan
   GAGAL (dulu diam-diam diekspor memakai durasi video sebelumnya).
 
+## Yang Baru di v2.11
+
+### EKSPOR ANTI-BEKU — gerakan video hasil ekspor/split selalu mulus
+- **Gejala yang diperbaiki**: video hasil ekspor/split **jalan normal 1–3
+  detik, lalu gambar beku 4–8 detik** (subtitel tetap menempel, audio tetap
+  jalan), di detik 9 bergerak lagi, beku lagi, begitu seterusnya sampai
+  habis. Kadang gerak, kadang tidak.
+- **Penyebabnya**: mesin ekspor TURBO mengambil frame sambil video diputar
+  cepat. Saat decoder/layar kewalahan (render paralel + efek blur/neon +
+  video kualitas besar), sebagian frame **dibuang oleh decoder**. Waktu
+  tampil frame berikutnya langsung **melompat beberapa detik**, dan lompatan
+  itu ikut tersimpan ke file MP4 → pemutar video "menahan" frame lama
+  selama lompatan itu = gambar beku, sementara audio tetap mengalir.
+- **Solusi tiga lapis di v2.11**:
+  1. **Deteksi + isi ulang otomatis** — setiap lompatan waktu terdeteksi,
+     frame yang hilang **diambil ulang satu per satu lewat seek presisi**
+     dengan posisi waktunya yang asli. Aliran frame di MP4 kini selalu
+     rapat → tidak ada lagi durasi "beku" di dalam file.
+  2. **Kecepatan capture adaptif** — bila decoder mulai kewalahan,
+     kecepatan pengambilan frame **turun segera** (bukan menunggu
+     statistik), dan langit-langit kecepatannya kini lebih konservatif
+     saat render paralel sedang berat — frame tidak dibuang dari awal.
+  3. **Verifikasi output diperketat** — jumlah keluaran encoder kini
+     diverifikasi ≥ 98% frame; kekurangan memicu **ulang otomatis dengan
+     encoder software**, jadi file "setengah jadi" tidak mungkin tersimpan.
+- Berlaku untuk **ekspor tunggal, split part, dan batch ekspor** sekaligus.
+  Diuji otomatis dengan simulasi pembuangan frame: hasilnya tetap mulus
+  tanpa satu pun lubang waktu.
+
 ## Yang Baru di v2.9
 
 ### WAKTU MULAI & BERHENTI EKSPOR (modul 02)

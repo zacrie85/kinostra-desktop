@@ -1,8 +1,14 @@
 /* ================================================================
-   KINOSTRA DESKTOP — exporter.js (v2.2 TURBO STREAM)
+   KINOSTRA DESKTOP — exporter.js (v2.2 TURBO STREAM · v2.11 ANTI-BEKU)
    Pipeline ekspor WebCodecs → MP4.
+   v2.11 FIX "VIDEO HASIL EKSPOR/SPLIT KADANG BEKU": frame yang dibuang
+   decoder/compositor membuat mediaTime antar frame tersaji LOMPAT beberapa
+   detik → PTS di dalam MP4 bolong → pemutar menahan frame lama berdetik-
+   detik (gambar beku, audio terus jalan). Kini: lompatan terdeteksi dan
+   DIISI ULANG lewat seek presisi slot-per-slot (refillGap) + kecepatan
+   capture turun segera saat decoder kewalahan → gerakan selalu mulus.
    UPGRADE v2.2 (kenapa jauh lebih cepat):
-   - CAPTURE PLAYBACK: video DIPUTAR cepat (rate adaptif 2–4×) dan
+   - CAPTURE PLAYBACK: video DIPUTAR cepat (rate adaptif 1.5–2.5×) dan
      setiap frame yang tampil diambil lewat requestVideoFrameCallback
      → TIDAK ADA seek per frame (penyebab utama lambat di v2.0/2.1)
    - BACKPRESSURE: video otomatis pause saat antrean encoder penuh,
@@ -29,6 +35,10 @@ const RVFC_OK = typeof HTMLVideoElement !== 'undefined' && 'requestVideoFrameCal
    tetapi lapisan batch bisa membedakan "pengguna minta berhenti" vs
    "video ini gagal → tandai GAGAL lalu lanjut ke video berikutnya". */
 function xAborted() { return state.abort || !!state.exportFatal; }
+
+/* v2.11: jumlah render paralel aktif — menahan kecepatan capture
+   (playbackRate) supaya decoder tidak membuang frame saat paralel berat */
+let _xPar = 1;
 
 async function pickVCodecCfg(W, H, br, fps) {
   const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
@@ -256,9 +266,36 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
          sudah mencapai akhir part? video error? encoder diam terlalu
          lama? → semua diarahkan SELESAI atau GAGAL DENGAN PESAN JELAS. */
       _stage = 'stream';
-      let capRate = 2, dAcc = 0, dN = 0, lastM = -1;
+      /* v2.11 FIX "KADANG GERAK KADANG BEKU": dulu capRate mulai 2× dan bisa
+         naik sampai 4× — di atas kemampuan decoder/compositor, frame sumber
+         dibuang beramai-ramai, mediaTime antar frame tersaji LOMPAT, PTS
+         ekspor ikut bolong → pemutar menahan frame lama berdetik-detik.
+         Sekarang: mulai 1.5×, langit-langit 2× (paralel ≥3) / 2.5×, turun
+         SEGERA saat ada frame hilang, dan setiap lompatan DIISI ULANG dengan
+         seek presisi (refillGap) sehingga aliran PTS selalu rapat & mulus. */
+      const RATE_MAX = _xPar >= 3 ? 2 : 2.5;
+      const frameGapTol = 1.8 / fps;
+      let capRate = 1.5, dAcc = 0, dN = 0, lastM = -1, hadFirst = false;
       v.playbackRate = capRate;
       let lastAct = Date.now(), qStallSince = 0;
+      let refilling = false, refillN = 0, maxGapMs = 0;
+      /* v2.11: isi ulang frame yang hilang di interval (from, to) — seek
+         presisi slot per slot, encode dengan PTS aslinya. Dipanggil SEBELUM
+         frame@to di-encode agar urutan PTS tetap naik. lastAct disegarkan
+         tiap slot supaya watchdog 30 dtk tidak mengira render diam. */
+      const refillGap = async (from, to) => {
+        const step = 1 / fps;
+        let t = from + step, k = 0;
+        while (t < to - step * 0.5) {
+          if (state.abort) throw new Error('Dibatalkan');
+          if (state.exportFatal) throw state.exportFatal;
+          await seekTo(Math.min(t, Math.max(0, (v.duration || seg.end) - 0.011)), v);
+          drawAt(t, Math.max(0, Math.round((t - seg.start) * 1e6)));
+          lastAct = Date.now(); k++; t += step;
+          doneCb && doneCb();
+        }
+        refillN += k; return k;
+      };
       await new Promise((resolve, rej) => {
         let finished = false;
         const stop = () => { try { v.pause(); } catch (e) { } };
@@ -284,38 +321,61 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           if (now - lastAct > 30000)
             return fail(new Error('render diam total 30 dtk — akan dicoba ulang otomatis dengan encoder software'));
           /* dorong ulang bila video diam padahal encoder tidak penuh */
-          if (v.paused && !v.seeking && venc.encodeQueueSize <= CAP && !v.ended) {
+          if (v.paused && !refilling && !v.seeking && venc.encodeQueueSize <= CAP && !v.ended) {
             try { const p = v.play(); if (p && p.catch) p.catch(err => fail(new Error('video tidak bisa dilanjut: ' + (err.message || err)))); }
             catch (err) { fail(new Error('video tidak bisa dilanjut: ' + (err.message || err))); }
           }
         }, 250);
-        const onFrame = (now, meta) => {
-          if (finished) return;
-          lastAct = Date.now();
-          if (state.abort) return fail(new Error('Dibatalkan'));
-          if (state.exportFatal) return fail(state.exportFatal);   /* v2.10 */
-          const m = meta.mediaTime;
-          if (v.ended || m >= seg.end - 0.004) return fin();
-          if (m >= seg.start - 0.06 && m > lastM) {
-            drawAt(m, Math.max(0, Math.round((m - seg.start) * 1e6)));
-            /* rate adaptif: naik kalau tidak ada frame buangan, turun kalau banyak */
-            if (lastM >= 0) {
-              const d = m - lastM;
-              if (d > 0 && d < 0.6) {
-                dAcc += d; dN++;
-                if (dN >= 24) {
-                  const avg = dAcc / dN; dAcc = 0; dN = 0; const tg = 1 / fps;
-                  if (avg < tg * 1.3 && capRate < 4) { capRate = Math.min(4, capRate + 0.5); v.playbackRate = capRate; }
-                  else if (avg > tg * 2.2 && capRate > 1) { capRate = Math.max(1, capRate - 0.5); v.playbackRate = capRate; }
+        const onFrame = async (now, meta) => {
+          try {
+            if (finished) return;
+            lastAct = Date.now();
+            if (state.abort) return fail(new Error('Dibatalkan'));
+            if (state.exportFatal) return fail(state.exportFatal);   /* v2.10 */
+            const m = meta.mediaTime;
+            if (v.ended || m >= seg.end - 0.004) return fin();
+            if (m >= seg.start - 0.06 && m > lastM) {
+              /* v2.11: DETEKSI FRAME HILANG — lompatan mediaTime > 1.8× durasi
+                 frame berarti decoder/compositor membuang frame. Isi slot yang
+                 bolong lewat seek presisi SEBELUM frame m di-encode supaya
+                 urutan PTS rapat (tanpa durasi sampel multi-detik = beku). */
+              const gap = hadFirst ? m - lastM : 0;
+              if (gap > frameGapTol) {
+                maxGapMs = Math.max(maxGapMs, gap * 1000);
+                refilling = true; stop();
+                const k = await refillGap(lastM, m);
+                if (finished) return;
+                await seekTo(Math.min(m, Math.max(0, (v.duration || seg.end) - 0.011)), v);
+                refilling = false;
+                if (finished) return;
+                /* decoder kewalahan pada rate ini → turun SEGERA */
+                if (capRate > 1) { capRate = Math.max(1, capRate - 0.5); v.playbackRate = capRate; }
+                dAcc = 0; dN = 0;
+              }
+              drawAt(m, Math.max(0, Math.round((m - seg.start) * 1e6)));
+              hadFirst = true;
+              /* rate adaptif: naik HANYA bila jendela bersih tanpa lompatan */
+              if (lastM >= 0) {
+                const d = m - lastM;
+                if (d > 0 && d < 0.6) {
+                  dAcc += d; dN++;
+                  if (dN >= 24) {
+                    const avg = dAcc / dN; dAcc = 0; dN = 0; const tg = 1 / fps;
+                    if (avg > tg * 1.5 && capRate > 1) { capRate = Math.max(1, capRate - 0.5); v.playbackRate = capRate; }
+                    else if (avg < tg * 1.18 && capRate < RATE_MAX) { capRate = Math.min(RATE_MAX, capRate + 0.5); v.playbackRate = capRate; }
+                  }
                 }
               }
+              lastM = m;
+              doneCb && doneCb();
             }
-            lastM = m;
-            doneCb && doneCb();
+            /* backpressure: pause bila encoder tertinggal, lanjut otomatis */
+            if (venc.encodeQueueSize > CAP) { stop(); setTimeout(pump, 5); return; }
+            pump();
+          } catch (e) {
+            refilling = false;
+            fail(e && e.message ? e : new Error(String(e)));
           }
-          /* backpressure: pause bila encoder tertinggal, lanjut otomatis */
-          if (venc.encodeQueueSize > CAP) { stop(); setTimeout(pump, 5); return; }
-          pump();
         };
         const pump = () => {
           if (finished) return;
@@ -332,6 +392,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         v.addEventListener('error', () => fail(new Error('video error saat dirender')), { once: true });
         pump();
       });
+      if (refillN) console.info(`part ${seg.i + 1}: ${n} frame dirender · ${refillN} diisi-ulang (lompatan maks ${Math.round(maxGapMs)} ms) — anti-beku v2.11 aktif`);
       if (n === 0) {
         /* sumber aneh / tidak menghasilkan frame — jalankan jalur lama */
         _stage = 'fallback-seek';
@@ -357,7 +418,9 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
        tersimpan tapi isinya gambar beku. Gagal di sini → auto-retry dengan
        encoder software oleh exportPartsToDir. */
     if (vencErrMsg) throw new Error('aliran video tidak valid: ' + vencErrMsg);
-    const minChunks = Math.max(1, Math.ceil(n * 0.9));
+    /* v2.11: verifikasi diperketat 90% → 98% — encoder yang membuang output
+       di tengah stream kini terdeteksi → auto-retry software, bukan MP4 beku */
+    const minChunks = Math.max(1, Math.ceil(n * 0.98));
     if (vChunks < minChunks)
       throw new Error(`encoder hanya mengeluarkan ${vChunks} dari ${n} frame (gambar akan beku)`);
     _stage = 'finalize';
@@ -400,6 +463,7 @@ async function exportPartsToDir(dir, ui) {
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();
   const par = pickParallelCount(segs.length);
+  _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
   /* slot progres per part */
