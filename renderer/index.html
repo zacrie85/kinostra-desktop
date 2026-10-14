@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.12.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.13.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.12.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.13.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -208,13 +208,16 @@
             <select class="in" id="asrModel">
               <option value="turbo">TURBO · PALING AKURAT (±547 MB)</option>
               <option value="small">SEDANG · SEIMBANG (±181 MB)</option>
-              <option value="tiny">RINGAN · CEPAT (±31 MB)</option>
+              <option value="base">CEPAT · RINGAN &amp; TAJAM (±60 MB)</option>
+              <option value="tiny">RINGAN · TERCEPAT (±32 MB)</option>
             </select></div>
         </div>
         <label class="chk"><input type="checkbox" id="singMode" checked><span>MODE LAGU / VOKAL (VIDEO BERNYANYI)</span></label>
+        <label class="chk"><input type="checkbox" id="autoSub" checked><span>AUTO-SUBTITEL — SEMUA VIDEO OTOMATIS DIBUATKAN SUBTITEL SAAT EKSPOR / SPLIT / BATCH <span class="beta">BARU · v2.13</span></span></label>
+        <label class="chk"><input type="checkbox" id="subSkipSilence" checked><span>MODE TURBO — LEWATI BAGIAN TANPA SUARA (JAUH LEBIH CEPAT)</span></label>
         <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> BUAT SUBTITEL DARI VOKAL</button>
         <div class="substat" id="subStat">VOCALIS v4 siap · mesin native (tanpa batas memori browser) · 100% lokal</div>
-        <div class="note"><b>VOCALIS v4 — mesin native baru (whisper.cpp) fokus Bahasa Jawa &amp; Indonesia.</b> Jauh lebih stabil &amp; ringan daripada versi lama: proses terpisah dari aplikasi, unduhan model <b>lanjut otomatis</b> bila koneksi terputus, dan binari sudah terpasang di dalam aplikasi. Teks dibuat <b>dalam bahasa yang diucapkan/dinyanyikan</b> di video (Jawa tetap Jawa, Indonesia tetap Indonesia) — tanpa terjemahan. Mesin <b>TURBO</b> paling akurat untuk ucapan &amp; lirik lagu. Kalau deteksi keliru, pilih bahasa manual di atas.</div>
+        <div class="note"><b>v2.13 — VOCALIS TURBO &amp; AUTO-SUBTITEL.</b> Dengan <b>AUTO-SUBTITEL</b> aktif, setiap video yang diimpor <b>langsung dibuatkan subtitelnya otomatis saat EKSPOR / SPLIT / BATCH</b> — tidak perlu menekan BUAT SUBTITEL dulu; berlaku untuk semua video di kotak. Subtitel buatanmu sendiri atau hasil IMPOR SRT tetap dihormati (tidak ditimpa). <b>TURBO</b>: audio dipecah lalu ditranskrip <b>paralel 2-4 pekerja</b> di CPU multi-core (2-4× lebih cepat) dan bagian tanpa suara dilewati. Mesin <b>CEPAT</b> (±60 MB) adalah pilihan seimbang tercepat untuk lagu; <b>TURBO</b> tetap paling akurat. Kalau deteksi bahasa keliru, pilih bahasa manual di atas.</div>
         <label class="chk"><input type="checkbox" id="subsOn" checked><span>BURN-IN SUBTITEL KE VIDEO</span></label>
         <div class="lbl">UKURAN SUBTITEL <b id="subSizeV">1.0×</b></div>
         <input type="range" id="subSize" min="0.6" max="1.8" step="0.05" value="1">
@@ -381,7 +384,7 @@
         <div class="lbl" style="margin-top:14px">BATCH EKSPOR <span class="beta">BARU · v2.8</span></div>
         <button class="btn wide" id="btnExportAll"><i data-lucide="layers"></i> BATCH EKSPOR — SEMUA VIDEO DI KOTAK</button>
         <div class="substat" id="expAllStat">Kotak kosong — impor video dulu (modul 00 / IMPOR MEDIA)</div>
-        <div class="note"><b>Batch ekspor:</b> semua video dalam <b>KOTAK VIDEO</b> diekspor <b>berurutan satu per satu</b> otomatis ke satu folder pilihanmu — memakai setelan ekspor saat ini (rasio, split, judul otomatis, deskripsi, efek, frame neon, musik &amp; kualitas). Setiap video menghasilkan part MP4 sesuai durasinya. Video berstatus SELESAI diproses ulang juga.</div>
+        <div class="note"><b>Batch ekspor:</b> semua video dalam <b>KOTAK VIDEO</b> diekspor <b>berurutan satu per satu</b> otomatis ke satu folder pilihanmu — memakai setelan ekspor saat ini (rasio, split, judul otomatis, deskripsi, efek, frame neon, musik &amp; kualitas). Setiap video menghasilkan part MP4 sesuai durasinya. Video berstatus SELESAI diproses ulang juga. <b>v2.13:</b> dengan AUTO-SUBTITEL aktif, semua video langsung bersubtitel.</div>
         <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.2 TURBO:</b> frame diambil sambil video <b>diputar cepat</b> (tanpa seek per frame), lapisan statis di-cache, semua part dirender <b>paralel</b> + encoder hardware GPU. Output: MP4 H.264 + AAC/Opus.</div>
       </div></div></div>
     </div>
@@ -389,7 +392,7 @@
     <div class="mod" id="m10">
       <button class="mod-h"><span class="no">10</span><span class="t">BATCH PROSES <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Bisa <b>sekaligus banyak</b>: pilih sampai <b>100 video</b> dalam satu dialog impor (Ctrl+A untuk semua). Semua masuk <b>KOTAK VIDEO (modul 00)</b> berurutan atas→bawah, lalu diproses <b>satu per satu berurutan</b> memakai setelan saat ini (rasio, split, judul otomatis, deskripsi, efek, watermark, musik &amp; kualitas). Subtitel &amp; tracking bersifat per-video, dilewati di batch.</div>
+        <div class="note">Bisa <b>sekaligus banyak</b>: pilih sampai <b>100 video</b> dalam satu dialog impor (Ctrl+A untuk semua). Semua masuk <b>KOTAK VIDEO (modul 00)</b> berurutan atas→bawah, lalu diproses <b>satu per satu berurutan</b> memakai setelan saat ini (rasio, split, judul otomatis, deskripsi, efek, watermark, musik &amp; kualitas). <b>v2.13 — AUTO-SUBTITEL:</b> bila aktif (modul 04), setiap video otomatis dibuatkan subtitel AI saat diproses. Tracking tetap per-video, dilewati di batch.</div>
         <div class="row">
           <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE KE KOTAK…</button>
           <button class="btn sm" id="btnBatchClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>

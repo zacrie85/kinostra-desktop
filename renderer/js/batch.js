@@ -241,6 +241,14 @@ async function runBatch(forceAll = false) {
           await composeMusic(false, true, true);
         }
 
+        /* --- v2.13: AUTO-SUBTITEL per video — bila pengaturan aktif &
+               video belum punya subtitel, dibuatkan sekarang sehingga
+               BATCH EKSPOR menghasilkan semua video bersubtitel.
+               Gagal internal → video tetap diekspor tanpa subtitel
+               (batch lanjut); batal pengguna → batch berhenti. --- */
+        setSub('Memeriksa subtitel otomatis…');
+        await ensureAutoSubs({ sub: setSub, prog: p => setProg(clamp(0.04 + p * 0.12, 0, 0.16)) });
+
         /* --- render semua part (paralel via mesin TURBO) --- */
         const results = await exportPartsToDir(dir, {
           title(segs) {

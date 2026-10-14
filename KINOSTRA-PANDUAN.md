@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.12.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.13.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.9.0.exe`
+1. Jalankan `KINOSTRA-Setup-2.13.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.9.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-2.13.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -32,6 +32,36 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.13
+
+### 1. AUTO-SUBTITEL — SEMUA VIDEO OTOMATIS BERSUBTITEL SAAT EKSPOR
+Dulu: buat subtitel dulu, baru ekspor. Kini tinggal aktifkan sekali
+(modul 04 — **AUTO-SUBTITEL**, aktif secara default) dan **setiap video
+yang diimpor langsung dibuatkan subtitel AI-nya saat tombol EKSPOR &
+SPLIT MP4 / BATCH EKSPOR / MULAI BATCH ditekan** — tanpa langkah manual.
+
+- Berlaku untuk **semua video**: ekspor tunggal, split, dan seluruh isi
+  Kotak Video di batch (sampai 100 video — masing-masing dibuatkan
+  subtitelnya sendiri sesuai suaranya).
+- Subtitel yang sudah ada **dihormati**: hasil BUAT SUBTITEL manual atau
+  IMPOR SRT tidak ditimpa; matikan burn-in untuk melewati pembuatan.
+- **Gagal transkrip tidak menggagalkan ekspor** — muncul peringatan dan
+  video tetap dirender (tanpa subtitel); tombol BATAL tetap berfungsi.
+
+### 2. VOCALIS TURBO — PEMBUATAN SUBTITEL JAUH LEBIH CEPAT
+- **Transkrip paralel**: audio panjang dipecah menjadi potongan ±150 dtk
+  lalu diproses **2-4 proses mesin sekaligus** (menyesuaikan inti CPU &
+  RAM) — di CPU multi-core hasilnya 2-4× lebih cepat. Progres tampil
+  per bagian: "bagian 3/12 · 2 PEKERJA PARALEL".
+- **Lewati bagian tanpa suara** (aktif default): hening / musik tanpa
+  vokal tidak dibuang-buang waktu — intro panjang, jeda, iklan selesai
+  dalam sekali lewat. Bisa dimatikan bila ada bisikan pelan.
+- **Batas potongan di titik tersepi** di sekitar target sehingga kata
+  tidak terpotong di tengah; baris ganda di sambungan dihapus otomatis.
+- **Mesin baru CEPAT (base, ±60 MB)** di antara SEDANG dan RINGAN —
+  keseimbangan tercepat untuk lagu/vokal; TURBO tetap paling akurat.
+  Semua model tetap diunduh sekali dengan lanjut-otomatis, lalu 100% offline.
 
 ## Yang Baru di v2.12
 

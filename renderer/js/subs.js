@@ -1,15 +1,13 @@
 /* ================================================================
-   KINOSTRA DESKTOP — subs.js (v2.4 · MESIN VOCALIS v4 NATIVE)
+   KINOSTRA DESKTOP — subs.js (v2.13 · VOCALIS v4 TURBO + AUTO-SUBTITEL)
    ================================================================
    AI SUBTITEL BARU — FOKUS BAHASA JAWA & BAHASA INDONESIA SAJA.
 
-   VOCALIS v4 menggantikan TOTAL mesin v3 (transformers.js WASM)
-   yang sering gagal (kehabisan memori renderer / unduhan putus).
-   Sekarang memakai mesin native whisper.cpp sebagai proses
+   VOCALIS v4 memakai mesin native whisper.cpp sebagai proses
    terpisah di luar browser:
    1. TANPA BATAS MEMORI BROWSER — proses native, stabil di semua
       mesin (4GB pun aman). Tidak ada lagi WebGPU/WASM crash.
-   2. UNDUHAN DENGAN RESUME — model ggml (31/181/547 MB) lanjut
+   2. UNDUHAN DENGAN RESUME — model ggml (32/60/181/547 MB) lanjut
       dari posisi terakhir bila koneksi terputus. Tidak mulai
       dari nol lagi → tidak ada lagi "gagal terus".
    3. BINARI DIBUNDEL — whisper-cli + DLL di dalam aplikasi,
@@ -23,6 +21,13 @@
       balik musik tetap ditranskrip.
    7. FILTER HALLUSINASI: baris non-Latin (aksara asing) dibuang,
       anti-pengulangan, dedupe.
+   8. v2.13 TURBO — audio dipecah jadi potongan lalu ditranskrip
+      PARALEL oleh 2-4 proses sekaligus (di CPU multi-core hasilnya
+      2-4× lebih cepat), bagian tanpa suara DILEWATI, dan model
+      baru CEPAT (base, ±60 MB) untuk keseimbangan kecepatan.
+   9. v2.13 AUTO-SUBTITEL — pengaturan baru: semua video otomatis
+      dibuatkan subtitelnya SAAT EKSPOR / SPLIT / BATCH, tanpa
+      perlu menekan BUAT SUBTITEL dulu (bisa dimatikan).
    100% LOKAL — model diunduh sekali ke AppData, lalu offline permanen.
    ================================================================ */
 'use strict';
@@ -31,6 +36,7 @@
 const VOCALIS_ENGINES = {
   turbo: { engine: 'turbo', label: 'TURBO', sizeMB: 547 },
   small: { engine: 'small', label: 'SEDANG', sizeMB: 181 },
+  base: { engine: 'base', label: 'CEPAT', sizeMB: 60 },
   tiny: { engine: 'tiny', label: 'RINGAN', sizeMB: 32 }
 };
 
@@ -176,7 +182,9 @@ function detectLang(text) {
 
 /* ---------- LISTENER PROGRES GLOBAL (didftar SEKALI, tidak menumpuk) ----------
    Kejadian dikirim main process: model (unduh), detect/detected (bahasa),
-   transcribe (persen menulis). Modal yang tampil otomatis diperbarui. */
+   transcribe (persen menulis — v2.13 membawa info pekerja paralel).
+   Modal yang tampil otomatis diperbarui. */
+let _lastEngLabel = 'SEDANG';
 window.kinostra.onWhisperProgress(info => {
   if (!info) return;
   if (info.phase === 'model' && info.total) {
@@ -191,47 +199,116 @@ window.kinostra.onWhisperProgress(info => {
     const srcLang = $('#asrLang') ? $('#asrLang').value : 'auto';
     $('#vmLang').textContent = (srcLang === 'auto' ? 'AUTO · ' : '') + lb;
   } else if (info.phase === 'transcribe') {
-    setSub(`VOCALIS menulis · ${Math.round((info.pct || 0) * 100)}%`);
+    const pct = Math.round((info.pct || 0) * 100);
+    /* v2.13: TURBO — info pekerja & potongan bila ada */
+    const ch = info.total > 1 ? ` · bagian ${info.done + 1}/${info.total}` : '';
+    const par = info.workers > 1 ? ` · ${info.workers} PEKERJA PARALEL` : '';
+    setSub(`VOCALIS ${_lastEngLabel} menulis · ${pct}%${ch}${par}`);
     setProg(clamp(0.1 + (info.pct || 0) * 0.88, 0, 0.985));
   }
 });
 
 /* ================================================================
-   PIPELINE UTAMA VOCALIS v4 (mesin native)
+   v2.13 TURBO — PERENCANA POTONGAN AUDIO
+   Audio penuh dipecah menjadi potongan ±150 dtk (maks 240 dtk):
+   - batas potongan dicari di titik PALING SEPI di sekitar target
+     agar kata tidak terpotong di tengah;
+   - bila "lewati bagian tanpa suara" aktif, rentang hening/lagu
+     instrumen tidak dibuat potongannya (transkrip jauh lebih cepat);
+   - potongan dikirim ke main process untuk ditranskrip paralel.
    ================================================================ */
-async function generateSubs() {
-  if (!state.file) { toast('Impor media dulu', 'err'); return; }
-  if (state.busy || _whisperBusy) return;
-  state.busy = true; _whisperBusy = true; state.abort = false;   /* reset batal lama */
+function rmsAt(pcm, sr, t, win = 0.3) {
+  const a = Math.max(0, Math.floor(t * sr)), b = Math.min(pcm.length, Math.floor((t + win) * sr));
+  let s = 0, c = 0;
+  for (let i = a; i < b; i += 4) { s += pcm[i] * pcm[i]; c++; }
+  return Math.sqrt(s / Math.max(1, c));
+}
+
+function planChunks(pcm, sr = 16000, singMode = false, skipSilence = true) {
+  const dur = pcm.length / sr;
+  const TARGET = 150, MINC = 25, MAXC = 240, LOOK = 12;
+  /* 1) wilayah aktif = semua rentang yang berisi suara (atau penuh bila mati) */
+  let regions = [[0, dur]];
+  if (skipSilence) {
+    const wins = speechWindows(pcm, sr, singMode);
+    const mg = [];
+    for (const w of wins) {
+      if (mg.length && w.s - mg[mg.length - 1][1] < 3.0) mg[mg.length - 1][1] = w.e;
+      else mg.push([w.s, w.e]);
+    }
+    regions = mg.filter(r => r[1] - r[0] > 0.4);
+    if (!regions.length) regions = [[0, dur]];   /* VAD tidak menemukan apa pun → penuh (aman) */
+  }
+  /* 2) pecah tiap wilayah pada titik tersepi di sekitar target */
+  const chunks = [];
+  for (const [rs, re] of regions) {
+    let s = rs;
+    while (re - s > MAXC) {
+      const want = s + TARGET;
+      const lo = Math.max(s + MINC, want - LOOK), hi = Math.min(re - MINC, want + LOOK);
+      let best = -1, bestE = Infinity;
+      if (hi > lo) {
+        for (let t = lo; t <= hi; t += 0.25) {
+          const e = rmsAt(pcm, sr, t, 0.3);
+          if (e < bestE) { bestE = e; best = t; }
+        }
+      }
+      const cut = best > 0 ? best : want;
+      chunks.push({ a: s, b: cut });
+      s = cut;
+    }
+    if (re - s > 0.3) chunks.push({ a: s, b: re });
+  }
+  if (!chunks.length) chunks.push({ a: 0, b: dur });
+  /* 3) bantal 0.25 dtk di kedua ujung (baris ganda dijahit dedupeLines) */
+  return chunks.map(c => ({ a: Math.max(0, c.a - 0.25), b: Math.min(dur, c.b + 0.25) }));
+}
+
+/* ================================================================
+   INTI TRANSKRIP — transcribeCore(opt)
+   Dipakai dua jalur: tombol BUAT SUBTITEL (generateSubs, modal
+   sendiri) dan AUTO-SUBTITEL saat ekspor/split/batch (ensureAutoSubs,
+   UI mengikuti modal proses yang sedang tampil).
+   opt: { engine, srcLang, singMode, skipSilence, onSub, onProg, isCancelled }
+   Hasil: { subs, langLabel, audioSec, engineLabel, turbo }
+   Melempar Error bila gagal / dibatalkan.
+   ================================================================ */
+async function transcribeCore(opt) {
+  const engineKey = opt.engine || ($('#asrModel') && $('#asrModel').value) || 'small';
+  const eng = VOCALIS_ENGINES[engineKey] || VOCALIS_ENGINES.small;
+  const engLabel = eng.label;
+  _lastEngLabel = engLabel;
+  const singMode = opt.singMode != null ? opt.singMode : ($('#singMode') ? $('#singMode').checked : false);
+  const skipSilence = opt.skipSilence != null ? opt.skipSilence : ($('#subSkipSilence') ? $('#subSkipSilence').checked : true);
+  const srcLang = opt.srcLang || ($('#asrLang') ? $('#asrLang').value : 'auto');
+  const onSub = opt.onSub || setSub, onProg = opt.onProg || setProg;
+  const isCancelled = opt.isCancelled || (() => state.abort);
+
+  /* pengawas pembatalan: bila ekspor/batch dibatalkan di tengah transkrip,
+     hentikan proses whisper segera */
+  const abortWatch = setInterval(() => { if (isCancelled()) window.kinostra.whisperCancel().catch(() => { }); }, 500);
+
   try {
-    const engineKey = $('#asrModel').value || 'small';
-    const eng = VOCALIS_ENGINES[engineKey] || VOCALIS_ENGINES.small;
-    const engLabel = eng.label;
-    const singMode = $('#singMode').checked;
-    const srcLang = $('#asrLang').value;      // auto | javanese | indonesian
-
-    showModal({ title: 'MESIN VOCALIS v4', sub: 'Menyiapkan mesin native…', cancel: true, onCancel: cancelSubs });
-
     /* --- 1) pastikan model ggml ada di disk (unduh dengan RESUME) --- */
     const st0 = await window.kinostra.whisperStatus();
     if (!st0.binOk) throw new Error('Binari mesin tidak ditemukan — instal ulang aplikasi');
     _whisperTmpDir = st0.tmpDir;
     if (!st0.models[engineKey] || !st0.models[engineKey].ready) {
-      setSub(`Mengunduh model ${engLabel} (${eng.sizeMB} MB) — sekali saja, dilanjutkan otomatis bila terputus…`);
-      setProg(0.01);
+      onSub(`Mengunduh model ${engLabel} (${eng.sizeMB} MB) — sekali saja, dilanjutkan otomatis bila terputus…`);
+      onProg(0.01);
       const r = await window.kinostra.whisperEnsure(engineKey);
       if (!r.ok) throw new Error(r.error || 'Gagal mengunduh model');
     }
-    setProg(0.1);
+    onProg(0.1);
 
     /* --- 2) ekstrak audio 16 kHz mono → WAV --- */
-    setSub('Mengekstrak audio 16 kHz…');
+    onSub('Mengekstrak audio 16 kHz…');
     const pcm = await getMono16k();
     if (!pcm || pcm.length < 1600) throw new Error('Audio kosong / tidak terbaca');
 
     /* --- 3) potongan PROBE bahasa: 3-12 dtk pertama yang berisi vokal --- */
-    let wins = speechWindows(pcm, 16000, singMode);
     const sr = 16000;
+    const wins = speechWindows(pcm, sr, singMode);
     let probePcm = null;
     if (wins.length) {
       const w = wins[0];
@@ -242,8 +319,11 @@ async function generateSubs() {
       probePcm = pcm.slice(0, Math.min(pcm.length, 12 * sr));
     }
 
-    /* --- 4) tulis WAV ke folder kerja mesin --- */
-    setSub('Menulis audio sementara…');
+    /* --- 4) v2.13 TURBO: rencana potongan (lewati hening + paralel) --- */
+    const chunks = planChunks(pcm, sr, singMode, skipSilence);
+
+    /* --- 5) tulis WAV ke folder kerja mesin --- */
+    onSub('Menulis audio sementara…');
     const tmp = await whisperTmpDir();
     const wavPath = await saveWav(encodeWav16(pcm, sr), tmp, 'kinestra_full.wav');
     let probePath = wavPath;
@@ -251,20 +331,21 @@ async function generateSubs() {
       try { probePath = await saveWav(encodeWav16(probePcm, sr), tmp, 'kinestra_probe.wav'); } catch (_) { }
     }
 
-    /* --- 5) TRANSKRIP NATIVE (proses terpisah, tidak membebani browser) --- */
-    setSub(`VOCALIS ${engLabel} menulis · ${fmtT(pcm.length / sr)} audio · ${srcLang === 'auto' ? 'AUTO' : srcLang === 'javanese' ? 'JAWA' : 'INDONESIA'}`);
+    /* --- 6) TRANSKRIP NATIVE (proses terpisah, tidak membebani browser) --- */
+    const nCh = chunks.length > 1 ? ` · ${chunks.length} bagian` : '';
+    onSub(`VOCALIS ${engLabel} menulis · ${fmtT(pcm.length / sr)} audio${nCh} · ${srcLang === 'auto' ? 'AUTO' : srcLang === 'javanese' ? 'JAWA' : 'INDONESIA'}`);
     const r = await window.kinostra.whisperTranscribe({
       wavPath, probePath, engine: engineKey,
       lang: srcLang === 'javanese' ? 'jw' : srcLang === 'indonesian' ? 'id' : 'auto',
-      song: singMode
+      song: singMode, chunks
     });
     if (!r.ok) throw new Error(r.error || 'Transkrip gagal');
-    if (state.abort) throw new Error('Dibatalkan');
+    if (isCancelled()) throw new Error('Dibatalkan');
 
     const langLabel = (r.chosen || r.language || 'id') === 'jw' ? 'JAWA' : 'INDONESIA';
-    if (srcLang === 'auto') $('#vmLang').textContent = `AUTO · ${langLabel}`;
+    if (srcLang === 'auto' && $('#vmLang')) $('#vmLang').textContent = `AUTO · ${langLabel}`;
 
-    /* --- 6) bersihkan baris (hallusinasi/aksara asing/ulangan) --- */
+    /* --- 7) bersihkan baris (hallusinasi/aksara asing/ulangan) --- */
     let subs = [];
     for (const s of r.segments || []) {
       const txt = cleanLine(s.text);
@@ -273,13 +354,74 @@ async function generateSubs() {
     }
     subs = dedupeLines(subs.sort((a, b) => a.s - b.s));
 
-    state.subs = subs; state.subsOn = subs.length > 0; $('#subsOn').checked = state.subsOn;
-    renderSubList();
-    $('#subStat').textContent = `${subs.length} baris · ${langLabel} · mesin ${engLabel} NATIVE · audio ${Math.round(pcm.length / sr)} dtk`;
-    toast(`${subs.length} baris subtitel dihasilkan (VOCALIS v4 · ${langLabel})`, 'ok');
-
-    /* --- 7) rapikan file sementara --- */
     try { await window.kinostra.whisperCancel(); } catch (_) { }
+    return { subs, langLabel, audioSec: Math.round(pcm.length / sr), engineLabel: engLabel, turbo: r.turbo || null };
+  } finally {
+    clearInterval(abortWatch);
+  }
+}
+
+/* ================================================================
+   v2.13 AUTO-SUBTITEL — dibuatkan subtitel otomatis saat ekspor
+   Dipanggil SEBELUM ekspor/split/batch. Aturan:
+   - hanya jalan bila pengaturan AUTO-SUBTITEL aktif (default ON),
+     burn-in subtitel aktif, video belum punya subtitel (hasil AI
+     manual / impor SRT sebelumnya dihormati), dan mesin sedang idle;
+   - GAGAL TIDAK MENGHENTIKAN EKSPOR — toast peringatan, video tetap
+     dirender tanpa subtitel (kecuali pengguna membatalkan).
+   ================================================================ */
+function autoSubEnabled() {
+  const el = $('#autoSub');
+  return !!el && el.checked;
+}
+
+async function ensureAutoSubs(ui = {}) {
+  if (!autoSubEnabled()) return;
+  if (!state.file || state.subs.length || !state.subsOn) return;
+  if (_whisperBusy) return;
+  _whisperBusy = true;
+  const ownModal = !!ui.ownModal;
+  const onSub = ui.sub || setSub, onProg = ui.prog || setProg;
+  try {
+    if (ownModal) showModal({ title: 'SUBTITEL OTOMATIS', sub: 'Menyiapkan mesin VOCALIS…', cancel: true, onCancel() { state.abort = true; } });
+    const res = await transcribeCore({
+      onSub, onProg, isCancelled: () => state.abort
+    });
+    state.subs = res.subs;
+    state.subsOn = res.subs.length > 0;
+    const cb = $('#subsOn'); if (cb) cb.checked = state.subsOn;
+    renderSubList();
+    const nm = (state.file && state.file.name ? state.file.name.slice(0, 24) : 'video');
+    $('#subStat').textContent = `${res.subs.length} baris · AUTO · ${res.langLabel} · mesin ${res.engineLabel}${res.turbo ? ` · turbo ${res.turbo.workers}×` : ''} · ${nm}`;
+    toast(`Subtitel otomatis: ${res.subs.length} baris (${res.langLabel}) — ikut terbakar ke semua part`, 'ok');
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (state.abort || /Dibatalkan/i.test(msg)) throw new Error('Dibatalkan');
+    /* kegagalan internal → ekspor tetap jalan tanpa subtitel */
+    console.warn('auto-subtitle dilewati:', msg);
+    toast('Subtitel otomatis dilewati: ' + msg.slice(0, 90), 'warn');
+  } finally {
+    _whisperBusy = false;
+    if (ownModal) hideModal();
+  }
+}
+
+/* ================================================================
+   TOMBOL BUAT SUBTITEL — jalur manual (modal sendiri)
+   ================================================================ */
+async function generateSubs() {
+  if (!state.file) { toast('Impor media dulu', 'err'); return; }
+  if (state.busy || _whisperBusy) return;
+  state.busy = true; _whisperBusy = true; state.abort = false;   /* reset batal lama */
+  try {
+    showModal({ title: 'MESIN VOCALIS v4', sub: 'Menyiapkan mesin native…', cancel: true, onCancel: cancelSubs });
+    const res = await transcribeCore({});
+    if (state.abort) throw new Error('Dibatalkan');
+
+    state.subs = res.subs; state.subsOn = res.subs.length > 0; $('#subsOn').checked = state.subsOn;
+    renderSubList();
+    $('#subStat').textContent = `${res.subs.length} baris · ${res.langLabel} · mesin ${res.engineLabel} NATIVE${res.turbo ? ` · TURBO ${res.turbo.workers} PEKERJA` : ''} · audio ${res.audioSec} dtk`;
+    toast(`${res.subs.length} baris subtitel dihasilkan (VOCALIS v4 · ${res.langLabel}${res.turbo ? ` · turbo ${res.turbo.workers} pekerja paralel` : ''})`, 'ok');
   } catch (e) {
     console.error(e);
     toast('Subtitel gagal: ' + (e.message || e), 'err');

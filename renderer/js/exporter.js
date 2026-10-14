@@ -640,6 +640,12 @@ async function doExport() {
     const dir = await window.kinostra.pickOutputDir(_lastOutDir || undefined);
     if (!dir) { state.busy = false; return; }
     _lastOutDir = dir;
+    /* v2.13: AUTO-SUBTITEL — bila pengaturan aktif & video belum punya
+       subtitel, buatkan dulu di sini sehingga EKSPOR & SPLIT langsung
+       menghasilkan video bersubtitel tanpa langkah manual. Gagal internal
+       tidak membatalkan ekspor (toast peringatan + lanjut tanpa subtitel);
+       pembatalan pengguna dilempar sebagai 'Dibatalkan'. */
+    await ensureAutoSubs({ ownModal: true });
     const tStart = performance.now();
     const results = await exportPartsToDir(dir, {
       title(segs) {

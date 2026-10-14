@@ -892,6 +892,7 @@ const WHISPER_TMP_DIR = path.join(WHISPER_MODELS_DIR, 'tmp');
 const WHISPER_MODELS = {
   turbo: { file: 'ggml-large-v3-turbo-q5_0.bin', sizeMB: 547, label: 'TURBO' },
   small: { file: 'ggml-small-q5_1.bin', sizeMB: 181, label: 'SEDANG' },
+  base: { file: 'ggml-base-q5_1.bin', sizeMB: 60, label: 'CEPAT' },
   tiny: { file: 'ggml-tiny-q5_1.bin', sizeMB: 32, label: 'RINGAN' }
 };
 
@@ -1014,6 +1015,107 @@ function whisperThreads() {
   return Math.max(2, Math.min(8, Math.round(c / 2)));
 }
 
+/* ---------- v2.13 VOCALIS TURBO: rencana pekerja paralel ----------
+   Audio panjang dipecah jadi potongan lalu DITRANSCRIPT PARALEL oleh
+   beberapa proses whisper-cli sekaligus (whisper.cpp hanya memakai
+   beberapa thread secara efisien — 2-4 proses × 2 thread jauh lebih
+   cepat daripada 1 proses penuh thread di CPU multi-core).
+   Jumlah pekerja dibatasi inti fisik & RAM (tiap proses memuat
+   modelnya sendiri): turbo ±1.6 GB/proses, small ±0.8, base ±0.45,
+   tiny ±0.3. KINOSTRA_WHISPER_WORKERS bisa memaksa jumlah pekerja
+   (dipakai pengujian otomatis). */
+function whisperWorkerPlan(engine) {
+  const cpus = os.cpus().length || 4;
+  const ramGB = os.totalmem() / 1073741824;
+  const phys = Math.max(2, Math.floor(cpus / 2));            /* perkiraan inti fisik */
+  let workers = Math.max(1, Math.min(4, Math.floor(phys / 2)));
+  const forced = parseInt(process.env.KINOSTRA_WHISPER_WORKERS || '0', 10);
+  if (forced >= 1) workers = forced;
+  const ramCaps = {
+    turbo: ramGB >= 24 ? 4 : ramGB >= 16 ? 3 : ramGB >= 8 ? 2 : 1,
+    small: ramGB >= 16 ? 4 : ramGB >= 8 ? 3 : ramGB >= 6 ? 2 : 1,
+    base: ramGB >= 8 ? 4 : ramGB >= 4 ? 2 : 1,
+    tiny: ramGB >= 8 ? 4 : ramGB >= 4 ? 3 : 2
+  };
+  workers = Math.max(1, Math.min(workers, ramCaps[engine] || 1));
+  const threads = Math.max(2, Math.min(8, Math.floor(phys / workers)));
+  return { workers, threads, cpus, phys, ramGB: +ramGB.toFixed(1) };
+}
+
+/* ---------- v2.13: potong WAV (PCM 16-bit 16 kHz, header 44 byte buatan
+   sendiri dari encodeWav16 renderer) menjadi file per-potongan ---------- */
+function sliceWav16(buf, a, b, dest) {
+  const sr = 16000;
+  const off = 44 + Math.max(0, Math.round(a * sr)) * 2;
+  const len = Math.min(buf.length - off, Math.max(2, Math.round((b - a) * sr)) * 2);
+  const head = Buffer.from(buf.subarray(0, 44));
+  head.writeUInt32LE(36 + len, 4);
+  head.writeUInt32LE(len, 40);
+  fs.writeFileSync(dest, Buffer.concat([head, buf.subarray(off, off + len)]));
+  return len / 2 / sr;   /* durasi efektif potongan (detik) */
+}
+
+/* ---------- v2.13: transkrip PARALEL per potongan ----------
+   Semua potongan dijalankan oleh `workers` proses whisper-cli secara
+   bersamaan; stempel waktu digeser balik ke waktu media global; progres
+   gabungan berbobot durasi dikirim ke renderer. */
+async function transcribeChunked(opt) {
+  const { engine, modelPath, wavPath, chunks, langCode, song, emit, tmpDir } = opt;
+  const plan = whisperWorkerPlan(engine);
+  const W = plan.workers;
+  const buf = fs.readFileSync(wavPath);
+  const tag = Date.now();
+  const jobs = chunks.map((c, i) => {
+    const wav = path.join(tmpDir, `chunk_${tag}_${i}.wav`);
+    const dur = sliceWav16(buf, Math.max(0, c.a), Math.max(c.a + 0.2, c.b), wav);
+    return { i, a: c.a, wav, out: path.join(tmpDir, `tr_${tag}_${i}`), pct: 0, done: false, dur, segs: [] };
+  });
+  const totalW = jobs.reduce((s, j) => s + j.dur, 0);
+  let lastEmit = 0;
+  const tick = force => {
+    const now = Date.now();
+    if (!force && now - lastEmit < 250) return;
+    lastEmit = now;
+    const w = jobs.reduce((s, j) => s + j.dur * (j.done ? 1 : j.pct), 0);
+    emit({ phase: 'transcribe', pct: totalW ? w / totalW : 1, workers: W, done: jobs.filter(j => j.done).length, total: jobs.length });
+  };
+  let cursor = 0, failErr = null;
+  const worker = async () => {
+    while (cursor < jobs.length && !failErr) {
+      const j = jobs[cursor++];
+      const args = ['-m', modelPath, '-f', j.wav, '-l', langCode,
+        '-ojf', '-of', j.out, '-pp', '-np', '-t', String(plan.threads),
+        '-ml', '42', '-sow', '-mc', '0'];
+      if (song) args.push('-nth', '0.35');
+      try {
+        await runWhisper(args, info => { if (info && info.phase === 'transcribe') { j.pct = info.pct; tick(false); } });
+        const jp = j.out + '.json';
+        if (!fs.existsSync(jp)) throw new Error('Mesin tidak menghasilkan keluaran JSON (potongan ' + (j.i + 1) + ')');
+        let d;
+        try { d = JSON.parse(fs.readFileSync(jp, 'utf8')); } catch (err) { throw new Error('Keluaran JSON rusak: ' + err.message); }
+        try { fs.unlinkSync(jp); } catch (_) { }
+        j.segs = (d.transcription || []).map(t => ({
+          s: t.offsets.from / 1000 + j.a, e: t.offsets.to / 1000 + j.a,
+          text: (t.text || '').replace(/\[.*?\]|\(.*?\)/g, ' ').replace(/\s+/g, ' ').trim()
+        })).filter(t => t.text && t.e > t.s);
+      } catch (err) {
+        if (!failErr) failErr = err;
+        for (const c of whisperChildren) { try { c._kill(); } catch (_) { } }
+      } finally {
+        try { fs.unlinkSync(j.wav); } catch (_) { }
+        j.done = true; tick(false);
+      }
+    }
+  };
+  const runners = [];
+  for (let k = 0; k < Math.min(W, jobs.length); k++) runners.push(worker());
+  await Promise.all(runners);
+  tick(true);
+  if (failErr) throw failErr;
+  const segments = jobs.flatMap(j => j.segs).sort((x, y) => x.s - y.s);
+  return { segments, plan };
+}
+
 /* ---------- IPC: status mesin ---------- */
 ipcMain.handle('whisper:status', async () => {
   const models = {};
@@ -1057,9 +1159,11 @@ ipcMain.handle('whisper:ensure', async (e, payload) => {
   }
 });
 
-/* ---------- IPC: transkrip lengkap ---------- */
+/* ---------- IPC: transkrip lengkap ----------
+   v2.13: payload.chunks (opsional) = [{a,b}] detik — bila ada & lebih
+   dari satu, transkrip berjalan PARALEL per potongan (VOCALIS TURBO). */
 ipcMain.handle('whisper:transcribe', async (e, payload) => {
-  const { wavPath, probePath, engine = 'small', lang = 'auto', song = false } = payload || {};
+  const { wavPath, probePath, engine = 'small', lang = 'auto', song = false, chunks = null } = payload || {};
   const emit = info => { if (win && !win.isDestroyed()) win.webContents.send('whisper:progress', info); };
   try {
     const m = WHISPER_MODELS[engine] || WHISPER_MODELS.small;
@@ -1067,7 +1171,8 @@ ipcMain.handle('whisper:transcribe', async (e, payload) => {
     if (!fs.existsSync(modelPath)) throw new Error('Model belum terunduh — klik BUAT SUBTITEL lagi untuk melanjutkan unduhan');
     if (!fs.existsSync(wavPath)) throw new Error('File audio 16 kHz tidak ditemukan');
     await fsp.mkdir(WHISPER_TMP_DIR, { recursive: true });
-    const threads = whisperThreads();
+    const plan = whisperWorkerPlan(engine);
+    const threads = plan.threads;
 
     const transcribeOnce = async (wav, langCode, outBase) => {
       const args = ['-m', modelPath, '-f', wav, '-l', langCode,
@@ -1106,13 +1211,21 @@ ipcMain.handle('whisper:transcribe', async (e, payload) => {
       emit({ phase: 'detected', language: chosen, scoreJv: sJ, scoreId: sI });
     }
 
-    /* --- LANGKAH 2: transkrip penuh --- */
-    const outBase = path.join(WHISPER_TMP_DIR, `tr_${Date.now()}`);
-    const r = await transcribeOnce(wavPath, chosen, outBase);
+    /* --- LANGKAH 2: transkrip penuh ---
+       v2.13: potongan >1 → jalur TURBO paralel; selain itu jalur tunggal */
+    let r, turboInfo = null;
+    if (Array.isArray(chunks) && chunks.length > 1) {
+      const rr = await transcribeChunked({ engine, modelPath, wavPath, chunks, langCode: chosen, song, emit, tmpDir: WHISPER_TMP_DIR });
+      r = { language: chosen, segments: rr.segments };
+      turboInfo = { workers: rr.plan.workers, threads: rr.plan.threads, chunks: chunks.length };
+    } else {
+      const outBase = path.join(WHISPER_TMP_DIR, `tr_${Date.now()}`);
+      r = await transcribeOnce(wavPath, chosen, outBase);
+    }
     /* rapikan WAV sementara setelah selesai */
     try { fs.unlinkSync(wavPath); } catch (_) { }
     try { if (probePath !== wavPath) fs.unlinkSync(probePath); } catch (_) { }
-    return { ok: true, language: r.language, chosen, segments: r.segments };
+    return { ok: true, language: r.language, chosen, segments: r.segments, turbo: turboInfo };
   } catch (err) {
     try { if (wavPath) fs.unlinkSync(wavPath); } catch (_) { }
     try { if (probePath && probePath !== wavPath) fs.unlinkSync(probePath); } catch (_) { }

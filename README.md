@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.12.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.13.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -47,6 +47,8 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 29 | **Probe Encoder** ⭐v2.12 | Encoder GPU diuji nyata dulu (encode+flush mini) sebelum dipakai — yang bermasalah otomatis diganti software, folder output dibuat otomatis → ekspor makin awet |
 | 21 | **Batch Anti-Batal** ⭐v2.10 | **Satu video bermasalah tidak lagi membatalkan seluruh batch ekspor** — ditandai GAGAL + penyebabnya, antrean lanjut otomatis. Skor musik kini dirender ulang benar untuk tiap video di batch (dulu memicu berhenti "dibatalkan"), musik otomatis berulang bila part lebih panjang dari skor, dan pesan kegagalan tampil apa adanya — bukan lagi "Ekspor dibatalkan" |
 | 22 | **Ekspor Anti-Beku** ⭐v2.11 | **Video hasil ekspor/split tidak lagi beku-bekerak** (jalan sebentar, beku beberapa detik, jalan lagi, begitu seterusnya). Lompatan frame akibat decoder kewalahan kini dideteksi otomatis dan **diisi ulang lewat seek presisi frame-per-frame**, kecepatan capture menyesuaikan beban, dan verifikasi output diperketat — gerakan selalu mulus & sinkron dengan audio, di ekspor tunggal, split, maupun batch |
+| 30 | **Auto-Subtitel Saat Ekspor** ⭐v2.13 | **Semua video langsung dibuatkan subtitel AI otomatis saat EKSPOR / SPLIT / BATCH** — tidak perlu menekan BUAT SUBTITEL dulu. Berlaku untuk semua video yang diimpor (termasuk batch 100 video); subtitel buatan sendiri atau hasil Impor SRT tetap dihormati; gagal transkrip tidak menggagalkan ekspor; bisa dimatikan |
+| 31 | **Vocalis Turbo — Transkrip 2-4× Lebih Cepat** ⭐v2.13 | Audio dipecah jadi potongan lalu ditranskrip **paralel oleh 2-4 proses mesin sekaligus** di CPU multi-core, **bagian tanpa suara dilewati**, batas potongan dicari di titik tersepi (kata tidak terpotong), progres gabungan per bagian, + mesin baru **CEPAT (base, ±60 MB)** yang seimbang untuk lagu |
 
 ⭐ = fitur baru/upgrade terbaru
 
