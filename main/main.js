@@ -1251,6 +1251,63 @@ ipcMain.handle('sys:info', async () => {
 });
 
 /* ================================================================
+   v2.14: DETEKSI GPU — apa kartu grafis yang terpasang di PC/laptop
+   ================================================================
+   Windows: daftar GPU asli dari Win32_VideoController (PowerShell,
+   fallback wmic). Hasil dipakai modul EKSPOR untuk menampilkan GPU
+   terpasang + saran akselerasi (encoder hardware NVENC/QuickSync/AMF).
+   Deteksi encoder kira-kira: NVIDIA GTX/RTX/Quadro, AMD Radeon RX,
+   Intel HD/UHD/Iris/Arc era 2012+ punya encoder hardware H.264. */
+let _gpuCache = null;
+ipcMain.handle('sys:gpu', async () => {
+  if (_gpuCache) return _gpuCache;
+  const gpus = [];
+  let src = 'tidak tersedia';
+  const parseLines = (out) => {
+    return String(out).split(/\r?\n/).map(l => l.trim())
+      .filter(l => l && !/^Name$/i.test(l) && !/^-+$/.test(l));
+  };
+  try {
+    /* PowerShell — ada di semua Windows 10/11 modern */
+    const { execFile } = require('child_process');
+    const run = (cmd, args) => new Promise(res => {
+      execFile(cmd, args, { windowsHide: true, timeout: 8000, maxBuffer: 1 << 20 },
+        (err, stdout) => res(err ? '' : String(stdout || '')));
+    });
+    let out = process.platform === 'win32'
+      ? await run('powershell.exe', ['-NoProfile', '-Command',
+        'Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name }'])
+      : '';
+    if (out.trim()) src = 'powershell';
+    if (!out.trim() && process.platform === 'win32') {
+      out = await run('wmic', ['path', 'win32_VideoController', 'get', 'name']);
+      if (out.trim()) src = 'wmic';
+    }
+    for (const name of parseLines(out)) {
+      if (/^Microsoft Basic Render Driver$/i.test(name)) continue;
+      const n = name.replace(/\s+/g, ' ').trim();
+      if (!n || gpus.some(g => g.name.toLowerCase() === n.toLowerCase())) continue;
+      const isNv = /NVIDIA|GeForce|Quadro|RTX|GTX/i.test(n);
+      const isAm = /AMD|Radeon|RX \d|Vega/i.test(n);
+      const isIt = /Intel|\bHD Graphics|\bUHD|Iris|Arc\b/i.test(n);
+      gpus.push({
+        name: n,
+        vendor: isNv ? 'NVIDIA' : isAm ? 'AMD' : isIt ? 'INTEL' : 'LAIN',
+        dedicated: isNv || isAm || /Arc\b/i.test(n),
+        encHw: isNv || isAm || (isIt && /HD Graphics (4\d{3}|5\d{3}|[6789]\d{3})|UHD|Iris|Arc/i.test(n))
+      });
+    }
+  } catch (e) { src = 'galat: ' + (e.message || e); }
+  _gpuCache = {
+    platform: process.platform, source: src, gpus,
+    hasAny: gpus.length > 0,
+    hasEncHw: gpus.some(g => g.encHw),
+    label: gpus.length ? gpus.map(g => g.name).join(' + ') : 'TIDAK TERDETEKSI'
+  };
+  return _gpuCache;
+});
+
+/* ================================================================
    DIALOG FILE & PENYIMPANAN
    ================================================================ */
 ipcMain.handle('dialog:openMedia', async () => {

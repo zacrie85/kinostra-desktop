@@ -1,8 +1,8 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "2.13.0",
-  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v2.13 Subtitel Otomatis + Vocalis Turbo",
+  "version": "2.14.0",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v2.14 Ekspor GPU Kilat + Auto-Subtitel",
   "main": "main/main.js",
   "author": "KINOSTRA",
   "license": "MIT",

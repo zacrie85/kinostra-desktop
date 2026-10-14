@@ -41,12 +41,12 @@ function xAborted() { return state.abort || !!state.exportFatal; }
 let _xPar = 1;
 
 /* v2.12: PROBE ENCODER — uji nyata mini sebelum encoder dipakai merender:
-   configure + encode 4 frame + flush + verifikasi output. Encoder GPU yang
-   "konon didukung" tapi langsung mati (codec closed) / macet saat flush
-   (Media Foundation tanpa GPU yang benar) terdeteksi DI SINI — aplikasi
-   otomatis memilih software, bukan gagal di tengah render part besar.
-   Ini penyembuh ekspor macet di bagian akhir pada sebagian mesin Windows. */
-async function probeEncoder(cfg, W, H) {
+   configure + encode beberapa frame + flush + verifikasi output. Encoder GPU
+   yang "konon didukung" tapi langsung mati (codec closed) / macet saat flush
+   (Media Foundation tanpa GPU yang benar) terdeteksi DI SINI.
+   v2.14: probe sekarang MENGUKUR KECEPATAN (fps) — mode OTOMATIS memilih
+   encoder yang benar-benar lebih kencang (GPU vs CPU), bukan menduga-duga. */
+async function probeEncoderFPS(cfg, W, H, frames = 30) {
   try {
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
@@ -57,38 +57,107 @@ async function probeEncoder(cfg, W, H) {
       error: e => { err = err || (e && e.message) || 'encoder error'; }
     });
     venc.configure({ ...cfg, latencyMode: 'realtime' });
-    for (let i = 0; i < 4; i++) {
+    const t0 = performance.now();
+    for (let i = 0; i < frames; i++) {
+      /* konten BERGERAK — encoder bekerja nyata, angka fps jujur */
+      g.fillStyle = `hsl(${(i * 12) % 360} 60% ${18 + (i % 26)}%)`;
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = '#fff';
+      g.fillRect((i * 37) % (W - 130), (i * 53) % (H - 70), 120, 68);
       const vf = new VideoFrame(c, { timestamp: i * 41666, duration: 41666 });
       venc.encode(vf, { keyFrame: i === 0 }); vf.close();
     }
-    await withTimeout(venc.flush().then(() => { flushed = true; }), 8000, 'probe flush macet');
+    await withTimeout(venc.flush().then(() => { flushed = true; }), 10000, 'probe flush macet');
+    const ms = performance.now() - t0;
     try { venc.close(); } catch (e) { }
-    return flushed && chunks >= 3 && !err;   /* minimal 3 dari 4 frame keluar */
+    const ok = flushed && chunks >= frames * 0.9 && !err;
+    return { ok, fps: ok ? Math.round(frames / Math.max(1, ms) * 1000) : 0 };
   } catch (e) {
-    try { } catch (_) { }
-    return false;
+    return { ok: false, fps: 0 };
   }
 }
+/* kompatibilitas: probe boolean dipakai tempat lain */
+async function probeEncoder(cfg, W, H) { return (await probeEncoderFPS(cfg, W, H, 8)).ok; }
+
+/* v2.14: hasil pemilihan encoder di-cache per setelan (WxH:bitrate:fps:acc)
+   — batch ekspor banyak video tidak mengulang uji kecepatan tiap video */
+let _accCache = null;
+let _lastEnc = { kind: 'sw', fps: 0 };   /* utk ringkasan ekspor & hitung paralel */
 async function pickVCodecCfg(W, H, br, fps) {
   const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
-  /* 1) coba hardware GPU dulu — jauh lebih cepat di Windows (Media Foundation)
-     v2.12: setiap kandidat wajib LULUS PROBE nyata — bukan cuma isConfigSupported */
-  for (const c of base) {
-    try {
-      const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-hardware' };
-      const s = await VideoEncoder.isConfigSupported(cfg);
-      if (s.supported && await probeEncoder(cfg, W, H)) return cfg;
-    } catch (e) { }
+  const mkHw = c => ({ codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-hardware' });
+  const mkSw = c => ({ codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-software' });
+  const key = `${W}x${H}:${br}:${fps}:${state.acc}`;
+  if (_accCache && _accCache.key === key) { _lastEnc = _accCache.res.enc; return _accCache.res.cfg; }
+
+  const probeKind = async (mk, kind) => {
+    for (const c of base) {
+      try {
+        const cfg = mk(c);
+        const s = await VideoEncoder.isConfigSupported(cfg);
+        if (!s.supported) continue;
+        const r = await probeEncoderFPS(cfg, W, H);
+        if (r.ok && r.fps > 0) return { cfg, enc: { kind, fps: r.fps } };
+      } catch (e) { }
+    }
+    return null;
+  };
+
+  let res = null;
+  if (state.acc === 'gpu') {
+    /* DIPAKSA GPU — bila encoder hardware tidak merespons, jatuh ke CPU
+       dengan peringatan (ekspor tetap jalan, bukan gagal) */
+    res = await probeKind(mkHw, 'hw');
+    if (!res) {
+      toast('Encoder GPU tidak merespons — otomatis memakai encoder CPU', 'warn');
+      res = await probeKind(mkSw, 'sw');
+    }
+  } else if (state.acc === 'cpu') {
+    res = (await probeKind(mkSw, 'sw')) || (await probeKind(mkHw, 'hw'));
+  } else {
+    /* OTOMATIS — ukur keduanya, pilih yang TERBUKTI lebih kencang.
+       GPU harus lebih cepat ≥15% untuk mengalahkan CPU (stabil & hemat risiko). */
+    const hw = await probeKind(mkHw, 'hw');
+    const sw = await probeKind(mkSw, 'sw');
+    res = !sw ? hw : (!hw ? sw : (hw.enc.fps >= sw.enc.fps * 1.15 ? hw : sw));
   }
-  /* 2) fallback software — juga di-probe */
-  for (const c of base) {
-    try {
-      const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps };
-      const s = await VideoEncoder.isConfigSupported(cfg);
-      if (s.supported && await probeEncoder(cfg, W, H)) return cfg;
-    } catch (e) { }
+  if (!res) {
+    /* upaya terakhir: tanpa preferensi hardware */
+    for (const c of base) {
+      try {
+        const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps };
+        const s = await VideoEncoder.isConfigSupported(cfg);
+        const r = s.supported ? await probeEncoderFPS(cfg, W, H) : { ok: false };
+        if (r.ok) { res = { cfg, enc: { kind: 'sw', fps: r.fps } }; break; }
+      } catch (e) { }
+    }
+  }
+  if (res) {
+    _accCache = { key, res };
+    _lastEnc = res.enc;
+    return res.cfg;
   }
   return null;
+}
+
+/* v2.14: uji kecepatan encoder ringkas (1280×720) — dipakai kotak info GPU
+   di modul EKSPOR agar pengguna tahu GPU-nya terpakai atau tidak */
+async function quickAccProbe() {
+  const base = ['avc1.640028', 'avc1.4D0028'];
+  const one = async (hw) => {
+    for (const c of base) {
+      try {
+        const cfg = { codec: c, width: 1280, height: 720, bitrate: 4e6, framerate: 30,
+          ...(hw ? { hardwareAcceleration: 'prefer-hardware' } : { hardwareAcceleration: 'prefer-software' }) };
+        if (!(await VideoEncoder.isConfigSupported(cfg)).supported) continue;
+        const r = await probeEncoderFPS(cfg, 1280, 720, 24);
+        if (r.ok) return r.fps;
+      } catch (e) { }
+    }
+    return 0;
+  };
+  const hw = await one(true), sw = await one(false);
+  return { hw, sw, hwWins: hw > 0 && hw >= sw * 1.15 };
 }
 async function pickACodec() {
   for (const c of ['mp4a.40.2', 'opus']) {
@@ -181,11 +250,15 @@ function partFileName(title, prefix, idx) {
   return `${slug(title)}${prefix !== '#' ? '_' + prefix.replace(/\s+/g, '_') : ''}_${String(idx).padStart(2, '0')}.mp4`;
 }
 
-/* ---------- JUMLAH RENDER PARALEL ---------- */
-function pickParallelCount(parts) {
+/* ---------- JUMLAH RENDER PARALEL ----------
+   v2.14: bila encoder GPU terbukti hidup, paralel otomatis naik sampai 6×
+   (NVENC/QuickSync/AMF sanggup melayani banyak sesi sekaligus). */
+function pickParallelCount(parts, hwOk = false) {
   if (state.parallel > 0) return Math.max(1, Math.min(state.parallel, parts));
   const cores = navigator.hardwareConcurrency || 8;
-  return Math.max(1, Math.min(4, parts, Math.max(1, Math.floor(cores / 3))));
+  return hwOk
+    ? Math.max(2, Math.min(6, parts, Math.floor(cores / 2)))
+    : Math.max(1, Math.min(4, parts, Math.floor(cores / 3)));
 }
 
 /* ---------- FALLBACK: rantai seek per frame (lama) ----------
@@ -311,10 +384,12 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
          naik sampai 4× — di atas kemampuan decoder/compositor, frame sumber
          dibuang beramai-ramai, mediaTime antar frame tersaji LOMPAT, PTS
          ekspor ikut bolong → pemutar menahan frame lama berdetik-detik.
-         Sekarang: mulai 1.5×, langit-langit 2× (paralel ≥3) / 2.5×, turun
-         SEGERA saat ada frame hilang, dan setiap lompatan DIISI ULANG dengan
-         seek presisi (refillGap) sehingga aliran PTS selalu rapat & mulus. */
-      const RATE_MAX = _xPar >= 3 ? 2 : 2.5;
+         Sekarang: mulai 1.5×, turun SEGERA saat ada frame hilang, dan setiap
+         lompatan DIISI ULANG dengan seek presisi (refillGap) sehingga aliran
+         PTS selalu rapat & mulus.
+         v2.14: bila encoder GPU (hardware) aktif, langit-langit dinaikkan
+         ke 3× — encoding bukan lagi hambatan, decoder-lah penentu. */
+      const RATE_MAX = hw ? 3 : (_xPar >= 3 ? 2 : 2.5);
       /* v2.12: toleransi & target lompatan diskalakan kecepatan —
          pada spd 2× jarak sumber antar frame tampil 2× lebih renggang */
       const frameGapTol = 1.8 / fps * spd;
@@ -501,15 +576,17 @@ async function exportPartsToDir(dir, ui) {
   const spd = clamp(state.speed || 1, 0.25, 4);
   const dims = outDims(sc), { W, H } = dims;
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
+  /* v2.14: pilih encoder sesuai AKSELERASI (auto = uji kecepatan GPU vs CPU) */
   const vCfg = await pickVCodecCfg(W, H, br, fps);
   if (!vCfg) throw new Error('Tidak ada codec video yang didukung engine');
+  const enc = _lastEnc;
   /* v2.5: cadangan encoder SOFTWARE untuk percobaan ulang otomatis */
   const swCfg = await pickSWCfg(W, H, br, fps);
   const wantAudio = !!(state.audioBuffer || state.music.buffer);
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();
-  const par = pickParallelCount(segs.length);
+  const par = pickParallelCount(segs.length, enc.kind === 'hw');
   _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
@@ -545,7 +622,7 @@ async function exportPartsToDir(dir, ui) {
   try {
     if (ui.title) ui.title(segs);
     if (ui.prog) ui.prog(0);
-    if (ui.sub) ui.sub(`menyiapkan ${par} render paralel${hw ? ' · encoder GPU' : ''}${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}${spd !== 1 ? ` · kecepatan ${spd}×` : ''}…`);
+    if (ui.sub) ui.sub(`encoder ${enc.kind === 'hw' ? `GPU ${enc.fps}fps` : `CPU ${enc.fps}fps`} · ${par} render paralel${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}${spd !== 1 ? ` · kecepatan ${spd}×` : ''}…`);
 
     /* jalankan worker dengan batas `par` sekaligus (antrean)
        v2.10: kegagalan part TIDAK lagi men-set state.abort (flag batal
@@ -649,7 +726,7 @@ async function doExport() {
     const tStart = performance.now();
     const results = await exportPartsToDir(dir, {
       title(segs) {
-        const par = pickParallelCount(segs.length);
+        const par = pickParallelCount(segs.length, _lastEnc.kind === 'hw');
         showModal({ title: `MERENDER ${segs.length} PART · PARALEL ${par}×`,
           sub: 'Menyiapkan encoder…', cancel: true, onCancel() { state.abort = true; } });
       },
@@ -705,7 +782,8 @@ function updateExportInfo() {
   /* v2.12: estimasi memakai durasi efektif (rentang − potongan) ÷ kecepatan */
   const outLen = expLen() / clamp(state.speed || 1, 0.25, 4);
   const est = br / 8 * outLen + 160000 / 8 * outLen;
-  const par = pickParallelCount(segmentsCount());
+  /* v2.14: paralel ikut mode akselerasi aktif */
+  const par = pickParallelCount(segmentsCount(), _lastEnc.kind === 'hw');
   const r = rangeInfo();
   const rangeLine = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < (state.duration || 0) - 0.01))
     ? `<br><b>RANGE ${fmtT(r.start)} → ${fmtT(r.end)}</b> · durasi ekspor ${fmtT(expLen())}` : '';

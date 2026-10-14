@@ -72,6 +72,9 @@ const state = {
   audioGain: 0.9, quality: 'balanced', scale: 1, fps: 30,
   /* UPGRADE v2.1: jumlah render paralel (0 = otomatis) */
   parallel: 0,
+  /* v2.14: AKSELERASI EKSPOR — auto (uji kecepatan GPU vs CPU, pilih
+     terkencang) | gpu (paksa encoder hardware) | cpu (paksa software) */
+  acc: 'auto',
   /* UPGRADE: efek visual & watermark */
   vfx: { bright: 1, contrast: 1, saturate: 1, vignette: false, grain: false },
   wm: { mode: 'off', text: '@KINOSTRA', img: null, imgName: '', pos: 'br', opacity: 0.6, scale: 1 },

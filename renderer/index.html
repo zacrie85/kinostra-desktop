@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.13.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.14.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.13.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.14.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -374,10 +374,17 @@
         <div class="seg" id="segScale"><button data-v="1" class="on">100%</button><button data-v="0.75">75%</button><button data-v="0.5">50%</button></div>
         <div class="lbl">FRAME RATE</div>
         <div class="seg" id="segFps"><button data-v="24">24</button><button data-v="30" class="on">30</button><button data-v="60">60</button></div>
-        <div class="lbl">RENDER PARALEL <span class="beta">BARU</span></div>
+        <div class="lbl">AKSELERASI GPU — EKSPOR LEBIH CEPAT <span class="beta">BARU · v2.14</span></div>
+        <div class="substat" id="gpuInfo">Mendeteksi GPU terpasang…</div>
+        <div class="seg wrap" id="segAcc">
+          <button data-v="auto" class="on">OTOMATIS</button><button data-v="gpu">GPU</button><button data-v="cpu">CPU</button>
+        </div>
+        <div class="note"><b>OTOMATIS</b>: aplikasi menguji kecepatan encoder GPU vs CPU sesaat sebelum ekspor lalu memakai yang <b>terbukti lebih kencang</b>. <b>GPU</b>: paksa encoder hardware (NVENC / QuickSync / AMF) — bisa 5-10× lebih cepat dari CPU, ramai CPU tetap lega. <b>CPU</b>: paksa software (paling serasi). Cek hasil deteksi di kotak di atas — bila GPU-mu tampil &amp; encoder GPU aktif, video panjang (mis. 58 menit) bisa selesai <b>jauh lebih cepat</b>. Render paralel otomatis naik sampai 6× saat GPU dipakai.</div>
+        <div class="lbl">RENDER PARALEL</div>
         <div class="seg wrap" id="segParallel">
           <button data-v="0" class="on">OTOMATIS</button><button data-v="1">1×</button>
           <button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
+          <button data-v="5">5×</button><button data-v="6">6×</button>
         </div>
         <div class="expsum" id="expSum">Impor media untuk melihat ringkasan.</div>
         <button class="btn acc big wide" id="btnExport"><i data-lucide="clapperboard"></i> EKSPOR &amp; SPLIT MP4</button>

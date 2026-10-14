@@ -492,6 +492,46 @@ bindSeg('segQual', v => { state.quality = v; updateAll(); });
 bindSeg('segScale', v => { state.scale = v; updateAll(); });
 bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
 bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
+/* v2.14: AKSELERASI EKSPOR — OTOMATIS (uji kecepatan GPU vs CPU) / GPU / CPU */
+bindSeg('segAcc', v => {
+  state.acc = v;
+  _accCache = null;   /* setelan berubah → uji ulang saat ekspor berikutnya */
+  updateAll();
+  toast(v === 'auto' ? 'Akselerasi: OTOMATIS — dipilih hasil uji kecepatan nyata' :
+    v === 'gpu' ? 'Akselerasi: GPU — encoder hardware (NVENC/QuickSync/AMF)' :
+      'Akselerasi: CPU — encoder software paling serasi', 'ok');
+});
+
+/* v2.14: DETEKSI GPU TERPASANG + UJI ENCODER (di belakang, tidak menahan boot).
+   Kotak #gpuInfo menampilkan: nama GPU, dukungan encoder hardware, dan hasil
+   uji kecepatan GPU vs CPU (fps) + encoder yang akan dipakai mode OTOMATIS. */
+(async () => {
+  const box = $('#gpuInfo');
+  if (!box) return;
+  let glName = '';
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const dbg = gl && gl.getExtension('WEBGL_debug_renderer_info');
+    if (dbg) glName = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '';
+  } catch (e) { }
+  try {
+    const gi = await window.kinostra.gpuInfo();
+    const gtxt = gi.hasAny ? gi.label : 'TIDAK TERDETEKSI';
+    box.innerHTML = `<b>GPU TERPASANG:</b> ${gtxt}` +
+      (gi.hasEncHw ? ' · <b style="color:var(--acc)">encoder hardware tersedia</b>' : ' · tanpa encoder hardware terdeteksi') +
+      ' — menguji kecepatan encoder…';
+    const p = await quickAccProbe();
+    const win = p.hwWins ? 'GPU' : 'CPU';
+    box.innerHTML = `<b>GPU TERPASANG:</b> ${gtxt}` +
+      (gi.hasEncHw ? ' · <b style="color:var(--acc)">encoder hardware tersedia</b>' : '') +
+      `<br><b>UJI ENCODER (720p):</b> GPU ${p.hw > 0 ? p.hw + ' fps' : 'tidak tersedia'} · CPU ${p.sw > 0 ? p.sw + ' fps' : 'tidak tersedia'}` +
+      ` → mode OTOMATIS memakai <b style="color:var(--acc)">${win}${win === 'GPU' ? ' (' + p.hw + ' fps)' : ''}</b>` +
+      (p.hwWins ? ' — ekspor video panjang jauh lebih cepat' : (p.hw === 0 && p.sw > 0 ? ' — PC ini tanpa encoder GPU; CPU tetap aman & mulus' : '')) +
+      (glName && !/swiftshader|llvmpipe|software/i.test(glName) ? `<br><span style="opacity:.75">Renderer tampilan: ${String(glName).slice(0, 70)}</span>` : '');
+  } catch (e) {
+    box.innerHTML = `<b>GPU:</b> deteksi gagal (${(e.message || e).toString().slice(0, 60)}) — ekspor tetap jalan dengan encoder terbaik yang tersedia`;
+  }
+})();
 $('#btnExport').onclick = doExport;
 /* v2.8: BATCH EKSPOR dari menu EKSPOR & KOMPRESI — semua video di kotak
    diekspor berurutan memakai setelan saat ini (paksa proses ulang yang

@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('kinostra', {
 
   /* v2.4: info sistem (RAM asli) */
   sysInfo: () => ipcRenderer.invoke('sys:info'),
+  /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
+  gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 
   /* shell */
   showInFolder: (p) => ipcRenderer.invoke('shell:showInFolder', p),
