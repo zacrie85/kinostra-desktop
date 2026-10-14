@@ -260,6 +260,11 @@ span.qthumb{display:flex;align-items:center;justify-content:center;color:var(--t
 #frameStyles,#expPresets{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
 #frameStyles .fchip,#expPresets .fchip{border-left:3px solid var(--line2)}
 #frameStyles .fchip.on,#expPresets .fchip.on{border-left-color:var(--acc)}
+/* ===== v2.16: HEADER GRUP FRAME KHUSUS (HOROR ALAMGAIB / DANGDUT IDOLADESA) ===== */
+.fghead{grid-column:1/-1;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;padding:7px 9px 5px;border-bottom:1px dashed var(--line2);margin-top:6px;color:var(--tx2)}
+.fghead:first-child{margin-top:0}
+.fg-horor{color:#e89ab0;border-bottom-color:rgba(194,58,90,.5)}
+.fg-koplo{color:#f5d98a;border-bottom-color:rgba(245,201,78,.45)}
 
 /* ===== v2.12: POTONG & HAPUS BAGIAN ===== */
 .cutlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:170px;overflow-y:auto;margin-bottom:8px}

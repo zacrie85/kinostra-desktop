@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.15.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.16.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -51,6 +51,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 31 | **Vocalis Turbo — Transkrip 2-4× Lebih Cepat** ⭐v2.13 | Audio dipecah jadi potongan lalu ditranskrip **paralel oleh 2-4 proses mesin sekaligus** di CPU multi-core, **bagian tanpa suara dilewati**, batas potongan dicari di titik tersepi (kata tidak terpotong), progres gabungan per bagian, + mesin baru **CEPAT (base, ±60 MB)** yang seimbang untuk lagu |
 | 32 | **Deteksi GPU + Akselerasi Ekspor** ⭐v2.14 | Aplikasi **mendeksi otomatis GPU yang terpasang** (NVIDIA/AMD/Intel) dan menguji kecepatan encoder GPU vs CPU — hasilnya tampil di modul EKSPOR. Pilihan **OTOMATIS / GPU / CPU**: mode GPU memakai encoder hardware (NVENC/QuickSync/AMF) yang bisa **5-10× lebih cepat**; paralel otomatis naik sampai **6×** saat GPU aktif; capture rate naik 3× karena encoding bukan lagi hambatan |
 | 33 | **Ekspor Batch Anti-Pelan** ⭐v2.15 | **Film ke-3 ke atas di batch tidak lagi merambat** (film 60 mnt tak lagi 4 jam). Empat akar masalah dibereskan: data video kini dialirkan potongan 512 KB (dulu buffer sebesar sisa film dibaca sinkron di setiap seek), part besar ditulis langsung ke disk selagi dirender, audio di-encode per blok 60 dtk, dan bocor sesi encoder GPU ditutup — encoder hardware yang berulang kali macet otomatis diganti CPU untuk sisa batch. RAM antar film dibersihkan + paralel ramah GPU terintegrasi (Intel Iris/UHD maks 4×) |
+| 34 | **12 Frame Khusus Tema** ⭐v2.16 | Menu FRAME VIDEO kini **20 gaya** dengan papan judul tema terpasang di atas frame: **6 HOROR ALAMGAIB** (Hutan Mistis, Kuburan, Rumah Berhantu, Darah Kutukan, Jejak Hantu, Lilin Malam — bertema horor misteri & hantu, papan gothic font Cinzel + tengkorak + glow merah) dan **6 DANGDUT IDOLADESA** (Panggung, Gendang, Gliter Emas, Neon Disko, Obor Desa, Kipas Gliter — bertema musik dangdut koplo, pita merah-emas font Anton + catatan musik). Semua beranimasi (kabut, kelelawar, lampu sorot, bola disko, gliter) & terbakar ke video saat ekspor; judul videomu otomatis tampil di bawah papan tema |
 
 ⭐ = fitur baru/upgrade terbaru
 

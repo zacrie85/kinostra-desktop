@@ -357,14 +357,26 @@ syncNeonLabels();
 /* ================================================================
    v2.12 — FRAME VIDEO 8 GAYA BARU (dari 9 gambar referensi)
    Chips gaya frame: klik = pakai; NEON = mode garis berputar lama.
+   v2.16 — +12 FRAME KHUSUS: header grup HOROR ALAMGAIB &
+   DANGDUT IDOLADESA + aksen warna chip per tema.
    ================================================================ */
 function renderFrameChips() {
   const g = $('#frameStyles'); g.innerHTML = '';
+  let lastG = null;
   FRAMESTYLES.forEach(f => {
+    if (f.g && f.g !== lastG) {
+      lastG = f.g;
+      const h = document.createElement('div');
+      h.className = 'fghead ' + (f.g === 'HOROR ALAMGAIB' ? 'fg-horor' : 'fg-koplo');
+      h.textContent = f.g;
+      g.appendChild(h);
+    }
     const b = document.createElement('button');
     b.className = 'fchip' + (state.frameStyle === f.k ? ' on' : '');
     b.innerHTML = `<span>${f.n}</span><em>${f.d}</em>`;
     if (f.k === 'neon') b.style.background = 'linear-gradient(90deg,#12325a,#0b1c33)';
+    if (f.g === 'HOROR ALAMGAIB') { b.style.background = 'linear-gradient(90deg,#241126,#120a18)'; b.style.borderLeftColor = '#c23a5a'; }
+    if (f.g === 'DANGDUT IDOLADESA') { b.style.background = 'linear-gradient(90deg,#33101d,#1d0a12)'; b.style.borderLeftColor = '#f5c94e'; }
     b.onclick = () => {
       state.frameStyle = f.k;
       state.neon.on = (f.k === 'neon');   /* neon = gaya berputar; gaya lain mematikan neon */

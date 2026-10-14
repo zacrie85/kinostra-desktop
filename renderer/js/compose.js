@@ -214,9 +214,12 @@ function drawComposition(x, W, H, t) {
   let yTitleBase = 0;
   if (state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
-    /* v2.6: geser vertikal ±14% tinggi layar dari posisi default */
+    /* v2.6: geser vertikal ±14% tinggi layar dari posisi default
+       v2.16: frame khusus HOROR/KOPLO punya papan judul tema di ATAS —
+       judul pengguna otomatis digeser ke bawah papan (FST.titlePush) */
     const tpy = clamp(state.titlePosY || 0, -1, 1);
-    const yLine = H * clamp(0.062 + tpy * 0.14, 0.012, 0.46);
+    const tPush = (FST && FST.titlePush) || 0;
+    const yLine = H * clamp(0.062 + tPush + tpy * 0.14, 0.012, 0.46);
     x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yLine, 60 * u, 3 * u);
     x.fillStyle = '#F2F0EA';
     const txt = state.upper ? state.title.toUpperCase() : state.title;

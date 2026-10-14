@@ -30,7 +30,22 @@ const FRAMESTYLES = [
   { k: 'elegan', n: 'PUTIH ELEGAN', d: 'Latar gading · ornamen jingga melengkung' },
   { k: 'awan', n: 'AWAN BIRU', d: 'Awan biru berlapis · matahari · gaya LIVE REPORT' },
   { k: 'panel', n: 'PANEL BIRU', d: 'Panel putih bulat di atas biru cerah' },
-  { k: 'gradien', n: 'GRADIEN TIPIS', d: 'Garis gradien minimalis hijau-pink-oranye' }
+  { k: 'gradien', n: 'GRADIEN TIPIS', d: 'Garis gradien minimalis hijau-pink-oranye' },
+  /* v2.16: 12 FRAME KHUSUS — papan judul bertuliskan tema TETAP di atas:
+     6 frame HOROR (tulisan "HOROR ALAMGAIB") + 6 frame KOPLO
+     (tulisan "DANGDUT IDOLADESA"). g = grup chip di menu. */
+  { k: 'hororhutan', n: 'HOROR · HUTAN MISTIS', d: 'Hutan gelap berkabut · roh hijau melayang · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororkuburan', n: 'HOROR · KUBURAN', d: 'Bulan purnama · nisan & pohon mati · kelelawar · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororrumah', n: 'HOROR · RUMAH BERHANTU', d: 'Rumah tua angker · jendela berkedip · pagar patah · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'horordarah', n: 'HOROR · DARAH KUTUKAN', d: 'Tetesan darah menetes · tengkorak · merah gelap · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororhantu', n: 'HOROR · JEJAK HANTU', d: 'Hantu putih melayang · uap ectoplasm biru · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororlilin', n: 'HOROR · LILIN MALAM', d: 'Lilin berkedip · tengkorak · lingkar ritual · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'koplopanggung', n: 'KOPLO · PANGGUNG', d: 'Tirai panggung emas · lampu sorot berputar · speaker · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplogendang', n: 'KOPLO · GENDANG', d: 'Kendang & gong emas · terompet · denyut koplo · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplogliter', n: 'KOPLO · GLITER EMAS', d: 'Emas berkilau berjatuhan · catatan musik · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koploneon', n: 'KOPLO · NEON DISKO', d: 'Neon pink-biru · bola disko berputar · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koploobor', n: 'KOPLO · OBOR DESA', d: 'Obor kampung menyala · umbul bendera · kembang merah · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplokipas', n: 'KOPLO · KIPAS GLITER', d: 'Kipas penari mengembang · sequin berkilau · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' }
 ];
 const FONTS = [
   { n: 'Cinzel', d: 'TRAJAN · GLADIATOR / TROY' },
