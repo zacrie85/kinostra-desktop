@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* stream writer */
   beginWrite: (dir, fileName) => ipcRenderer.invoke('fs:beginWrite', { dir, fileName }),
   writeChunk: (id, chunk) => ipcRenderer.invoke('fs:writeChunk', { id, chunk: new Uint8Array(chunk) }),
+  /* v2.15: tulis pada POSISI tertentu (pwrite acak) — dipakai muxer streaming
+     mp4-muxer StreamTarget yang mem-patch header mdat di posisi lama saat finalize */
+  writeChunkAt: (id, chunk, position) => ipcRenderer.invoke('fs:writeChunkAt', { id, chunk: new Uint8Array(chunk), position }),
   endWrite: (id) => ipcRenderer.invoke('fs:endWrite', { id }),
   abortWrite: (id) => ipcRenderer.invoke('fs:abortWrite', { id }),
 

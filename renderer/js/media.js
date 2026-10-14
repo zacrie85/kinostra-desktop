@@ -125,6 +125,11 @@ async function loadFileBlob(file, force = false) {
 async function decodeFileAudio() {
   if (!state.file) return;
   try {
+    /* v2.15: lepaskan buffer audio film LAMA lebih dulu — decode film 60 mnt
+       butuh ArrayBuffer ±2 GB + hasil decode ±1.4 GB; bila buffer lama masih
+       dipegang saat decode baru jalan, puncak RAM jadi dua kali lipat dan
+       batch film ke-3 ke atas kehabisan memori fisik */
+    state.audioBuffer = null; state.peaks = null;
     /* v2.6: file virtual dibaca lewat fetch kfile:// (streaming disk) */
     const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
       : await state.file.arrayBuffer();

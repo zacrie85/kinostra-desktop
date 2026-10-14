@@ -495,7 +495,7 @@ bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); })
 /* v2.14: AKSELERASI EKSPOR — OTOMATIS (uji kecepatan GPU vs CPU) / GPU / CPU */
 bindSeg('segAcc', v => {
   state.acc = v;
-  _accCache = null;   /* setelan berubah → uji ulang saat ekspor berikutnya */
+  resetAccAdaptation();   /* v2.15: setelan berubah → hapus demosi & uji ulang */
   updateAll();
   toast(v === 'auto' ? 'Akselerasi: OTOMATIS — dipilih hasil uji kecepatan nyata' :
     v === 'gpu' ? 'Akselerasi: GPU — encoder hardware (NVENC/QuickSync/AMF)' :
@@ -521,6 +521,10 @@ bindSeg('segAcc', v => {
       (gi.hasEncHw ? ' · <b style="color:var(--acc)">encoder hardware tersedia</b>' : ' · tanpa encoder hardware terdeteksi') +
       ' — menguji kecepatan encoder…';
     const p = await quickAccProbe();
+    /* v2.15: tandai GPU TERINTEGRASI (hanya iGPU tanpa kartu diskrit —
+       Intel Iris/UHD, AMD APU) → paralel otomatis dibatasi 4× agar iGPU
+       tidak kebanjiran sesi encode+decode saat batch film panjang */
+    state._igpu = !!(gi.hasAny && !gi.gpus.some(g => g.dedicated));
     const win = p.hwWins ? 'GPU' : 'CPU';
     box.innerHTML = `<b>GPU TERPASANG:</b> ${gtxt}` +
       (gi.hasEncHw ? ' · <b style="color:var(--acc)">encoder hardware tersedia</b>' : '') +

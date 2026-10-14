@@ -220,6 +220,11 @@ async function runBatch(forceAll = false) {
         sub: `Memuat ${it.name}…`, cancel: true, onCancel() { state.abort = true; } });
       setProg(0.02);
       try {
+        /* --- v2.15: lepaskan buffer audio film sebelumnya SEBELUM memuat
+               film berikutnya — decode audio film 60 mnt menahan ±1.4 GB
+               di RAM; tanpa pelepasan eksplisit puncak memori naik terus
+               tiap film → film ke-3 dst masuk swap & ekspor merambat --- */
+        state.audioBuffer = null; state.peaks = null;
         /* --- v2.6: muat STREAMING via kfile:// — tanpa membaca seluruh
                file ke memori (video besar langsung siap, hemat RAM) --- */
         await loadFromPath(it.path, true);   /* force: abaikan guard busy */

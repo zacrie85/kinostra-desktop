@@ -47,12 +47,13 @@ let _xPar = 1;
    v2.14: probe sekarang MENGUKUR KECEPATAN (fps) — mode OTOMATIS memilih
    encoder yang benar-benar lebih kencang (GPU vs CPU), bukan menduga-duga. */
 async function probeEncoderFPS(cfg, W, H, frames = 30) {
+  let venc = null;
   try {
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
     g.fillStyle = '#1a2a3a'; g.fillRect(0, 0, W, H);
     let chunks = 0, err = null, flushed = false;
-    const venc = new VideoEncoder({
+    venc = new VideoEncoder({
       output: () => chunks++,
       error: e => { err = err || (e && e.message) || 'encoder error'; }
     });
@@ -69,11 +70,18 @@ async function probeEncoderFPS(cfg, W, H, frames = 30) {
     }
     await withTimeout(venc.flush().then(() => { flushed = true; }), 10000, 'probe flush macet');
     const ms = performance.now() - t0;
-    try { venc.close(); } catch (e) { }
     const ok = flushed && chunks >= frames * 0.9 && !err;
     return { ok, fps: ok ? Math.round(frames / Math.max(1, ms) * 1000) : 0 };
   } catch (e) {
     return { ok: false, fps: 0 };
+  } finally {
+    /* v2.15 FIX BOCOR SESI ENCODER: dulu bila flush probe kena timeout,
+       exception melompati venc.close() → sesi encoder Media Foundation
+       TETAP TERBUKA di GPU process. Sesi bocor menumpuk sepanjang batch →
+       film ke-3 dst encoder hardware menolak/macet → tiap part membayar
+       gagal-hardware 30-45 dtk + render ulang software → ekspor 4× lipat.
+       Kini close() dijamin jalan di SEMUA jalur (sukses/gagal/timeout). */
+    try { if (venc && venc.state !== 'closed') venc.close(); } catch (e) { }
   }
 }
 /* kompatibilitas: probe boolean dipakai tempat lain */
@@ -83,6 +91,21 @@ async function probeEncoder(cfg, W, H) { return (await probeEncoderFPS(cfg, W, H
    — batch ekspor banyak video tidak mengulang uji kecepatan tiap video */
 let _accCache = null;
 let _lastEnc = { kind: 'sw', fps: 0 };   /* utk ringkasan ekspor & hitung paralel */
+/* v2.15: ADAPTASI ANTI-PELAN — bila encoder hardware jatuh berulang kali
+   (stall/error → auto-retry software), jalur software dipakai untuk sisa
+   sesi. Tanpa ini TIAP part berikutnya membayar lagi: gagal-hardware
+   (watchdog 30-45 dtk) + render ulang software = dobel kerja → film
+   ke-3 ke atas terasa berkali-kali lebih lama. */
+let _hwFails = 0, _hwDemoted = false;
+function noteHwFailure(msg) {
+  if (_hwDemoted || state.acc === 'cpu') return;
+  if (++_hwFails >= 2) {
+    _hwDemoted = true; _accCache = null;
+    console.warn('encoder hardware didemosi ke software untuk sisa sesi:', msg);
+    toast('Encoder GPU berulang kali bermasalah — sisa ekspor memakai encoder CPU (lebih stabil)', 'warn');
+  }
+}
+function resetAccAdaptation() { _hwFails = 0; _hwDemoted = false; _accCache = null; }
 async function pickVCodecCfg(W, H, br, fps) {
   const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
   const mkHw = c => ({ codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-hardware' });
@@ -116,8 +139,10 @@ async function pickVCodecCfg(W, H, br, fps) {
     res = (await probeKind(mkSw, 'sw')) || (await probeKind(mkHw, 'hw'));
   } else {
     /* OTOMATIS — ukur keduanya, pilih yang TERBUKTI lebih kencang.
-       GPU harus lebih cepat ≥15% untuk mengalahkan CPU (stabil & hemat risiko). */
-    const hw = await probeKind(mkHw, 'hw');
+       GPU harus lebih cepat ≥15% untuk mengalahkan CPU (stabil & hemat risiko).
+       v2.15: bila hardware sudah didemosi (berulang kali macet di film
+       sebelumnya), langsung software — tanpa uji GPU lagi. */
+    const hw = (state.acc === 'auto' && _hwDemoted) ? null : await probeKind(mkHw, 'hw');
     const sw = await probeKind(mkSw, 'sw');
     res = !sw ? hw : (!hw ? sw : (hw.enc.fps >= sw.enc.fps * 1.15 ? hw : sw));
   }
@@ -218,25 +243,45 @@ async function renderMix(start, durOut, spd = 1) {
   }
   return oc.startRendering();
 }
-async function encodeAudioTo(muxer, abuf, codec) {
-  const sr = abuf.sampleRate, chs = Math.min(2, abuf.numberOfChannels);
+/* ---------- ENCODING AUDIO (v2.15: PER BLOK 60 dtk — RAM tetap datar) ----------
+   Dulu: SELURUH audio part dirender dulu oleh OfflineAudioContext →
+   AudioBuffer sebesar durasi part (film 60 mnt ≈ 700 MB Float32 di RAM
+   per part!) baru di-encode. Kini: blok 60 dtk dirender & di-encode
+   bergantian. Hasil identik — offset sumber & posisi loop musik kontinu
+   antar blok (blok k = waktu output [k·60, (k+1)·60) → sumber mulai
+   seg.start + outOff·spd), stempel waktu dihitung dari penghitung global. */
+async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec) {
+  const sr = 48000, chs = 2;
   const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => console.warn('aenc', e) });
   aenc.configure({ codec, sampleRate: sr, numberOfChannels: chs, bitrate: 160000 });
-  const L = abuf.getChannelData(0), R2 = chs > 1 ? abuf.getChannelData(1) : L, BLK = sr;
-  for (let off = 0; off < abuf.length; off += BLK) {
-    if (state.abort) throw new Error('Dibatalkan');
-    if (state.exportFatal) throw state.exportFatal;
-    const n = Math.min(BLK, abuf.length - off);
-    const data = new Float32Array(n * chs);
-    data.set(L.subarray(off, off + n), 0);
-    if (chs > 1) data.set(R2.subarray(off, off + n), n);
-    const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs,
-      timestamp: Math.round(off / sr * 1e6), data });
-    aenc.encode(ad); ad.close();
-    let drainMs = 0;
-    while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if (state.exportFatal) throw state.exportFatal; if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
+  try {
+    const BLK = 60;
+    let outOff = 0;
+    while (outOff < durOut - 1e-6) {
+      if (state.abort) throw new Error('Dibatalkan');
+      if (state.exportFatal) throw state.exportFatal;
+      const len = Math.min(BLK, durOut - outOff);
+      const mix = await renderMix(seg.start + outOff * spd, len, spd);
+      const L = mix.getChannelData(0), R2 = chs > 1 ? mix.getChannelData(1) : L;
+      for (let off = 0; off < mix.length; off += sr) {
+        if (state.abort) throw new Error('Dibatalkan');
+        if (state.exportFatal) throw state.exportFatal;
+        const n = Math.min(sr, mix.length - off);
+        const data = new Float32Array(n * chs);
+        data.set(L.subarray(off, off + n), 0);
+        if (chs > 1) data.set(R2.subarray(off, off + n), n);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs,
+          timestamp: Math.round((outOff + off / sr) * 1e6), data });
+        aenc.encode(ad); ad.close();
+        let drainMs = 0;
+        while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if (state.exportFatal) throw state.exportFatal; if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
+      }
+      outOff += len;
+    }
+    await aenc.flush();
+  } finally {
+    try { aenc.close(); } catch (e) { }   /* v2.15: sesi encoder audio selalu ditutup */
   }
-  await aenc.flush(); aenc.close();
 }
 async function ensureFontsReady() {
   try {
@@ -256,6 +301,10 @@ function partFileName(title, prefix, idx) {
 function pickParallelCount(parts, hwOk = false) {
   if (state.parallel > 0) return Math.max(1, Math.min(state.parallel, parts));
   const cores = navigator.hardwareConcurrency || 8;
+  /* v2.15: GPU TERINTEGRASI (Intel Iris/UHD, AMD APU) — memori bersama
+     dgn RAM; paralel 6× membanjiri iGPU (encode+decode 6 sesi) → ekspor
+     justru merambat. Di iGPU langit-langitnya 4×. */
+  if (hwOk && state._igpu) return Math.max(2, Math.min(4, parts, Math.floor(cores / 2)));
   return hwOk
     ? Math.max(2, Math.min(6, parts, Math.floor(cores / 2)))
     : Math.max(1, Math.min(4, parts, Math.floor(cores / 3)));
@@ -317,15 +366,48 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     const ecv = document.createElement('canvas'); ecv.width = W; ecv.height = H;
     const ec = ecv.getContext('2d', { alpha: false });
     _stage = 'muxer';
-    const muxer = new Mp4Muxer.Muxer({
-      target: new Mp4Muxer.ArrayBufferTarget(), fastStart: 'in-memory', firstTimestampBehavior: 'offset',
-      video: { codec: 'avc', width: W, height: H, frameRate: fps },
-      ...(aCodec ? { audio: { codec: aCodec === 'mp4a.40.2' ? 'aac' : 'opus', numberOfChannels: 2, sampleRate: 48000 } } : {})
-    });
+    /* v2.15: part BESAR ditulis LANGSUNG ke disk (StreamTarget → IPC 8 MB) —
+       dulu SELURUH berkas MP4 menumpuk di RAM (ArrayBufferTarget) sampai
+       render selesai; part 30-60 mnt = gigabyte per part di memori,
+       batch film panjang lalu kehabisan memori → ekspor merambat.
+       Part kecil tetap in-memory (fastStart penuh, kompatibilitas maks). */
+    const nm = partFileName(state.title, state.partPrefix, seg.i + 1);
+    const estBytes = Math.round(durS * (br + (aCodec ? 160000 : 0)) / 8) + 4e6;
+    const streamDisk = estBytes > (state._streamThreshMB || 384) * 1048576;
+    let wsId = null, wsErr = null, wsPath = nm, chain = Promise.resolve(), sent = 0;
+    const mkAudio = aCodec ? { audio: { codec: aCodec === 'mp4a.40.2' ? 'aac' : 'opus', numberOfChannels: 2, sampleRate: 48000 } } : {};
+    const mkVideo = { codec: 'avc', width: W, height: H, frameRate: fps };
+    let muxer;
+    if (streamDisk) {
+      const w = await window.kinostra.beginWrite(slot.dir, nm);
+      wsId = w.id; wsPath = w.path;
+      console.info(`part ${seg.i + 1}: muxer streaming disk aktif (±${fmtMB(estBytes)}) — RAM tetap datar (v2.15)`);
+      muxer = new Mp4Muxer.Muxer({
+        target: new Mp4Muxer.StreamTarget({
+          chunked: true, chunkSize: 8 * 1024 * 1024,
+          /* onData(data, posisi) — tulis-acak ke disk via pwrite (IPC);
+             rantai `chain` menjaga urutan panggilan, patch header mdat di
+             posisi lama oleh mp4-muxer (fastStart:false) tetap benar */
+          onData: (data, pos) => {
+            if (wsErr) return;
+            sent += data.byteLength;
+            slot.saveProg = Math.min(0.98, sent / estBytes);
+            chain = chain.then(() => window.kinostra.writeChunkAt(wsId, data, pos)).catch(e => { wsErr = wsErr || e; });
+          }
+        }),
+        fastStart: false, firstTimestampBehavior: 'offset',
+        video: mkVideo, ...mkAudio
+      });
+    } else {
+      muxer = new Mp4Muxer.Muxer({
+        target: new Mp4Muxer.ArrayBufferTarget(), fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+        video: mkVideo, ...mkAudio
+      });
+    }
     if (aCodec) {
       _stage = 'audio';
-      const mix = await withTimeout(renderMix(seg.start, durS, spd), 120000, 'mix audio macet');
-      await withTimeout(encodeAudioTo(muxer, mix, aCodec), 300000, 'encoding audio macet');
+      /* v2.15: encode audio PER BLOK — RAM datar di part panjang */
+      await withTimeout(encodeAudioStream(muxer, seg, durS, spd, aCodec), 300000, 'encoding audio macet');
     }
     _stage = 'configure';
     const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
@@ -545,20 +627,33 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
       throw new Error(`encoder hanya mengeluarkan ${vChunks} dari ${n} frame (gambar akan beku)`);
     _stage = 'finalize';
     slot.stage = 'finalize';
+    if (wsErr) throw wsErr;
     await withTimeout(Promise.resolve().then(() => muxer.finalize()), 30000, 'penulisan header MP4 macet');
     _stage = 'save';
     slot.stage = 'save';
-    const nm = partFileName(state.title, state.partPrefix, seg.i + 1);
-    const wr = await withTimeout(
-      saveBufferToDir(muxer.target.buffer, slot.dir, nm, (w, t) => { slot.saveProg = w / t; }),
-      180000, 'menyimpan file ke disk macet (cek ruang kosong disk)');
+    let wr;
+    if (streamDisk) {
+      /* v2.15: semua byte sudah mengalir ke disk SELAMA render — tinggal
+         menuntaskan rantai tulis, menutup stream, membaca ukuran berkas */
+      if (wsErr) throw wsErr;
+      await withTimeout(chain, 180000, 'menulis file ke disk macet (cek ruang kosong disk)');
+      if (wsId) { const id = wsId; wsId = null; await window.kinostra.endWrite(id); }
+      const stt = await window.kinostra.stat(wsPath);
+      wr = { path: wsPath, size: (stt && stt.ok) ? stt.size : sent };
+    } else {
+      wr = await withTimeout(
+        saveBufferToDir(muxer.target.buffer, slot.dir, nm, (w, t) => { slot.saveProg = w / t; }),
+        180000, 'menyimpan file ke disk macet (cek ruang kosong disk)');
+    }
     slot.prog = 1; slot.fr = slot.total = Math.max(slot.total, n);
-    return { name: nm, path: wr.path, size: wr.size };
+    return { name: wr.path.split(/[\\/]/).pop(), path: wr.path, size: wr.size };
   } catch (err) {
     if (_stage !== 'frames' && _stage !== 'stream') console.error(`part ${seg.i + 1} GAGAL di tahap ${_stage}: ${err && err.name || 'ERR'} | ${err && err.message || err}`);
     throw err;
   } finally {
     try { if (venc && venc.state !== 'closed') venc.close(); } catch (e) { }
+    /* v2.15: bila gagal di tengah render streaming → buang berkas setengah jadi */
+    try { if (wsId) { const id = wsId; wsId = null; window.kinostra.abortWrite(id).catch(() => { }); } } catch (e) { }
     try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) { }
     try { v.remove(); } catch (e) { }
   }
@@ -640,7 +735,10 @@ async function exportPartsToDir(dir, ui) {
         } catch (e) {
           /* v2.5: RETRY OTOMATIS 1× dengan encoder SOFTWARE — penyembuh
              utama "ekspor macet di bagian akhir" (encoder GPU berhenti).
-             Jangan ulangi bila user membatalkan sendiri / part lain gagal. */
+             Jangan ulangi bila user membatalkan sendiri / part lain gagal.
+             v2.15: kegagalan jalur hardware dicatat — 2× jatuh → sisa batch
+             otomatis memakai software (anti-pelan, tanpa dobel kerja). */
+          if (hw && !xAborted()) noteHwFailure(e && e.message || String(e));
           if (!xAborted() && swCfg) {
             console.warn(`part ${idx + 1} gagal (${e && e.message || e}) — ulangi 1× dengan encoder software`);
             slot.fr = 0; slot.stage = null; slot.saveProg = 0; slot.retried = true; slot.working = true; uiTick(true);

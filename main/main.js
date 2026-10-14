@@ -729,7 +729,16 @@ function handleModelsScheme(request) {
 
 /* ---------- Handler kfile:// (v2.3: media DISK streaming + Range) ----------
    kfile://media/?p=<path terenkode> — dipakai thumbnail kotak video &
-   preview supaya 100 video tak perlu dibaca utuh ke memori. */
+   preview supaya 100 video tak perlu dibaca utuh ke memori.
+   v2.15 FIX "BATCH FILM 3+ SANGAT LAMA": dulu setiap permintaan (termasuk
+   Range terbuka "bytes=N-" yang rutin dipakai mesin media & seek ekspor)
+   dibaca SINKRON ke satu Buffer sebesar sisa file (film 60 mnt = 1-2 GB!)
+   → main process membeku berdetik-detik & RAM membengkak pada SETIAP
+   seek/load part → film pertama kedua masih kuat, film ketiga ke atas
+   sistem kehabisan memori fisik → ekspor merambat sampai berjam-jam.
+   Kini: SEMUA respons dialirkan dengan fs.createReadStream (potongan
+   512 KB) — RAM main process tetap datar berapa pun besar filmnya. */
+const { Readable } = require('stream');
 function handleKFileScheme(request) {
   try {
     const u = new URL(request.url);
@@ -747,30 +756,22 @@ function handleKFileScheme(request) {
       'Access-Control-Allow-Origin': '*',
       'Cross-Origin-Resource-Policy': 'cross-origin'
     };
-    const range = request.headers.get('Range') || '';
-    const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+    let a = 0, b = size - 1, isRange = false;
+    const m = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get('Range') || '');
     if (m) {
-      let a = m[1] === '' ? NaN : parseInt(m[1], 10);
-      let b = m[2] === '' ? size - 1 : Math.min(parseInt(m[2], 10), size - 1);
-      if (Number.isNaN(a)) { a = Math.max(0, size - parseInt(m[2] || '0', 10)); b = size - 1; }
-      if (a > b || a >= size) {
+      if (m[1] === '' && m[2] === '') { a = 0; b = size - 1; }
+      else if (m[1] === '') { a = Math.max(0, size - parseInt(m[2], 10)); b = size - 1; }
+      else { a = parseInt(m[1], 10); b = m[2] === '' ? size - 1 : Math.min(parseInt(m[2], 10), size - 1); }
+      if (Number.isNaN(a) || Number.isNaN(b) || a > b || a >= size) {
         return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
       }
-      const len = b - a + 1;
-      const buf = Buffer.alloc(len);
-      const fd = fs.openSync(p, 'r');
-      try { fs.readSync(fd, buf, 0, len, a); } finally { fs.closeSync(fd); }
-      return new Response(buf, {
-        status: 206,
-        headers: {
-          ...baseHeaders,
-          'Content-Range': `bytes ${a}-${b}/${size}`,
-          'Content-Length': String(len)
-        }
-      });
+      isRange = true;
     }
-    const buf = fs.readFileSync(p);
-    return new Response(buf, { status: 200, headers: { ...baseHeaders, 'Content-Length': String(size) } });
+    const node = fs.createReadStream(p, { start: a, end: b, highWaterMark: 524288 });
+    node.on('error', () => { try { node.destroy(); } catch (_) { } });
+    const headers = { ...baseHeaders, 'Content-Length': String(b - a + 1) };
+    if (isRange) headers['Content-Range'] = `bytes ${a}-${b}/${size}`;
+    return new Response(Readable.toWeb(node), { status: isRange ? 206 : 200, headers });
   } catch (e) {
     return new Response('error: ' + e.message, { status: 500 });
   }
@@ -1396,10 +1397,24 @@ ipcMain.handle('fs:writeChunk', async (e, { id, chunk }) => {
   return true;
 });
 
+/* v2.15: tulis pada POSISI tertentu (pwrite acak) — muxer streaming
+   mp4-muxer StreamTarget mem-patch header mdat di posisi lama saat
+   finalize; tulisan berurutan murni akan menghasilkan MP4 rusak.
+   FD dibuka sekali per stream, ditutup lagi oleh endWrite/abortWrite. */
+ipcMain.handle('fs:writeChunkAt', async (e, { id, chunk, position }) => {
+  const s = streams.get(id);
+  if (!s) throw new Error('stream tidak ditemukan');
+  if (s.fd == null) s.fd = fs.openSync(s.path, 'r+');
+  const buf = Buffer.from(chunk);
+  await new Promise((res, rej) => fs.write(s.fd, buf, 0, buf.length, position, err => err ? rej(err) : res()));
+  return true;
+});
+
 ipcMain.handle('fs:endWrite', async (e, { id }) => {
   const s = streams.get(id);
   if (!s) throw new Error('stream tidak ditemukan');
   const p = s.path;
+  if (s.fd != null) { try { fs.closeSync(s.fd); } catch (_) { } s.fd = null; }
   await new Promise((res, rej) => { s.ws.end(err => err ? rej(err) : res()); });
   streams.delete(id);
   return { path: p, size: fs.statSync(p).size };
@@ -1408,6 +1423,7 @@ ipcMain.handle('fs:endWrite', async (e, { id }) => {
 ipcMain.handle('fs:abortWrite', async (e, { id }) => {
   const s = streams.get(id);
   if (!s) return false;
+  if (s.fd != null) { try { fs.closeSync(s.fd); } catch (_) { } s.fd = null; }
   try { s.ws.close(); } catch (_) {}
   try { fs.unlinkSync(s.path); } catch (_) {}
   streams.delete(id);

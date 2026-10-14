@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.14.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.15.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
@@ -32,6 +32,42 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.15
+
+### EKSPOR BATCH ANTI-PELAN — film ke-3 dst tidak lagi merambat
+Gejala yang diperbaiki: batch eksport & split lancar di film pertama dan kedua,
+tapi **film ketiga ke atas sangat lambat** (film 60 menit bisa 4 jam). Akar
+masalahnya empat lapis, semuanya sudah dibedah dan dibereskan:
+
+- **Streaming kfile:// sejati** — dulu setiap permintaan data video (termasuk
+  permintaan Range terbuka yang rutin dipakai mesin pemutar saat seek) dibaca
+  SINKRON ke satu buffer sebesar sisa file (film 60 mnt = 1-2 GB!) di main
+  process → aplikasi membeku berdetik-detik & RAM membengkak di setiap
+  seek/load part. Kini semua data **dialirkan potongan 512 KB** — RAM main
+  process terbukti datar (uji: 3× baca range 400 MB = naik 0 MB).
+- **Muxer streaming disk** — part besar (±>384 MB) kini ditulis LANGSUNG ke
+  disk selagi dirender (mp4-muxer StreamTarget → pwrite per posisi). Dulu
+  seluruh berkas MP4 menumpuk di memori sampai render selesai. Part kecil
+  tetap memakai fastStart penuh (kompatibilitas maksimal).
+- **Audio di-encode per blok 60 detik** — dulu SELURUH audio part dirender
+  dulu ke memori (film 60 mnt ≈ 700 MB per part) baru di-encode. Hasil
+  identik — uji kontinuitas 140 jendela 0,5 dtk tanpa lubang hening.
+- **Anti-bocor sesi encoder + demosi otomatis** — probe/flush yang kena
+  timeout kini selalu menutup sesi encoder (dulu bocor → sesi Media Foundation
+  menumpuk → film ke-3 dst macet berulang). Bila encoder hardware jatuh 2×,
+  sisa batch otomatis memakai encoder CPU (tanpa dobel kerja gagal+ulang).
+- **RAM antar film dibersihkan** — buffer audio film sebelumnya (±1.4 GB)
+  dilepas sebelum film berikutnya di-decode.
+- **Paralel ramah GPU terintegrasi** — di laptop dengan Intel Iris/UHD atau
+  AMD APU (memori bersama), paralel otomatis dibatasi 4× agar iGPU tidak
+  kebanjiran sesi encode+decode; kartu diskrit tetap boleh 6×.
+
+### Intel Iris / UHD?
+Ya — Intel Iris (Iris Plus/Iris Xe) punya **QuickSync**, encoder hardware
+H.264 yang didukung penuh. Kotak **UJI ENCODER** di modul EKSPOR menampilkan
+nama GPU + hasil uji fps GPU vs CPU; mode **OTOMATIS** memakai encoder yang
+terbukti lebih kencang di mesinmu.
 
 ## Yang Baru di v2.14
 
