@@ -40,22 +40,52 @@ function xAborted() { return state.abort || !!state.exportFatal; }
    (playbackRate) supaya decoder tidak membuang frame saat paralel berat */
 let _xPar = 1;
 
+/* v2.12: PROBE ENCODER — uji nyata mini sebelum encoder dipakai merender:
+   configure + encode 4 frame + flush + verifikasi output. Encoder GPU yang
+   "konon didukung" tapi langsung mati (codec closed) / macet saat flush
+   (Media Foundation tanpa GPU yang benar) terdeteksi DI SINI — aplikasi
+   otomatis memilih software, bukan gagal di tengah render part besar.
+   Ini penyembuh ekspor macet di bagian akhir pada sebagian mesin Windows. */
+async function probeEncoder(cfg, W, H) {
+  try {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = '#1a2a3a'; g.fillRect(0, 0, W, H);
+    let chunks = 0, err = null, flushed = false;
+    const venc = new VideoEncoder({
+      output: () => chunks++,
+      error: e => { err = err || (e && e.message) || 'encoder error'; }
+    });
+    venc.configure({ ...cfg, latencyMode: 'realtime' });
+    for (let i = 0; i < 4; i++) {
+      const vf = new VideoFrame(c, { timestamp: i * 41666, duration: 41666 });
+      venc.encode(vf, { keyFrame: i === 0 }); vf.close();
+    }
+    await withTimeout(venc.flush().then(() => { flushed = true; }), 8000, 'probe flush macet');
+    try { venc.close(); } catch (e) { }
+    return flushed && chunks >= 3 && !err;   /* minimal 3 dari 4 frame keluar */
+  } catch (e) {
+    try { } catch (_) { }
+    return false;
+  }
+}
 async function pickVCodecCfg(W, H, br, fps) {
   const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
-  /* 1) coba hardware GPU dulu — jauh lebih cepat di Windows (Media Foundation) */
+  /* 1) coba hardware GPU dulu — jauh lebih cepat di Windows (Media Foundation)
+     v2.12: setiap kandidat wajib LULUS PROBE nyata — bukan cuma isConfigSupported */
   for (const c of base) {
     try {
       const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-hardware' };
       const s = await VideoEncoder.isConfigSupported(cfg);
-      if (s.supported) return cfg;
+      if (s.supported && await probeEncoder(cfg, W, H)) return cfg;
     } catch (e) { }
   }
-  /* 2) fallback software */
+  /* 2) fallback software — juga di-probe */
   for (const c of base) {
     try {
       const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps };
       const s = await VideoEncoder.isConfigSupported(cfg);
-      if (s.supported) return cfg;
+      if (s.supported && await probeEncoder(cfg, W, H)) return cfg;
     } catch (e) { }
   }
   return null;
@@ -91,27 +121,31 @@ function withTimeout(p, ms, msg) {
       e => { clearTimeout(tm); rej(e); });
   });
 }
-async function renderMix(start, dur) {
-  const sr = 48000, len = Math.max(1, Math.ceil(dur * sr));
+async function renderMix(start, durOut, spd = 1) {
+  const sr = 48000, len = Math.max(1, Math.ceil(durOut * sr));
   const oc = new OfflineAudioContext(2, len, sr);
   /* v2.10 FIX: dulu s.start(0, start, durBuffer − start) melempar
      InvalidStateError ketika start > durasi buffer (mis. WAKTU MULAI 1:05
      padahal skor musik masih milik video sebelumnya yang lebih pendek) —
      inilah pemicu utama batch ekspor "selalu dibatalkan" sejak v2.9.
      Sekarang: audio asli dilewati bila sudah lewat, musik diputar BERULANG
-     (loop) sehingga durasi buffer berapa pun tidak pernah crash. */
+     (loop) sehingga durasi buffer berapa pun tidak pernah crash.
+     v2.12: kecepatan → audio asli diputar lebih cepat/lambat memakai
+     playbackRate (pitch ikut naik/turun seperti efek fast-forward klasik). */
   if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
+    s.playbackRate.value = spd;
     const g = oc.createGain(); g.gain.value = state.audioGain;
     s.connect(g); g.connect(oc.destination);
-    s.start(0, start, Math.max(0.01, Math.min(dur, state.audioBuffer.duration - start)));
+    s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
   }
   if (state.music.buffer && state.music.buffer.duration > 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.music.buffer;
+    s.playbackRate.value = spd;
     const g = oc.createGain(); g.gain.value = state.music.gain;
     s.connect(g); g.connect(oc.destination);
     s.loop = true;   /* buffer lebih pendek dari part → mengulang, bukan crash */
-    s.start(0, start % state.music.buffer.duration, dur);
+    s.start(0, start % state.music.buffer.duration, durOut);
   }
   return oc.startRendering();
 }
@@ -156,21 +190,23 @@ function pickParallelCount(parts) {
 
 /* ---------- FALLBACK: rantai seek per frame (lama) ----------
    Dipakai untuk audio-only (tanpa frame video) dan bila browser
-   tanpa requestVideoFrameCallback. noSeek = audio (tidak perlu seek) */
-async function renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, noSeek = false) {
-  const n = Math.max(1, Math.round((seg.end - seg.start) * fps));
+   tanpa requestVideoFrameCallback. noSeek = audio (tidak perlu seek)
+   v2.12: spd = kecepatan — frame ke-i = waktu output i/fps → sumber
+   i*spd/fps; PTS output tetap i*1e6/fps (monoton rapat). */
+async function renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, noSeek = false, spd = 1) {
+  const n = Math.max(1, Math.round((seg.end - seg.start) / spd * fps));
   let seekP = null;
   for (let i = 0; i < n; i++) {
     if (state.abort) throw new Error('Dibatalkan');
     if (state.exportFatal) throw state.exportFatal;
     if (seekP) { await seekP; seekP = null; }
-    const t = Math.min(seg.start + i / fps, Math.max(0, (v.duration || seg.end) - 0.011));
+    const t = Math.min(seg.start + i * spd / fps, Math.max(0, (v.duration || seg.end) - 0.011));
     setCompSrc(v);
     drawComposition(ec, ecv.width, ecv.height, t);
     setCompSrc(null);
     const vf = new VideoFrame(ecv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
     venc.encode(vf, { keyFrame: i % (fps * 2) === 0 }); vf.close();
-    if (!noSeek && i + 1 < n) seekP = seekTo(seg.start + (i + 1) / fps, v);
+    if (!noSeek && i + 1 < n) seekP = seekTo(seg.start + (i + 1) * spd / fps, v);
     while (venc.encodeQueueSize > 14) await sleep(2);
     slot.fr = i + 1;
     doneCb && doneCb();
@@ -182,7 +218,10 @@ async function renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, noSe
    Elemen video sendiri + canvas sendiri + muxer sendiri.
    Frame diambil sambil video diputar (tanpa seek per frame). */
 async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, doneCb) {
-  const durS = seg.end - seg.start;
+  /* v2.12: KECEPATAN video — 1 = normal, 2 = 2× cepat (part ½ lebih pendek),
+     0.5 = slow-motion. Durasi output = durasi sumber ÷ spd. */
+  const spd = clamp(state.speed || 1, 0.25, 4);
+  const durS = (seg.end - seg.start) / spd;
   const v = document.createElement('video');
   v.muted = true; v.playsInline = true; v.preload = 'auto';
   v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2px;height:2px;opacity:0';
@@ -212,7 +251,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     });
     if (aCodec) {
       _stage = 'audio';
-      const mix = await withTimeout(renderMix(seg.start, durS), 120000, 'mix audio macet');
+      const mix = await withTimeout(renderMix(seg.start, durS, spd), 120000, 'mix audio macet');
       await withTimeout(encodeAudioTo(muxer, mix, aCodec), 300000, 'encoding audio macet');
     }
     _stage = 'configure';
@@ -246,7 +285,8 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     venc.configure({ ...vCfg, latencyMode: 'realtime' });
     const CAP = hw ? 40 : 14;
 
-    /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata */
+    /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata
+       v2.12: PTS = waktu OUTPUT = (m − mulai part) ÷ kecepatan */
     const drawAt = (t, ts) => {
       setCompSrc(v);
       drawComposition(ec, W, H, t);
@@ -255,6 +295,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
       venc.encode(vf, { keyFrame: n % (fps * 2) === 0 }); vf.close();
       n++; slot.fr = n;
     };
+    const outTs = (m) => Math.max(0, Math.round(((m - seg.start) / spd) * 1e6));
 
     if (RVFC_OK && !state.isAudio) {
       /* ============ v2.2: CAPTURE PLAYBACK (tanpa seek per frame) ============
@@ -274,9 +315,12 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
          SEGERA saat ada frame hilang, dan setiap lompatan DIISI ULANG dengan
          seek presisi (refillGap) sehingga aliran PTS selalu rapat & mulus. */
       const RATE_MAX = _xPar >= 3 ? 2 : 2.5;
-      const frameGapTol = 1.8 / fps;
+      /* v2.12: toleransi & target lompatan diskalakan kecepatan —
+         pada spd 2× jarak sumber antar frame tampil 2× lebih renggang */
+      const frameGapTol = 1.8 / fps * spd;
       let capRate = 1.5, dAcc = 0, dN = 0, lastM = -1, hadFirst = false;
-      v.playbackRate = capRate;
+      const applyRate = () => { try { v.playbackRate = Math.min(4.2, capRate * spd); } catch (e) { } };
+      applyRate();
       let lastAct = Date.now(), qStallSince = 0;
       let refilling = false, refillN = 0, maxGapMs = 0;
       /* v2.11: isi ulang frame yang hilang di interval (from, to) — seek
@@ -284,13 +328,13 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
          frame@to di-encode agar urutan PTS tetap naik. lastAct disegarkan
          tiap slot supaya watchdog 30 dtk tidak mengira render diam. */
       const refillGap = async (from, to) => {
-        const step = 1 / fps;
+        const step = spd / fps;
         let t = from + step, k = 0;
         while (t < to - step * 0.5) {
           if (state.abort) throw new Error('Dibatalkan');
           if (state.exportFatal) throw state.exportFatal;
           await seekTo(Math.min(t, Math.max(0, (v.duration || seg.end) - 0.011)), v);
-          drawAt(t, Math.max(0, Math.round((t - seg.start) * 1e6)));
+          drawAt(t, outTs(t));
           lastAct = Date.now(); k++; t += step;
           doneCb && doneCb();
         }
@@ -349,20 +393,21 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
                 refilling = false;
                 if (finished) return;
                 /* decoder kewalahan pada rate ini → turun SEGERA */
-                if (capRate > 1) { capRate = Math.max(1, capRate - 0.5); v.playbackRate = capRate; }
+                if (capRate > 1) { capRate = Math.max(1, capRate - 0.5); applyRate(); }
                 dAcc = 0; dN = 0;
               }
-              drawAt(m, Math.max(0, Math.round((m - seg.start) * 1e6)));
+              drawAt(m, outTs(m));
               hadFirst = true;
-              /* rate adaptif: naik HANYA bila jendela bersih tanpa lompatan */
+              /* rate adaptif: naik HANYA bila jendela bersih tanpa lompatan
+                 v2.12: target jarak antar frame = spd/fps (waktu sumber) */
               if (lastM >= 0) {
                 const d = m - lastM;
-                if (d > 0 && d < 0.6) {
+                if (d > 0 && d < 0.6 * spd) {
                   dAcc += d; dN++;
                   if (dN >= 24) {
-                    const avg = dAcc / dN; dAcc = 0; dN = 0; const tg = 1 / fps;
-                    if (avg > tg * 1.5 && capRate > 1) { capRate = Math.max(1, capRate - 0.5); v.playbackRate = capRate; }
-                    else if (avg < tg * 1.18 && capRate < RATE_MAX) { capRate = Math.min(RATE_MAX, capRate + 0.5); v.playbackRate = capRate; }
+                    const avg = dAcc / dN; dAcc = 0; dN = 0; const tg = spd / fps;
+                    if (avg > tg * 1.5 && capRate > 1) { capRate = Math.max(1, capRate - 0.5); applyRate(); }
+                    else if (avg < tg * 1.18 && capRate < RATE_MAX) { capRate = Math.min(RATE_MAX, capRate + 0.5); applyRate(); }
                   }
                 }
               }
@@ -396,13 +441,13 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
       if (n === 0) {
         /* sumber aneh / tidak menghasilkan frame — jalankan jalur lama */
         _stage = 'fallback-seek';
-        await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb);
+        await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, false, spd);
         n = slot.fr;
       }
     } else {
       /* audio-only / tanpa rVFC: jalur frame loop (tanpa seek utk audio) */
       _stage = 'frames';
-      await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, !!state.isAudio);
+      await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, !!state.isAudio, spd);
       n = slot.fr;
     }
 
@@ -452,6 +497,8 @@ async function exportPartsToDir(dir, ui) {
      loading) sudah selesai sebelum menentukan ada tidaknya track audio */
   if (state.audioReady) { try { await state.audioReady; } catch (e) { } }
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
+  /* v2.12: kecepatan video global — durasi output = sumber ÷ spd */
+  const spd = clamp(state.speed || 1, 0.25, 4);
   const dims = outDims(sc), { W, H } = dims;
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
   const vCfg = await pickVCodecCfg(W, H, br, fps);
@@ -466,8 +513,8 @@ async function exportPartsToDir(dir, ui) {
   _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
-  /* slot progres per part */
-  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) * fps)), working: false, stage: null, saveProg: 0 }));
+  /* slot progres per part — total frame = durasi output × fps */
+  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) / spd * fps)), working: false, stage: null, saveProg: 0 }));
   const totalFr = slots.reduce((a, s) => a + s.total, 0);
   const t0 = performance.now();
   let lastUi = 0;
@@ -498,7 +545,7 @@ async function exportPartsToDir(dir, ui) {
   try {
     if (ui.title) ui.title(segs);
     if (ui.prog) ui.prog(0);
-    if (ui.sub) ui.sub(`menyiapkan ${par} render paralel${hw ? ' · encoder GPU' : ''}${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}…`);
+    if (ui.sub) ui.sub(`menyiapkan ${par} render paralel${hw ? ' · encoder GPU' : ''}${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}${spd !== 1 ? ` · kecepatan ${spd}×` : ''}…`);
 
     /* jalankan worker dengan batas `par` sekaligus (antrean)
        v2.10: kegagalan part TIDAK lagi men-set state.abort (flag batal
@@ -639,20 +686,27 @@ function updateOutName() {
   /* v2.9: tampilkan rentang bila aktif (mulai > 0 atau berhenti < durasi) */
   const rangeTxt = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < (state.duration || 0) - 0.01))
     ? ` · ${fmtT(r.start)}–${fmtT(r.end)}` : '';
-  $('#outName').textContent = `${slug(state.title)}${state.partPrefix !== '#' ? '_' + state.partPrefix : ''}_01 … ${String(n).padStart(2, '0')}.mp4  ·  ${n} part × ${state.splitSec} dtk${rangeTxt}`;
+  /* v2.12: info potongan & kecepatan */
+  const cutTxt = (state.cuts || []).length ? ` · POTONG ${state.cuts.length} BAGIAN` : '';
+  const spdTxt = state.speed !== 1 ? ` · ${state.speed}×` : '';
+  $('#outName').textContent = `${slug(state.title)}${state.partPrefix !== '#' ? '_' + state.partPrefix : ''}_01 … ${String(n).padStart(2, '0')}.mp4  ·  ${n} part × ${state.splitSec} dtk${rangeTxt}${cutTxt}${spdTxt}`;
 }
 function updateExportInfo() {
   if (!state.file) { $('#expSum').textContent = 'Impor media untuk melihat ringkasan.'; return; }
   const sc = parseFloat(state.scale), q = QUAL[state.quality];
   const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
   const dims = outDims(sc);
-  /* v2.9: estimasi & jumlah part memakai rentang ekspor (bukan durasi penuh) */
-  const r = rangeInfo();
-  const est = br / 8 * r.len + 160000 / 8 * r.len;
+  /* v2.12: estimasi memakai durasi efektif (rentang − potongan) ÷ kecepatan */
+  const outLen = expLen() / clamp(state.speed || 1, 0.25, 4);
+  const est = br / 8 * outLen + 160000 / 8 * outLen;
   const par = pickParallelCount(segmentsCount());
+  const r = rangeInfo();
   const rangeLine = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < (state.duration || 0) - 0.01))
-    ? `<br><b>RANGE ${fmtT(r.start)} → ${fmtT(r.end)}</b> · durasi ekspor ${fmtT(r.len)}` : '';
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}
+    ? `<br><b>RANGE ${fmtT(r.start)} → ${fmtT(r.end)}</b> · durasi ekspor ${fmtT(expLen())}` : '';
+  const cutLine = (state.cuts || []).length
+    ? ` · <b>POTONG ${state.cuts.length}</b> bagian (−${fmtT(cutsLen())})` : '';
+  const spdLine = state.speed !== 1 ? ` · <b>${state.speed}×</b> KEC. ${state.speed > 1 ? 'CEPAT' : 'PELAN'}` : '';
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}${cutLine}${spdLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }

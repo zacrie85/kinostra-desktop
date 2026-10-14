@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-2.11.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-2.12.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -37,6 +37,14 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 18 | **Batch Ekspor** ⭐v2.8 | Tombol di menu EKSPOR & KOMPRESI: **semua video di Kotak Video diekspor berurutan** ke satu folder — ringkasan per video + buka folder output |
 | 19 | **Timeline Anti-Overflow** ⭐v2.8.1 | Video panjang (>60 menit) tidak lagi menghilangkan menu kanan: timeline split **pas di layar** & **bisa discrol ke samping** untuk video sangat panjang, playhead otomatis mengikuti |
 | 20 | **Waktu Mulai & Berhenti Ekspor** ⭐v2.9 | Ekspor & split hanya bagian yang diinginkan — mis. video 5 menit diambil menit 2–4 saja. Input `m:ss`, tombol PAKAI PLAYHEAD, zona non-ekspor tampil bergaris di timeline. **Tombol TERAPKAN KE SEMUA VIDEO**: waktu mulai + durasi split diterapkan ke semua video di Kotak Video (masing-masing tetap sampai habis) |
+| 22 | **8 Frame Video Baru** ⭐v2.12 | Dari 9 gambar referensi pengguna: **BIOSKOP** (tirai merah + lampu emas berkelip + film & popcorn), **MERAH PUTIH** (bingkai emas + awan + pita bendera), **KAYU & BUNGA** (papan kayu + bunga matahari), **GELOMBANG WARNA** (gelombang merah-kuning-pink), **PUTIH ELEGAN** (ornamen jingga), **AWAN BIRU** (awan berlapis + matahari), **PANEL BIRU** (panel putih bulat), **GRADIEN TIPIS** (garis minimalis) — semua animasi halus & terbakar saat ekspor, judul di pita atas / deskripsi di banner bawah / PART di pojok |
+| 23 | **Ken Burns Otomatis** ⭐v2.12 | Zoom in/out perlahan atau geser sinematik per part — video statis jadi hidup, kekuatan bisa diatur |
+| 24 | **Transisi Antar Bagian** ⭐v2.12 | FADE hitam atau SLIDE menyamping di awal & akhir tiap part — hasil split diputar berurutan terasa seperti satu film |
+| 25 | **Kontrol Kecepatan** ⭐v2.12 | 0.5× pelan sampai 2× cepat — video + audio ikut, durasi part menyesuaikan otomatis |
+| 26 | **Potong & Hapus Bagian** ⭐v2.12 | Buang bagian tak diinginkan dari hasil ekspor (salah ambil, iklan, jeda) — zona merah di timeline, pratinjau lompat otomatis, nomor part tetap menyambung |
+| 27 | **Impor SRT** ⭐v2.12 | Muat subtitel dari file `.srt` — tanpa perlu menulis ulang lewat AI |
+| 28 | **Preset Ekspor** ⭐v2.12 | Satu klik: YOUTUBE 16:9 1080p · TIKTOK 9:16 · REELS 9:16 · SHORTS 9:16 60fps |
+| 29 | **Probe Encoder** ⭐v2.12 | Encoder GPU diuji nyata dulu (encode+flush mini) sebelum dipakai — yang bermasalah otomatis diganti software, folder output dibuat otomatis → ekspor makin awet |
 | 21 | **Batch Anti-Batal** ⭐v2.10 | **Satu video bermasalah tidak lagi membatalkan seluruh batch ekspor** — ditandai GAGAL + penyebabnya, antrean lanjut otomatis. Skor musik kini dirender ulang benar untuk tiap video di batch (dulu memicu berhenti "dibatalkan"), musik otomatis berulang bila part lebih panjang dari skor, dan pesan kegagalan tampil apa adanya — bukan lagi "Ekspor dibatalkan" |
 | 22 | **Ekspor Anti-Beku** ⭐v2.11 | **Video hasil ekspor/split tidak lagi beku-bekerak** (jalan sebentar, beku beberapa detik, jalan lagi, begitu seterusnya). Lompatan frame akibat decoder kewalahan kini dideteksi otomatis dan **diisi ulang lewat seek presisi frame-per-frame**, kecepatan capture menyesuaikan beban, dan verifikasi output diperketat — gerakan selalu mulus & sinkron dengan audio, di ekspor tunggal, split, maupun batch |
 

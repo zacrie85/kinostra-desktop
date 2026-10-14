@@ -354,6 +354,139 @@ NEONCOLORS.forEach(([name, val]) => {
 });
 syncNeonLabels();
 
+/* ================================================================
+   v2.12 — FRAME VIDEO 8 GAYA BARU (dari 9 gambar referensi)
+   Chips gaya frame: klik = pakai; NEON = mode garis berputar lama.
+   ================================================================ */
+function renderFrameChips() {
+  const g = $('#frameStyles'); g.innerHTML = '';
+  FRAMESTYLES.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'fchip' + (state.frameStyle === f.k ? ' on' : '');
+    b.innerHTML = `<span>${f.n}</span><em>${f.d}</em>`;
+    if (f.k === 'neon') b.style.background = 'linear-gradient(90deg,#12325a,#0b1c33)';
+    b.onclick = () => {
+      state.frameStyle = f.k;
+      state.neon.on = (f.k === 'neon');   /* neon = gaya berputar; gaya lain mematikan neon */
+      syncNeonLabels(); renderFrameChips();
+      toast(f.k === 'off' ? 'Frame dimatikan — video polos' : `Frame ${f.n}: AKTIF — ikut terbakar ke video saat ekspor`, 'ok');
+    };
+    g.appendChild(b);
+  });
+}
+renderFrameChips();
+
+/* ---------- v2.12: KECEPATAN VIDEO (semua part) ---------- */
+function applyPreviewSpeed() {
+  try { videoEl.playbackRate = clamp(state.speed || 1, 0.25, 4); } catch (e) { }
+}
+videoEl.addEventListener('play', applyPreviewSpeed);
+bindSeg('segSpeed', v => {
+  state.speed = clamp(parseFloat(v) || 1, 0.25, 4);
+  applyPreviewSpeed(); updateAll();
+  toast(state.speed === 1 ? 'Kecepatan normal 1×' : `Kecepatan ${state.speed}× — part jadi ${state.speed > 1 ? 'lebih pendek' : 'lebih panjang'}`, 'ok');
+});
+
+/* ---------- v2.12: KEN BURNS ---------- */
+bindSeg('segKb', v => {
+  state.kb.mode = v;
+  const nm = { in: 'ZOOM IN', out: 'ZOOM OUT', panx: 'GESER KIRI→KANAN', pany: 'GESER ATAS→BAWAH', diag: 'ZOOM+GESER', off: 'MATI' }[v] || v;
+  toast(`Ken Burns ${nm}`, 'ok');
+});
+$('#inKbS').oninput = e => { state.kb.strength = clamp(parseFloat(e.target.value) || 0.3, 0.05, 0.8); $('#kbSV').textContent = Math.round(state.kb.strength * 100) + '%'; };
+(function initKbS() { $('#kbSV').textContent = Math.round(state.kb.strength * 100) + '%'; $('#inKbS').value = state.kb.strength; })();
+
+/* ---------- v2.12: TRANSISI ANTAR BAGIAN ---------- */
+bindSeg('segTrans', v => { state.trans.mode = v; toast(v === 'off' ? 'Transisi mati' : `Transisi ${v === 'fade' ? 'FADE HITAM' : 'SLIDE'}: AKTIF di awal & akhir tiap part`, 'ok'); });
+$('#inTransD').oninput = e => { state.trans.dur = clamp(parseFloat(e.target.value) || 0.8, 0.2, 2.5); $('#transDV').textContent = state.trans.dur.toFixed(1) + ' dtk'; };
+(function initTransD() { $('#transDV').textContent = state.trans.dur.toFixed(1) + ' dtk'; $('#inTransD').value = state.trans.dur; })();
+
+/* ================================================================
+   v2.12 — POTONG & HAPUS BAGIAN
+   Tandai rentang dari playhead → daftar potongan → zona merah di
+   timeline → bagian tsb TIDAK diekspor (part menyambung). Pratinjau
+   melompat otomatis melewati potongan.
+   ================================================================ */
+let _cutMark = null, _cutSkipAt = 0;
+function renderCutList() {
+  const el = $('#cutList');
+  if (!(state.cuts || []).length) {
+    el.innerHTML = '<div class="empty">BELUM ADA POTONGAN — VIDEO DIEKSPOR UTUH</div>';
+  } else {
+    el.innerHTML = '';
+    state.cuts.slice().sort((a, b) => a.s - b.s).forEach((c, i) => {
+      const r = document.createElement('div'); r.className = 'cutrow';
+      r.innerHTML = `<span class="cutno mono">${String(i + 1).padStart(2, '0')}</span>
+        <span class="cuttime mono">${fmtT(c.s)} → ${fmtT(c.e)}</span>
+        <span class="cutlen mono">−${fmtT(c.e - c.s)}</span>`;
+      const del = document.createElement('button'); del.className = 'sdel'; del.textContent = '×';
+      del.title = 'Hapus potongan ini';
+      del.onclick = () => { state.cuts.splice(state.cuts.indexOf(c), 1); renderCutList(); updateAll(); };
+      r.appendChild(del); el.appendChild(r);
+    });
+  }
+  const n = (state.cuts || []).length, L = n ? cutsLen() : 0;
+  $('#cutStat').textContent = `${n} potongan · ${L ? fmtT(L) : '0 dtk'} dibuang`;
+}
+$('#btnCutStart').onclick = () => {
+  if (!state.file) { toast('Impor media dulu', 'warn'); return; }
+  _cutMark = videoEl.currentTime || 0;
+  toast(`Mulai potong ditandai di ${fmtT(_cutMark)} — lanjutkan memutar lalu tekan BERAKHIR DI SINI`, 'ok');
+};
+$('#btnCutEnd').onclick = () => {
+  if (!state.file) { toast('Impor media dulu', 'warn'); return; }
+  if (_cutMark == null) { toast('Tekan MULAI POTONG dulu', 'warn'); return; }
+  const e = videoEl.currentTime || 0, s = Math.min(_cutMark, e), en = Math.max(_cutMark, e);
+  if (en - s < 0.3) { toast('Durasi potongan terlalu pendek (min 0.3 dtk)', 'warn'); return; }
+  state.cuts.push({ s, e: en }); _cutMark = null;
+  renderCutList(); updateAll();
+  toast(`Potongan ${fmtT(s)} → ${fmtT(en)} disimpan — bagian ini tidak diekspor`, 'ok');
+};
+$('#btnCutClear').onclick = () => {
+  state.cuts = []; _cutMark = null;
+  renderCutList(); updateAll();
+  toast('Semua potongan dihapus — video diekspor utuh', 'ok');
+};
+renderCutList();
+/* melompat otomatis melewati potongan saat pratinjau */
+function cutAutoSkip(t) {
+  if (state.busy || tlDrag || videoEl.seeking || !(state.cuts || []).length) return;
+  const c = state.cuts.find(c => t > c.s + 0.03 && t < c.e - 0.03);
+  if (c && performance.now() - _cutSkipAt > 300) {
+    _cutSkipAt = performance.now();
+    videoEl.currentTime = c.e + 0.01;
+  }
+}
+
+/* ---------- v2.12: IMPOR SRT (modul 04) ---------- */
+$('#btnSrtImport').onclick = () => importSrt();
+
+/* ---------- v2.12: PRESET EKSPOR SATU KLIK (modul 09) ---------- */
+const EXPPRESETS = [
+  { k: 'youtube', n: 'YOUTUBE', d: '16:9 · 1080p · MAKS', ratio: '16:9', scale: '1', fps: 30, quality: 'max' },
+  { k: 'tiktok', n: 'TIKTOK', d: '9:16 · penuh', ratio: '9:16', scale: '1', fps: 30, quality: 'balanced' },
+  { k: 'reels', n: 'REELS', d: '9:16 · penuh', ratio: '9:16', scale: '1', fps: 30, quality: 'balanced' },
+  { k: 'shorts', n: 'SHORTS', d: '9:16 · 60fps', ratio: '9:16', scale: '1', fps: 60, quality: 'balanced' }
+];
+function setSegOn(id, val) { $$('#' + id + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === String(val))); }
+(function renderExpPresets() {
+  const g = $('#expPresets');
+  EXPPRESETS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'fchip';
+    b.innerHTML = `<span>${p.n}</span><em>${p.d}</em>`;
+    b.onclick = () => {
+      state.ratio = p.ratio; state.scale = p.scale; state.fps = p.fps; state.quality = p.quality;
+      $('#hudRatio').textContent = p.ratio; $('#bgRow').style.display = p.ratio === '9:16' ? '' : 'none';
+      setSegOn('segRatio', p.ratio); setSegOn('segScale', p.scale);
+      setSegOn('segFps', p.fps); setSegOn('segQual', p.quality);
+      applyRatio(); updateAll();
+      toast(`Preset ${p.n}: rasio ${p.ratio} · ${p.fps}fps · kualitas ${p.quality === 'max' ? 'MAKSIMAL' : 'SEIMBANG'}`, 'ok');
+    };
+    g.appendChild(b);
+  });
+})();
+
 /* ---------- 09 EKSPOR ---------- */
 bindSeg('segQual', v => { state.quality = v; updateAll(); });
 bindSeg('segScale', v => { state.scale = v; updateAll(); });
@@ -404,11 +537,20 @@ function renderTimeline() {
     d.innerHTML = `<span>MULAI ${fmtT(r.start)}</span><em>TIDAK DIEKSPOR</em>`;
     inn.appendChild(d);
   }
+  /* v2.12: potongan HAPUS BAGIAN — zona merah menyela di antara part */
+  let prevEnd = null;
   segments().forEach(s => {
+    if (prevEnd != null && s.start - prevEnd > 0.05) {
+      const d = document.createElement('div'); d.className = 'tlcut';
+      d.style.flexGrow = (s.start - prevEnd).toFixed(2);
+      d.innerHTML = `<span>POTONGAN</span><em>−${fmtT(s.start - prevEnd)}</em>`;
+      inn.appendChild(d);
+    }
     const d = document.createElement('div'); d.className = 'tlseg'; d.dataset.i = s.i;
     d.style.flexGrow = (s.end - s.start).toFixed(2);
     d.innerHTML = `<span>PART ${String(s.i + 1).padStart(2, '0')}</span><em>${fmtT(s.start)}–${fmtT(s.end)}</em>`;
     inn.appendChild(d);
+    prevEnd = s.end;
   });
   if (dur - r.end > 0.01) {
     const d = document.createElement('div'); d.className = 'tlskip';
@@ -421,7 +563,9 @@ function renderTimeline() {
   inn.appendChild(ph);
   const rangeTxt = (r.start > 0.01 || (state.rangeEnd > 0 && r.end < dur - 0.01))
     ? ` · RANGE ${fmtT(r.start)}–${fmtT(r.end)}` : '';
-  $('#tlMeta').textContent = `${segmentsCount()} PART · SPLIT ${state.splitSec} DTK${rangeTxt} · TOTAL ${fmtT(dur)}`;
+  const cutTxt = (state.cuts || []).length ? ` · POTONG ${state.cuts.length}` : '';
+  const spdTxt = state.speed !== 1 ? ` · ${state.speed}×` : '';
+  $('#tlMeta').textContent = `${segmentsCount()} PART · SPLIT ${state.splitSec} DTK${rangeTxt}${cutTxt}${spdTxt} · TOTAL ${fmtT(dur)}`;
 }
 let tlDrag = false;
 function tlSeek(e) {
@@ -518,6 +662,7 @@ function loop() {
     if (state.busy && now - lastBusyDraw < 400) return;
     if (state.busy) lastBusyDraw = now;
     const t = videoEl.currentTime || 0;
+    cutAutoSkip(t);   /* v2.12: lompati bagian yang dipotong saat pratinjau */
     // tracking realtime saat play
     if (!videoEl.paused && state.track.active && performance.now() - lastTrack > 70) {
       lastTrack = performance.now(); trackStep(t);

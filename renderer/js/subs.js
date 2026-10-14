@@ -324,3 +324,56 @@ function shiftSubs(delta) {
   renderSubList();
   toast(`Semua baris digeser ${delta > 0 ? '+' : ''}${delta} dtk`, 'ok');
 }
+
+/* ================================================================
+   v2.12 — IMPOR SUBTITEL DARI FILE .SRT
+   Sekarang subtitel bisa dimuat dari file tanpa harus menulis ulang
+   lewat AI: hasil VOCALIS sebelumnya, subtitel dari editor lain,
+   atau subtitel buatan sendiri — tinggal impor dan langsung tampil
+   di preview & terbakar ke video saat ekspor.
+   Parser tahan BOM, CRLF, spasi berlebih, tag HTML (<i>, <font>),
+   dan pemisah milidetik koma ATAU titik.
+   ================================================================ */
+function parseSrtTime(s) {
+  /* "00:01:02,500" | "00:01:02.500" | "01:02.5" → detik */
+  s = String(s || '').trim().replace(',', '.');
+  const p = s.split(':').map(x => parseFloat(x.trim()));
+  if (!p.length || p.length > 3 || p.some(isNaN)) return NaN;
+  return p.reverse().reduce((a, v, i) => a + v * Math.pow(60, i), 0);
+}
+function parseSrt(txt) {
+  const out = [];
+  const blocks = String(txt || '').replace(/^\uFEFF/, '').replace(/\r/g, '').split(/\n{2,}/);
+  for (const b of blocks) {
+    const lines = b.split('\n').filter(l => l.trim() !== '');
+    if (!lines.length) continue;
+    let li = 0;
+    if (/^\d+$/.test(lines[0].trim())) li = 1;          /* nomor urut — lewati */
+    const tl = lines[li] || '';
+    const arrow = tl.indexOf('-->');
+    if (arrow < 0) continue;
+    const s = parseSrtTime(tl.slice(0, arrow));
+    const e = parseSrtTime(tl.slice(arrow + 3));
+    /* teks: sisanya, tanpa tag html */
+    const text = lines.slice(li + 1).join(' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (isNaN(s) || isNaN(e) || !text) continue;
+    out.push({ s: Math.max(0, s), e: Math.max(s + 0.2, e), text });
+  }
+  return out;
+}
+/* v2.12: dipakai ui.js — tombol IMPOR SRT di modul 04 */
+async function importSrt() {
+  if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
+  let r = null;
+  try { r = await window.kinostra.pickSrt(); } catch (e) { toast('Dialog tidak tersedia: ' + e.message, 'err'); return; }
+  if (!r || !r.text) return;
+  let subs = parseSrt(r.text);
+  if (!subs.length) { toast('File SRT tidak berisi baris yang valid', 'err'); return; }
+  /* rapikan dengan filter hallusinasi yang sama (aman utk SRT biasa) */
+  subs = dedupeLines(subs.map(s => ({ ...s, text: cleanLine(s.text) || s.text })).sort((a, b) => a.s - b.s));
+  subs.forEach(s => { s.e = Math.min(s.e, state.duration || s.e); });
+  state.subs = subs; state.subsOn = true; $('#subsOn').checked = true;
+  renderSubList();
+  $('#subStat').textContent = `${subs.length} baris · impor SRT · ${r.name}`;
+  toast(`${subs.length} baris subtitel dimuat dari ${r.name}`, 'ok');
+}

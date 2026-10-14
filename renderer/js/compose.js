@@ -43,7 +43,7 @@ let _compSrc = null;
 function setCompSrc(el) { _compSrc = el || null; }
 function compSrc() { return _compSrc || videoEl; }
 
-/* ---------- UPGRADE v2.1 → v2.6: RECT VIDEO DENGAN ZOOM & GESER ----------
+/* ---------- UPGRADE v2.1 → v2.12: RECT VIDEO DENGAN ZOOM & GESER + KEN BURNS ----------
    Dipakai preview, ekspor, dan tracking agar semuanya konsisten.
    Mode 9:16: zoom 1 = muat penuh (letterbox), zoom > 1 = membesar
    hingga menutup frame (maks 4×).
@@ -52,18 +52,39 @@ function compSrc() { return _compSrc || videoEl; }
      · video lebih kecil dari frame → geser memindahkan posisi strip
        video (atas/bawah/kiri/kanan) — berfungsi di zoom 1× pun
      · video lebih besar (zoom) → geser memilih bagian yang terlihat
-   - Dulu: pan hanya berlaku saat zoom > 1, dan video landscape butuh
-     zoom ≥ 3.16× untuk overflow vertikal (slider mentok 3×) → slider
-     GESER ATAS/BAWAH tidak pernah berfungsi. Sekarang model unified. */
-function videoFrameRect(vw, vh, W, H) {
+   v2.12 — KEN BURNS OTOMATIS (efek "video statis jadi hidup"):
+   - ZOOM IN / ZOOM OUT : skala berubah perlahan sepanjang part
+   - PAN X / PAN Y      : video menyapu kiri→kanan / atas→bawah
+   - Diterapkan di KEDUA rasio (16:9 & 9:16) di atas setelan manual.
+   - Progres memakai posisi DI DALAM part → tiap part mengulang efek
+     dari awal (sinematik & konsisten antar part). */
+function kbProgress(t) {
+  if (t == null) return 0;
+  const b = (typeof currentSegBounds === 'function' && currentSegBounds(t)) || null;
+  const start = b ? b.start : rangeInfo().start, len = b ? (b.end - b.start) : state.splitSec;
+  return clamp((t - start) / Math.max(0.1, len), 0, 1);
+}
+function videoFrameRect(vw, vh, W, H, t) {
   const fit = containRect(vw, vh, W, H);
-  if (state.ratio !== '9:16') return fit;
-  const z = clamp(state.frame.zoom || 1, 1, 4);
+  const v9 = state.ratio === '9:16';
+  let z = v9 ? clamp(state.frame.zoom || 1, 1, 4) : 1;
+  let px = v9 ? clamp(state.frame.panX || 0, -1, 1) : 0;
+  let py = v9 ? clamp(state.frame.panY || 0, -1, 1) : 0;
+  /* v2.12: KEN BURNS — progres 0..1 dalam part berjalan.
+     PAN butuh overscan minimal supaya geseran SELALU terlihat di
+     semua rasio (video yang pas-pasan penuh frame di zoom 1 tidak
+     punya ruang geser) → paksa zoom ringan 1+strength saat PAN. */
+  const K = state.kb;
+  if (t != null && K && K.mode && K.mode !== 'off') {
+    const s = clamp(K.strength || 0.3, 0.05, 0.8);
+    const p = kbProgress(t);
+    if (K.mode === 'in') z *= 1 + s * p;
+    else if (K.mode === 'out') z *= 1 + s * (1 - p);
+    else if (K.mode === 'panx') { z = Math.max(z, 1 + s); px = clamp(px + (p * 2 - 1) * s, -1, 1); }
+    else if (K.mode === 'pany') { z = Math.max(z, 1 + s); py = clamp(py + (p * 2 - 1) * s, -1, 1); }
+    else if (K.mode === 'diag') { z = Math.max(z, 1 + s * 0.6) * (1 + s * p); px = clamp(px + (p * 2 - 1) * s * 0.6, -1, 1); }
+  }
   const sw = fit.w * z, sh = fit.h * z;
-  /* posisi linear −1..1 → 0..(W−sw): satu rumus untuk DUA mode —
-     video lebih kecil (slack) = memindahkan strip; video lebih besar
-     (crop) = memilih bagian yang terlihat. px/py −1 selalu = ATAS/KIRI. */
-  const px = clamp(state.frame.panX || 0, -1, 1), py = clamp(state.frame.panY || 0, -1, 1);
   return {
     x: (px + 1) / 2 * (W - sw),
     y: (py + 1) / 2 * (H - sh),
@@ -116,21 +137,25 @@ function buildVignette(W, H) {
 /* ---------- KOMPONEN KOMPOSISI ---------- */
 function drawComposition(x, W, H, t) {
   const u = H / 1080, F = state.font;
+  const FST = (typeof frameDef === 'function') ? frameDef() : null;   /* v2.12 */
   /* --- latar --- */
   if (state.isAudio) {
     drawWaveBg(x, W, H, t, u);
   } else if (compSrc().videoWidth) {
     const vid = compSrc();
-    const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H);
-    /* v2.6 FIX BLUR SINEMATIK: latar blur digambar SELALU saat video belum
-       menutup frame (zoom berapa pun) — dulu kondisi `fit.w <= W+1` gagal
-       saat zoom > 1 sehingga latar jadi HITAM. Sekarang pakai flag `covers`.
-       Preview: latar blur mengikuti frame terkini (bucket ±1.6 dtk). */
-    if (state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers) {
+    const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H, t);
+    /* v2.12: frame bergaya punya LATAR SENDIRI bertema (mis. merah bioskop,
+       biru panel) — menggantikan blur saat frame aktif, persis referensi. */
+    const useBlur = state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers && !(FST && FST.bg);
+    if (FST && FST.bg) {
+      drawFrameBg(x, W, H, t, u);
+    } else if (useBlur) {
       const live = vid === videoEl ? t : null;
       const bg = getLayer(bgLayerKey(vid, W, H, live), () => buildBlurBg(vid, W, H));
       x.drawImage(bg, 0, 0);
     } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
+    /* v2.12: lapisan SEBELUM video (mis. panel putih gaya Exploraship) */
+    if (FST && FST.under) drawFrameUnder(x, W, H, t, u, fit);
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video */
     const V = state.vfx;
     x.save();
@@ -148,14 +173,18 @@ function drawComposition(x, W, H, t) {
     }
     /* UPGRADE: film grain (murah: noise halus per frame) */
     if (V.grain) drawGrain(x, W, H, t);
+    /* v2.12: hiasan frame bergaya — SEBELUM teks supaya judul/deskripsi/part
+       tampil DI ATAS pita & banner (persis skema posisi referensi pengguna) */
+    if (FST && FST.decor) drawFrameDecor(x, W, H, t, u, vid === videoEl, fit);
   } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
-  /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang mulai/berhenti) --- */
+  /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang · v2.12 sadar-potong) --- */
   const total = segmentsCount();
-  const rInf = rangeInfo();
-  const seg = clamp(Math.floor((t - rInf.start) / state.splitSec), 0, total - 1);
+  const segB = (typeof currentSegBounds === 'function' && currentSegBounds(t))
+    || { i: 0, start: rangeInfo().start, end: rangeInfo().end };
+  const seg = clamp(segB.i, 0, Math.max(0, total - 1));
   const ppx = clamp(state.partPosX || 0, -1, 1), ppy = clamp(state.partPosY || 0, -1, 1);
   if (state.partShow === 'intro') {
-    const tin = t - rInf.start - seg * state.splitSec, a = clamp(1 - tin / 1.6, 0, 1);
+    const tin = t - segB.start, a = clamp(1 - tin / 1.6, 0, 1);
     if (a > 0) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
       /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal) */
@@ -248,6 +277,50 @@ function drawComposition(x, W, H, t) {
   drawWatermark(x, W, H, u);
   /* --- v2.8: FRAME NEON BERPUTAR (di lapisan paling atas) --- */
   if (state.neon && state.neon.on) drawNeonFrame(x, W, H, t, u, compSrc() === videoEl);
+  /* --- v2.12: TRANSISI ANTAR BAGIAN (paling atas semuanya) --- */
+  applyTransition(x, W, H, t);
+}
+
+/* ================================================================
+   v2.12 — TRANSISI ANTAR BAGIAN (fade / slide)
+   Karena tiap part adalah file MP4 sendiri, transisi diterapkan di
+   AWAL dan AKHIR tiap part → saat part diputar berurutan, pergantian
+   terasa halus seperti diklip satu proyek.
+   - FADE  : masuk dari hitam di awal part + keluar ke hitam di akhir.
+   - SLIDE : seluruh gambar masuk dari kanan + keluar ke kiri
+             (canvas digambar ulang digeser; sisi kosong diisi hitam).
+   Durasi memakai WAKTU OUTPUT (sudah dibagi kecepatan) supaya terasa
+   sama enak di kecepatan berapa pun. Deterministik dari t → aman ekspor.
+   ================================================================ */
+function applyTransition(x, W, H, t) {
+  const T = state.trans;
+  if (!T || !T.mode || T.mode === 'off' || state.isAudio) return;
+  const b = (typeof currentSegBounds === 'function' && currentSegBounds(t));
+  if (!b) return;
+  const d = clamp(T.dur || 0.8, 0.2, 2.5);
+  const spd = clamp(state.speed || 1, 0.25, 4);
+  const lin = (t - b.start) / spd, lout = (b.end - t) / spd;   /* detik output */
+  if (T.mode === 'fade') {
+    let a = 0;
+    if (lin < d) a = 1 - lin / d;
+    if (lout < d) a = Math.max(a, 1 - lout / d);
+    if (a > 0.004) {
+      x.save(); x.fillStyle = `rgba(0,0,0,${clamp(a, 0, 1).toFixed(3)})`;
+      x.fillRect(0, 0, W, H); x.restore();
+    }
+  } else if (T.mode === 'slide') {
+    let dx = 0;
+    if (lin < d) dx = W * (1 - lin / d);          /* masuk dari kanan */
+    else if (lout < d) dx = -W * (1 - lout / d);  /* keluar ke kiri */
+    if (Math.abs(dx) > 0.5) {
+      x.save();
+      x.drawImage(x.canvas, dx, 0);               /* gambar seluruh komposisi digeser */
+      x.restore();
+      x.fillStyle = '#000';
+      if (dx > 0) x.fillRect(0, 0, Math.ceil(dx), H);
+      else x.fillRect(W + Math.floor(dx), 0, Math.ceil(-dx), H);
+    }
+  }
 }
 
 /* ================================================================

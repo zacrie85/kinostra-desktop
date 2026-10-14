@@ -19,6 +19,19 @@ const QUAL = {
   compressed: { br: 2.5e6, label: 'HEMAT 2.5 Mbps' },
   ultra: { br: 1e6, label: 'ULTRA HEMAT 1 Mbps' }
 };
+/* v2.12: katalog gaya frame (tampil sebagai chip di modul 08) */
+const FRAMESTYLES = [
+  { k: 'off', n: 'TANPA FRAME', d: 'Video polos tanpa hiasan' },
+  { k: 'neon', n: 'NEON BERPUTAR', d: 'Garis neon keliling · berputar otomatis (v2.8)' },
+  { k: 'bioskop', n: 'BIOSKOP', d: 'Tirai merah · lampu bioskop berkelip · film & popcorn' },
+  { k: 'merahputih', n: 'MERAH PUTIH', d: 'Bingkai emas · awan putih · pita bendera' },
+  { k: 'kayu', n: 'KAYU & BUNGA', d: 'Papan kayu · daun hijau · bunga matahari' },
+  { k: 'gelombang', n: 'GELOMBANG WARNA', d: 'Gelombang merah-kuning-pink yang mengalir' },
+  { k: 'elegan', n: 'PUTIH ELEGAN', d: 'Latar gading · ornamen jingga melengkung' },
+  { k: 'awan', n: 'AWAN BIRU', d: 'Awan biru berlapis · matahari · gaya LIVE REPORT' },
+  { k: 'panel', n: 'PANEL BIRU', d: 'Panel putih bulat di atas biru cerah' },
+  { k: 'gradien', n: 'GRADIEN TIPIS', d: 'Garis gradien minimalis hijau-pink-oranye' }
+];
 const FONTS = [
   { n: 'Cinzel', d: 'TRAJAN · GLADIATOR / TROY' },
   { n: 'Bebas Neue', d: 'KONDENSI POSTER · HOLLYWOOD' },
@@ -70,6 +83,18 @@ const state = {
   /* v2.9: preset TERAPKAN KE SEMUA VIDEO — detik mulai utk semua video
      di kotak (null = mati). Durasi split mengikuti state.splitSec global */
   applyAllStart: null,
+  /* v2.12: GAYA FRAME VIDEO — 'off' | 'neon' (garis berputar, state.neon)
+     | bioskop | merahputih | kayu | gelombang | elegan | awan | panel | gradien */
+  frameStyle: 'off',
+  /* v2.12: KEN BURNS — perbesar perlahan / geser otomatis per part
+     mode: off | in | out | panx | pany · strength 0.05..0.6 */
+  kb: { mode: 'off', strength: 0.3 },
+  /* v2.12: TRANSISI ANTAR BAGIAN — fade | slide | off · durasi detik */
+  trans: { mode: 'off', dur: 0.8 },
+  /* v2.12: KECEPATAN VIDEO global semua part (0.5 = pelan, 2 = cepat) */
+  speed: 1,
+  /* v2.12: HAPUS BAGIAN — daftar rentang yang dibuang saat ekspor [{s,e}] */
+  cuts: [],
   /* UPGRADE: batch */
   batch: [],
   busy: false, abort: false, scanAbort: false,

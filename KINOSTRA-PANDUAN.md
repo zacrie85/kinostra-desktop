@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.9.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.12.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
@@ -32,6 +32,70 @@ Porting setia dari KINOSTRA v1.0 (web) + 15 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v2.12
+
+### 1. DELAPAN FRAME VIDEO BARU (modul 08) — dari 9 gambar referensi
+Sesuai skema posisi referensi: **JUDUL di pita atas · VIDEO di tengah ·
+DESKRIPSI di banner bawah · PART di pojok** — teks KINOSTRA digambar DI ATAS
+hiasan sehingga selalu terbaca. Semua frame 100% prosedural (tanpa aset),
+dianimasikan halus, dan terbakar ke video saat ekspor:
+
+- **BIOSKOP** — tirai merah bergelombang, kolom lampu emas berkelip kiri-kanan,
+  panggung bawah dengan gulungan film & kotak popcorn, bingkai emas ganda.
+- **MERAH PUTIH** — latar merah marun, bingkai emas ganda + wajik sudut,
+  awan putih, pita bendera merah-putih bergelombang, banner emas deskripsi,
+  bendera kecil berkibar.
+- **KAYU & BUNGA** — rangka kayu berserat, papan nama kayu di atas (judul),
+  daun + bunga di pojok, bunga matahari bergoyang, banner hijau deskripsi.
+- **GELOMBANG WARNA** — gelombang merah-kuning-pink-ungu mengalir di keempat
+  tepi (bergerak pelan), bintang kelip, megafon kecil.
+- **PUTIH ELEGAN** — latar gading, ornamen lengkung jingga di 4 sudut,
+  pita judul putih, deretan titik emas berkedip.
+- **AWAN BIRU** — latar putih gading, awan scallop biru berlapis atas & bawah,
+  matahari emas berdenyut, badge merah, plat navy deskripsi.
+- **PANEL BIRU** — latar biru cerah + konfeti, panel putih bulat besar
+  (video tampil di dalamnya), pelat biru tua deskripsi.
+- **GRADIEN TIPIS** — garis gradien hijau-kuning-pink-ungu-biru minimalis
+  dengan pendar lembut.
+
+### 2. KEN BURNS — PERBESAR PERLAHAN OTOMATIS (modul 08)
+Pilih ZOOM IN / ZOOM OUT / GESER KIRI→KANAN / GESER ATAS→BAWAH / ZOOM+GESER.
+Efek berjalan perlahan sepanjang tiap part lalu mengulang dari awal di part
+berikutnya — video statis jadi terasa hidup. KEKUATAN GERAK 5–60%.
+
+### 3. TRANSISI ANTAR BAGIAN (modul 08)
+FADE HITAM atau SLIDE. Setiap part masuk & keluar halus, sehingga file hasil
+split yang diputar berurutan terasa seperti satu film menyambung. Durasi
+0.3–2 detik.
+
+### 4. KECEPATAN VIDEO (modul 08)
+0.5× (pelan) · 1× · 1.25× · 1.5× · 2× (cepat). Video & audio ikut dipercepat/
+diperlambat; durasi part menyesuaikan otomatis (6 detik @1.5× → 4 detik).
+Pratinjau juga ikut kecepatan yang dipilih.
+
+### 5. POTONG & HAPUS BAGIAN (modul 02B)
+Putar video ke posisi mulai → **MULAI POTONG DI SINI** → lanjutkan ke posisi
+akhir → **BERAKHIR DI SINI**. Bagian itu dibuang dari hasil ekspor & split:
+zona merah bergaris tampil di TIMELINE, pratinjau melompat otomatis melewatinya,
+dan nomor part tetap berurutan menyambung. Bisa banyak potongan sekaligus.
+
+### 6. IMPOR SRT (modul 04)
+Tombol **IMPOR SRT…** — muat subtitel dari file `.srt` (hasil VOCALIS lama,
+editor lain, atau buatan sendiri). Parser tahan BOM/CRLF/tag HTML, langsung
+tampil di daftar subtitel & terbakar saat ekspor.
+
+### 7. PRESET EKSPOR SATU KLIK (modul 09)
+**YOUTUBE** (16:9 · 1080p · maksimal) · **TIKTOK** (9:16 · 30fps) ·
+**REELS** (9:16 · 30fps) · **SHORTS** (9:16 · 60fps) — satu klik mengatur
+rasio, resolusi, fps & kualitas; sisanya tetap bisa diubah manual.
+
+### 8. ANDALAN EKSPOR MAKIN KUAT
+- **PROBE ENCODER**: sebelum merender, encoder GPU diuji nyata (configure +
+  encode 4 frame + flush). Yang "konon didukung" tapi macet otomatis diganti
+  software — tidak ada lagi render panjang gagal di tengah.
+- **FOLDER OUTPUT OTOMATIS**: folder tujuan yang belum ada dibuat otomatis
+  (dulu membuat ekspor diam di tahap menyimpan).
 
 ## Yang Baru di v2.10
 

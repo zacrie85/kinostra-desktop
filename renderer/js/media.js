@@ -65,7 +65,8 @@ async function loadFileBlob(file, force = false) {
   stopMusicPreview();
   state.mediaEpoch = (state.mediaEpoch || 0) + 1;   /* v2.2: invalidasi cache lapisan komposisi */
   // reset
-  Object.assign(state, { subs: [], peaks: null });
+  /* v2.12: potongan bersifat per-video — bersihkan saat ganti media */
+  Object.assign(state, { subs: [], peaks: null, cuts: [], rangeStart: 0, rangeEnd: 0 });
   state.track = { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: state.track.label, color: state.track.color, vx: 0, vy: 0, scale: 1, lost: 0 };
   $('#trackStat').textContent = '0 titik terlacak';
   state.file = file;
@@ -116,6 +117,7 @@ async function loadFileBlob(file, force = false) {
   /* v2.9: terapkan preset TERAPKAN-KE-SEMUA (bila aktif) ke video yang baru dimuat,
      lalu segarkan input waktu mulai/berhenti di modul 02 */
   applyRangePreset(); syncRangeInputs();
+  if (typeof renderCutList === 'function') renderCutList();   /* v2.12: kosongkan daftar potongan */
   renderTimeline(); updateAll();
   toast(`Dimuat: ${file.name}`, 'ok');
 }
@@ -163,20 +165,69 @@ function rangeInfo() {
   if (e - s < 0.1) { s = 0; e = dur; }   /* rentang tidak valid → penuh */
   return { start: s, end: e, len: Math.max(0.1, e - s) };
 }
+
+/* ---------- v2.12: HAPUS BAGIAN (POTONG) ----------
+   state.cuts = daftar rentang yang DIBUANG dari hasil ekspor/split:
+   [{s, e}, …]. Interval efektif = rentang ekspor DIKURANGI semua potongan.
+   Part hanya dibuat di dalam interval efektif — penomoran part lanjut
+   menyambung melewati tiap potongan. */
+function effIntervals() {
+  const r = rangeInfo();
+  const cuts = (state.cuts || [])
+    .map(c => ({ s: clamp(Math.min(c.s, c.e), r.start, r.end), e: clamp(Math.max(c.s, c.e), r.start, r.end) }))
+    .filter(c => c.e - c.s > 0.08)
+    .sort((a, b) => a.s - b.s);
+  const out = []; let cur = r.start;
+  for (const c of cuts) {
+    if (c.s > cur + 0.05) out.push({ a: cur, b: Math.min(c.s, r.end) });
+    cur = Math.max(cur, c.e);
+  }
+  if (cur < r.end - 0.05) out.push({ a: cur, b: r.end });
+  return out.filter(iv => iv.b - iv.a >= 0.1);
+}
+/* total durasi yang dibuang (utk statistik & ringkasan) */
+function cutsLen() {
+  const r = rangeInfo();
+  return (state.cuts || []).reduce((a, c) => a + Math.max(0, Math.min(c.e, r.end) - Math.max(c.s, r.start)), 0);
+}
+/* total durasi yang BENAR-BENAR diekspor (rentang − potongan) */
+function expLen() { return Math.max(0.1, rangeInfo().len - cutsLen()); }
+
 function segmentsCount() {
   if (!state.duration) return 1;
-  const r = rangeInfo();
-  return Math.max(1, Math.ceil(r.len / state.splitSec - 1e-6));
+  let n = 0;
+  for (const iv of effIntervals()) n += Math.max(1, Math.ceil((iv.b - iv.a) / state.splitSec - 1e-6));
+  return Math.max(1, n);
 }
 function segments() {
-  const r = rangeInfo(), n = segmentsCount(), arr = [];
-  for (let i = 0; i < n; i++)
-    arr.push({ i, start: r.start + i * state.splitSec, end: Math.min(r.end, r.start + (i + 1) * state.splitSec) });
-  return arr;
+  if (!state.duration) return [{ i: 0, start: 0, end: 0.1 }];
+  const arr = []; let i = 0;
+  for (const iv of effIntervals()) {
+    let t = iv.a;
+    while (t < iv.b - 1e-6) {
+      const end = Math.min(iv.b, t + state.splitSec);
+      arr.push({ i, start: t, end }); i++; t = end;
+    }
+  }
+  return arr.length ? arr : [{ i: 0, start: rangeInfo().start, end: rangeInfo().end }];
 }
-/* indeks part saat ini (0-based) relatif dalam rentang — utk HUD & komposisi */
+/* v2.12: batas part yang memuat waktu t → {i, start, end} (null di luar) */
+function currentSegBounds(t) {
+  const ivs = effIntervals(); let idx = 0;
+  for (const iv of ivs) {
+    const n = Math.max(1, Math.ceil((iv.b - iv.a) / state.splitSec - 1e-6));
+    if (t >= iv.a - 1e-6 && t <= iv.b + 1e-6) {
+      const k = clamp(Math.floor((t - iv.a) / state.splitSec), 0, n - 1);
+      return { i: idx + k, start: iv.a + k * state.splitSec, end: Math.min(iv.b, iv.a + (k + 1) * state.splitSec) };
+    }
+    idx += n;
+  }
+  return null;
+}
+/* indeks part saat ini (0-based) — sadar interval & potongan */
 function currentSegIndex(t) {
-  return clamp(Math.floor((t - rangeInfo().start) / state.splitSec), 0, segmentsCount() - 1);
+  const b = currentSegBounds(t);
+  return b ? b.i : 0;
 }
 /* v2.9: preset massal — dipanggil tiap video dimuat (impor, klik kotak, batch).
    Waktu mulai video = preset applyAllStart (dipotong bila melebihi durasi);

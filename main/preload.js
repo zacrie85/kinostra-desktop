@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* dialogs */
   openMedia: () => ipcRenderer.invoke('dialog:openMedia'),
   pickWatermark: () => ipcRenderer.invoke('dialog:openWatermark'),
+  pickSrt: () => ipcRenderer.invoke('dialog:openSrt'),
   pickOutputDir: (def) => ipcRenderer.invoke('dialog:pickOutputDir', def),
 
   /* stream writer */

@@ -255,3 +255,26 @@ span.qthumb{display:flex;align-items:center;justify-content:center;color:var(--t
 .qbtns button{width:22px;height:22px;background:var(--panel2);border:1px solid var(--line2);color:var(--tx2);font-size:11px;line-height:1;padding:0;cursor:pointer}
 .qbtns button:hover{border-color:var(--acc);color:var(--acc)}
 @keyframes qpulse{0%,100%{box-shadow:inset 2px 0 0 var(--acc)}50%{box-shadow:inset 2px 0 0 rgba(247,166,0,.25)}}
+
+/* ===== v2.12: FRAME GAYA BARU · KECEPATAN · KEN BURNS · TRANSISI ===== */
+#frameStyles,#expPresets{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+#frameStyles .fchip,#expPresets .fchip{border-left:3px solid var(--line2)}
+#frameStyles .fchip.on,#expPresets .fchip.on{border-left-color:var(--acc)}
+
+/* ===== v2.12: POTONG & HAPUS BAGIAN ===== */
+.cutlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:170px;overflow-y:auto;margin-bottom:8px}
+.cutrow{display:flex;align-items:center;gap:8px;padding:6px 9px;border-bottom:1px solid var(--line);transition:.12s}
+.cutrow:last-child{border-bottom:none}
+.cutrow:hover{background:var(--panel2)}
+.cutno{font-size:10px;color:var(--err);min-width:20px;text-align:right;flex:0 0 auto}
+.cuttime{flex:1;font-size:11px;color:var(--tx);letter-spacing:.04em}
+.cutlen{font-size:10px;color:var(--err);flex:0 0 auto}
+.cutrow .sdel{width:20px;height:20px;background:var(--panel2);border:1px solid var(--line2);color:var(--tx2);font-size:11px;line-height:1;padding:0;cursor:pointer;flex:0 0 auto}
+.cutrow .sdel:hover{border-color:var(--err);color:var(--err)}
+
+/* ===== v2.12: zona potongan di TIMELINE SPLIT (merah menyela) ===== */
+.tlcut{position:relative;overflow:hidden;padding:6px 9px;min-width:0;flex-shrink:0;
+  background:repeating-linear-gradient(135deg,rgba(255,84,73,.16) 0 8px,rgba(255,84,73,.05) 8px 16px);
+  border-right:1px solid rgba(255,84,73,.35);border-left:1px solid rgba(255,84,73,.35)}
+.tlcut span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--err)}
+.tlcut em{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;color:rgba(255,84,73,.65);margin-top:3px;white-space:nowrap;overflow:hidden}

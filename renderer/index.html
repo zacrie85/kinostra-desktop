@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.11.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.12.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.11.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.12.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -167,6 +167,23 @@
       </div></div></div>
     </div>
 
+    <div class="mod" id="m1c">
+      <button class="mod-h"><span class="no">02B</span><span class="t">POTONG &amp; HAPUS BAGIAN <span class="beta">BARU · v2.12</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Buang bagian video yang tidak diinginkan ( Salah ambil, iklan, jeda panjang ) dari hasil ekspor &amp; split: putar video ke posisi <b>mulai potong</b> → tekan <b>MULAI POTONG</b>, lanjutkan ke posisi <b>akhir potong</b> → tekan <b>BERAKHIR POTONG</b>. Bagian itu tidak ikut diekspor — nomor part tetap berurutan menyambung. Bisa potong <b>banyak bagian sekaligus</b>.</div>
+        <div class="row">
+          <button class="btn" id="btnCutStart"><i data-lucide="scissors"></i> MULAI POTONG DI SINI</button>
+          <button class="btn" id="btnCutEnd"><i data-lucide="check"></i> BERAKHIR DI SINI</button>
+        </div>
+        <div class="cutlist" id="cutList"><div class="empty">BELUM ADA POTONGAN — video diekspor utuh</div></div>
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnCutClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i> HAPUS SEMUA POTONGAN</button>
+          <span class="substat" id="cutStat">0 potongan · 0 dtk dibuang</span>
+        </div>
+        <div class="note">Saat pratinjau, video <b>melompat otomatis</b> melewati bagian yang dipotong. Zona potongan tampil <b>merah</b> di TIMELINE SPLIT. Potongan berlaku untuk ekspor tunggal &amp; batch ekspor.</div>
+      </div></div></div>
+    </div>
+
     <div class="mod" id="m2">
       <button class="mod-h"><span class="no">03</span><span class="t">DESKRIPSI VIDEO</span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
@@ -211,6 +228,7 @@
         </div>
         <div class="row">
           <button class="btn sm" id="btnSrt"><i data-lucide="file-down"></i> EKSPOR .SRT</button>
+          <button class="btn sm" id="btnSrtImport"><i data-lucide="file-up"></i> IMPOR SRT… <span class="beta">BARU</span></button>
           <button class="btn sm" id="btnSubClear"><i data-lucide="trash-2"></i></button>
         </div>
         <div class="sublist" id="subList"><div class="empty">BELUM ADA SUBTITEL</div></div>
@@ -309,6 +327,31 @@
         </div>
         <label class="chk"><input type="checkbox" id="neonDual" checked><span>DUA GARIS BERLAWANAN ARAH SEKALIGUS</span></label>
         <div class="note">Seperti gambar referensi: <b>garis neon bercahaya</b> mengelilingi pinggir video dalam bingkai membulat dan <b>terus berputar otomatis</b> sepanjang video — videomu tampil di bagian dalamnya. Berlaku untuk rasio <b>9:16 dan 16:9</b>, tampil di preview dan <b>terbakar ke video saat ekspor</b>. Pilih RAINBOW untuk warna pelangi yang ikut berputar.</div>
+        <div class="lbl" style="margin-top:10px">FRAME VIDEO — 8 GAYA BARU <span class="beta">BARU · v2.12</span></div>
+        <div class="chips" id="frameStyles"></div>
+        <div class="note">Pilih gaya frame dari gambar referensimu: <b>BIOSKOP</b> (tirai merah + lampu emas berkelip) · <b>MERAH PUTIH</b> (bingkai emas + pita bendera) · <b>KAYU &amp; BUNGA</b> (papan kayu + bunga matahari) · <b>GELOMBANG WARNA</b> (gelombang merah-kuning-pink) · <b>PUTIH ELEGAN</b> (ornamen jingga) · <b>AWAN BIRU</b> (awan berlapis + matahari) · <b>PANEL BIRU</b> (panel putih bulat) · <b>GRADIEN TIPIS</b> (garis minimalis). Judul tampil di pita atas, deskripsi di banner bawah, PART di pojok — <b>persis skema posisi referensimu</b>. Semua dianimasikan halus &amp; terbakar ke video saat ekspor.</div>
+        <div class="lbl" style="margin-top:10px">KECEPATAN VIDEO <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segSpeed">
+          <button data-v="0.5">0.5× PELAN</button><button data-v="1" class="on">1× NORMAL</button>
+          <button data-v="1.25">1.25×</button><button data-v="1.5">1.5×</button><button data-v="2">2× CEPAT</button>
+        </div>
+        <div class="note">Mempercepat / memperlambat <b>seluruh video &amp; audionya</b> — part menjadi lebih pendek (cepat) atau lebih panjang (pelan) otomatis. Cocok untuk gaya cepat TikTok/Shorts.</div>
+        <div class="lbl" style="margin-top:10px">KEN BURNS — PERBESAR PERLAHAN OTOMATIS <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segKb">
+          <button data-v="off" class="on">MATI</button><button data-v="in">ZOOM IN</button>
+          <button data-v="out">ZOOM OUT</button><button data-v="panx">GESER KIRI→KANAN</button>
+          <button data-v="pany">GESER ATAS→BAWAH</button><button data-v="diag">ZOOM+GESER</button>
+        </div>
+        <div class="lbl">KEKUATAN GERAK <b id="kbSV">30%</b></div>
+        <input type="range" id="inKbS" min="0.05" max="0.6" step="0.05" value="0.3">
+        <div class="note">Efek sinematik klasik: video <b>perlahan diperbesar / digeser</b> sepanjang part agar terasa hidup — efek diulang dari awal di setiap part. Berlaku di rasio 16:9 &amp; 9:16, tampil di preview dan terbakar saat ekspor.</div>
+        <div class="lbl" style="margin-top:10px">TRANSISI ANTAR BAGIAN <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segTrans">
+          <button data-v="off" class="on">MATI</button><button data-v="fade">FADE HITAM</button><button data-v="slide">SLIDE</button>
+        </div>
+        <div class="lbl">DURASI TRANSISI <b id="transDV">0.8 dtk</b></div>
+        <input type="range" id="inTransD" min="0.3" max="2" step="0.1" value="0.8">
+        <div class="note">Setiap part masuk &amp; keluar dengan transisi halus — FADE lewat hitam atau SLIDE menyamping — sehingga video hasil split diputar berurutan terasa seperti satu film yang menyambung.</div>
         <div class="note">Efek diterapkan langsung saat preview &amp; saat render ekspor — tanpa plugin tambahan.</div>
       </div></div></div>
     </div>
@@ -316,6 +359,9 @@
     <div class="mod" id="m9">
       <button class="mod-h"><span class="no">09</span><span class="t">EKSPOR &amp; KOMPRESI</span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="lbl">PRESET EKSPOR — SATU KLIK <span class="beta">BARU · v2.12</span></div>
+        <div class="chips" id="expPresets"></div>
+        <div class="note"><b>YOUTUBE</b> 16:9 · 1080p · 30fps — <b>TIKTOK</b> 9:16 · penuh · 30fps — <b>REELS</b> 9:16 · penuh · 30fps — <b>SHORTS</b> 9:16 · penuh · 60fps. Satu klik langsung mengatur rasio, resolusi, fps &amp; kualitas — sisanya tetap bisa diubah manual di bawah.</div>
         <div class="lbl">KUALITAS / TINGKAT KOMPRES</div>
         <div class="seg wrap" id="segQual">
           <button data-v="max">MAKSIMAL</button><button data-v="balanced" class="on">SEIMBANG</button>
@@ -384,6 +430,7 @@
 <script src="js/core.js"></script>
 <script src="js/media.js"></script>
 <script src="js/compose.js"></script>
+<script src="js/frames.js"></script>
 <script src="js/tracker.js"></script>
 <script src="js/music.js"></script>
 <script src="js/subs.js"></script>

@@ -1165,6 +1165,26 @@ ipcMain.handle('dialog:openWatermark', async () => {
   return { name: path.basename(p), data: buf.toString('base64') };
 });
 
+/* v2.12: IMPOR SUBTITEL — pilih file .srt, isi file dikirim sebagai teks */
+ipcMain.handle('dialog:openSrt', async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Impor Subtitel — pilih file .srt',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Subtitel SRT', extensions: ['srt', 'vtt', 'txt'] },
+      { name: 'Semua File', extensions: ['*'] }
+    ]
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const p = r.filePaths[0];
+  try {
+    const buf = await fsp.readFile(p);
+    return { name: path.basename(p), text: buf.toString('utf8') };
+  } catch (e) {
+    return { name: path.basename(p), text: '', error: e.message };
+  }
+});
+
 ipcMain.handle('dialog:pickOutputDir', async (e, defaultName) => {
   const r = await dialog.showOpenDialog(win, {
     title: 'Pilih Folder Output — semua part MP4 disimpan di sini',
@@ -1180,6 +1200,10 @@ const streams = new Map();
 let streamSeq = 1;
 
 ipcMain.handle('fs:beginWrite', async (e, { dir, fileName }) => {
+  // v2.12: pastikan folder output ADA — dulu folder yang belum ada membuat
+  // createWriteStream gagal senyap (ENOENT) → writeChunk menunggu selamanya
+  // → ekspor "macet di bagian akhir". Sekarang folder dibuat otomatis.
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (_) { }
   // hindari tabrakan nama: tambah akhiran (1), (2), ...
   let base = fileName, ext = '';
   const m = base.match(/^(.*?)(\.[^.]+)$/);
@@ -1189,6 +1213,7 @@ ipcMain.handle('fs:beginWrite', async (e, { dir, fileName }) => {
   while (fs.existsSync(final)) { final = path.join(dir, `${base} (${i})${ext}`); i++; }
   const id = streamSeq++;
   const ws = fs.createWriteStream(final);
+  ws.on('error', () => { /* cegah crash main — kegagalan ditangani writeChunk */ });
   streams.set(id, { ws, path: final });
   return { id, path: final };
 });
