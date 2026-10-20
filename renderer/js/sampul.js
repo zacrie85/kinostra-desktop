@@ -112,7 +112,7 @@ function drawSampul(x, W, H, t, style, titleTxt, subTxt) {
   x.restore();
 }
 
-let _sampulIv = null, _sampulT = 0;
+let _sampulIv = null, _sampulT = 0, _sampulCounter = 0;
 
 /* buka studio sampul (modal) */
 function openSampul() {
