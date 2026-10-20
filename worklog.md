@@ -105,3 +105,29 @@ Stage Summary:
 - Fungsi baru: state.splitParts, applySplitParts(), resetSplitPartsUI(), syncTInfoSplit() (media.js); binding #inSplitParts (ui.js); #inSplitParts/#splitPartsStat (index.html)
 - Uji baru: scripts/kinostra-v32-test.mjs (21/21) + testmedia/v32-60s.mp4
 - Keputusan: splitParts eksklusif dgn chip preset & durasi manual (saling mematikan); nilai pecahan diperbolehkan (splitSec float) agar N part selalu eksak; PER ADEGAN tidak digabung dgn JUMLAH PART (beda filosofi: adegan = titik alami, jumlah = pembagian merata)
+
+---
+Task ID: 8
+Agent: main (Super Z)
+Task: KINOSTRA v3.3.0 — BACKSOUND MP3 SENDIRI: user impor MP3 manual sebagai musik latar + volume manual, ikut eksport & split; uji otomatis, build & rilis GitHub
+
+Work Log:
+- Permintaan user: "menambah suara backsound pada video yang akan di eksport dan split..memasukan mp3 secara manual...bisa di atur besar kecil volume suaranya secara manual"
+- core.js: state.bsound = { on: true, buffer: null, gain: 0.35, name: '' }
+- music.js (blok baru setelah composeMusic): ensureBsGain/stopBsoundPreview/startBsoundSync (pratinjau sinkron video, loop, offset playhead) + setBsoundBuffer (pasang buffer + refresh UI) + loadBsoundFile(File — jalur UI, dialog native via <input type=file> hidden) + loadBsoundFromPath(path — jalur uji/batch via fetch kfile://)
+- exporter.js renderMix: sumber ke-4 BACKSOUND (setelah skor musik, sebelum TTS) — loop=true, offset = start % dur buffer (posisi lagu KONTINU antar part/blok, sama dgn perilaku musik prosedural), gain clamp 0..1.6, ikut spd; wantAudio kini ikut menghitung backsound (video tanpa suara asli tetap diekspor DENGAN audio)
+- encodeAudioStream TIDAK diubah — jalur unik (part + merge + batch) otomatis membawa backsound
+- index.html modul 06: tombol PILIH FILE MP3 + hapus, input file hidden, substat status, cheklis PAKAI BACKSOUND, slider VOLUME BACKSOUND 0–150% + note tips (kecilkan MIX AUDIO ASLI utk backsound dominan)
+- ui.js: binding 4 kontrol + hook play/pause/seeked → startBsoundSync/stopBsoundPreview
+- Media uji: testmedia/bs-sine.mp3 (sine 1200Hz 8 dtk — podcast.mp4 sunyi di 0–5 dtk → jendela ukur bersih)
+- UJI (scripts/kinostra-v33-test.mjs, CDP 9450): 14/14 LULUS — smoke UI, decode MP3 ±8 dtk + stat SIAP, renderMix terukur: off=sunyi (<0.005), on=bunyi (>0.05), gain 30% ≈ ⅓× (rasio 0.2–0.5), LOOP t=20 dtk (buffer 8 dtk) tetap bunyi, cheklis ON/OFF mengontrol mix, pratinjau guarded saat pause, EKSPOR NYATA 3 part + ffprobe volumedetect mean > −40 dB (backsound terdengar), hapus bersih
+- Regresi: v30 39/39 (run pertama gagal di GABUNG = tabrakan nama file sisa run sebelumnya "(1)" + kontensi 2 suite beruntun → OUTDIR dibersihkan → lulus; kode merge tidak tersentuh v3.3), v32 21/21, v31 29/30 (1 asersi teks "3.1.0", bukan regresi)
+- Versi 3.3.0: package.json (+deskripsi), installer.nsi, afterpack.js (3.3.0.0), README badge, PANDUAN (tabel modul 06 + bagian "Yang Baru di v3.3"), index.html boot/header
+- Build: dist:full → Portable 132.1MB + win-unpacked (3.3.0 UTF-16 ✓ posisi 187MB); makensis manual → Setup 95.8MB (3.3.0.0 UTF-16 ✓ posisi 53980)
+- Commit d787fdd + push main OK; Release v3.3.0 (id 418483119) + 3 aset HTTP 201 (Setup 91.3MB, Portable 126.0MB, PANDUAN.md) — skrip scripts/release-v330.sh (env GH_TOKEN, tanpa hardcode)
+
+Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.3.0
+- Fungsi baru: state.bsound; loadBsoundFile/loadBsoundFromPath/setBsoundBuffer/startBsoundSync/stopBsoundPreview (music.js); blok BS di renderMix + wantAudio (exporter.js); UI modul 06
+- Uji baru: scripts/kinostra-v33-test.mjs (14/14) + testmedia/bs-sine.mp3
+- Keputusan: backsound GLOBAL (setelan tetap untuk semua video batch, sama seperti splitSec); loop kontinu antar part (bukan restart per part); pratinjau WebAudio realtime; catatan: jalur GABUNG rentan flake bila OUTDIR berisi file nama sama dari run lain (guard timeout write) — di luar sentuhan v3.3, dicatat utk investigasi kelak
