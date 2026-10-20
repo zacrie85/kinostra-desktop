@@ -131,3 +131,29 @@ Stage Summary:
 - Fungsi baru: state.bsound; loadBsoundFile/loadBsoundFromPath/setBsoundBuffer/startBsoundSync/stopBsoundPreview (music.js); blok BS di renderMix + wantAudio (exporter.js); UI modul 06
 - Uji baru: scripts/kinostra-v33-test.mjs (14/14) + testmedia/bs-sine.mp3
 - Keputusan: backsound GLOBAL (setelan tetap untuk semua video batch, sama seperti splitSec); loop kontinu antar part (bukan restart per part); pratinjau WebAudio realtime; catatan: jalur GABUNG rentan flake bila OUTDIR berisi file nama sama dari run lain (guard timeout write) — di luar sentuhan v3.3, dicatat utk investigasi kelak
+
+---
+Task ID: 9
+Agent: main (Super Z)
+Task: KINOSTRA v3.4.0 — RESOLUSI OUTPUT 720p/1080p/2K/4K UHD: chip pilihan resolusi di modul 09 EKSPORT & KOMPRESI, berlaku semua video (EKSPORT & SPLIT MP4 + BATCH EKSPOR + GABUNG); uji otomatis, build; push & rilis MENUNGGU GH_TOKEN dari user
+
+Work Log:
+- Permintaan user: "tambahkan pilihan untuk mengatur resolusi video ... 720p, 1080p, 2k dan 4K (Ultra HD - 3840 x 2160) ... bisa di terapkan untuk semua video ... EKSPORT & SPLIT MP4 maupun BATCH EKSPORT - SEMUA VIDEO DI KOTAK"
+- Audit pipeline dulu: outDims() (media.js) = satu-satunya sumber W×H (dipakai exportPartsToDir, exportMergeToDir, updateExportInfo) → override terpusat otomatis mencakup batch & gabung; semua overlay (judul/subtitel/frame/watermark/spk-zoom) menggambar relatif (u=H/1080 + fraksi W×H) → aman 4K; cache lapisan statis (bgLayerKey/vignette) berkunci WxH → aman ganti resolusi
+- core.js: katalog RESOUTS {'720':1280×720,'1080':1920×1080,'1440':2560×1440,'2160':3840×2160} + state.resOut ('' = AUTO ikuti skala, perilaku lama utuh)
+- media.js outDims(): resOut terisi → kunci W×H tetap; rasio 9:16 membalik W↔H (4K vertikal = 2160×3840, konvensi TikTok/Shorts)
+- exporter.js: h264CodecsFor(W,H,fps) — ≤1080p daftar lama persis v2.x (nol regresi); >1080p wajib level 5.1 (avc1.640033/4D0033/420033), 4K@>30fps level 5.2 (640034) agar isConfigSupported & encoder hardware menerima frame; exportBitrate() — resolusi tetap → bitrate = q.br × luas/(1920×1080), clamp 0.6–48 Mbps; AUTO → pengali skala lama (1/0.62/0.38); dipakai di exportPartsToDir + exportMergeToDir + updateExportInfo; pesan error codec kini menyebut resolusi + saran turunkan
+- index.html modul 09: chip RESOLUSI OUTPUT (AUTO/720p HD/1080p FHD/2K QHD/4K UHD) + note; label SKALA jadi "(mode AUTO)"; ringkasan ekspor menampilkan "RESOLUSI 4K ULTRA HD" dst
+- ui.js: bindSeg segRes; eksklusif dua arah dgn segScale (klik skala saat resolusi tetap → balik AUTO + toast, pola v3.2) + class res-dim (opacity .4, kinestra.css); preset YOUTUBE/TIKTOK/REELS/SHORTS ikut reset ke AUTO
+- UJI scripts/kinostra-v34-test.mjs (CDP 9452): 34/34 LULUS — smoke 5 chip + AUTO default, dimensi 4 chip + 9:16 terbalik, eksklusivitas dua arah + preset, bitrate monoton 720<1080<2K<4K + 4K maks clamp 48Mbps + AUTO=6Mbps persis lama, codec level (1080p daftar lama; 2K/4K L5.1; 4K@60 L5.2), EKSPOR NYATA 720p 2 part + 2K 1 part + 4K 2 part (ffprobe 1280×720/2560×1440/3840×2160, encoder software env ini mendukung 4K), BATCH EKSPOR tombol asli runBatch(true) 2 video @720p → 4 part semua 1280×720
+- (Bug skrip uji, bukan aplikasi: 1 asersi awal memanggil outDims() tanpa arg skala → 1920×1080; diperbaiki outDims(parseFloat(state.scale)) → 34/34)
+- Regresi: v30 39/39; v32 20/21 (satu gagal = asersi teks "3.2.0" yang memang sudah naik — bukan regresi fungsi); v33 14/14
+- Versi 3.4.0: package.json (version+deskripsi), installer.nsi (APPVERSION/OutFile/VIProductVersion/VIAddVersionKey), afterpack.js (3.4.0.0), README badge, PANDUAN (tabel modul 09 + bagian "Yang Baru di v3.4" 8 butir + Setup/Portable 3.4.0), index.html boot+header
+- Build: dist:full → Portable 3.4.0 + win-unpacked (3.4.0 UTF-16 ✓ posisi 187MB); makensis manual → Setup 91.3MB (3.4.0.0 UTF-16 ✓ posisi 53980)
+- Commit bfeb775 (14 file). PUSH & RELEASE BELUM DILAKUKAN: GH_TOKEN dari sesi sebelumnya hilang saat konteks di-reset (memang tidak boleh disimpan di repo/file) — skrip scripts/release-v340.sh SUDAH SIAP (env GH_TOKEN, retry 3×/aset); begitu user memberi token: export GH_TOKEN=… → git push https://x-access-token:$GH_TOKEN@github.com/zacrie85/kinostra-desktop main → bash scripts/release-v340.sh
+
+Stage Summary:
+- Fungsi baru: state.resOut + RESOUTS (core.js); outDims() override (media.js); h264CodecsFor/exportBitrate (exporter.js); chip segRes + res-dim + eksklusivitas (ui.js/index.html/kinestra.css)
+- Uji baru: scripts/kinostra-v34-test.mjs (34/34) + testmedia/v34-8s.mp4, v34-6s.mp4
+- Keputusan: AUTO=''(bukan nilai khusus) agar seluruh kode lama tak tersentuh saat chip tak dipakai; bitrate dari luas piksel bukan tabel manual (2K=1.78×, 4K=4×); level H.264 naik otomatis >1080p sesuai spek (4.0 maks 1080p); KOMPRES PINTAR tetap menimpa bitrate per part; skala & resolusi tetap eksklusif dua arah
+- PENDING: push + GitHub Release v3.4.0 (3 aset) menunggu GH_TOKEN baru dari user
