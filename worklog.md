@@ -57,3 +57,24 @@ Stage Summary:
 - File baru: renderer/js/speaker.js, scripts/kinostra-v31-test.mjs, scripts/kinostra-v31-mkmedia.mjs, scripts/kinostra-v31-debug.mjs, testmedia/podcast.mp4
 - Keputusan: model = Xenova/yolos-tiny q8 (pipeline object-detection); zoom = crop kamera penuh-kanvas (bukan letterbox) dengan aspek mengikuti rasio output; keputusan pembicara menyimpan ID jejak (bukan indeks); saat senyap default TETAP DI PEMBICARA; prioritas kotak besar 0.6+0.4×(area/0.10) untuk menekan false-positive; zoom manual & Ken Burns diabaikan selagi spk aktif
 - Perbaikan kualitas lintas-versi: kunci cache segmentasi kini memuat durasi; metadata durasi tak masuk akal → muat ulang otomatis; mediaTime palsu diabaikan worker
+
+---
+Task ID: 6
+Agent: main (Super Z)
+Task: KINOSTRA v3.1.1 — BUGFIX STUDIO SAMPUL: "Gagal menyimpan sampul: _sampulCounter is not defined" saat klik SIMPAN PNG (laporan user dgn screenshot)
+
+Work Log:
+- Akar masalah: sampul.js baris 179 memakai `_sampulCounter` untuk nomor urut otomatis, tapi variabel TIDAK PERNAH dideklarasikan (lolos refactor v3.0.0; uji regresi lama hanya memanggil drawSampul di kanvas terpisah, tidak pernah klik tombol SIMPAN PNG) → ReferenceError tertangkap try/catch → toast error
+- Audit dependensi sampul.js satu per satu — semuanya aman: M/showModal/hideModal/fmtT/toast (core.js), coverRect (media.js), wrapLines (compose.js), frHororPlate/frGaibPlate/frDangdutPlate (frames.js), COLORFILTERS (core.js), slug/saveBlobToDir/_lastOutDir (core.js)
+- Fix 1 baris: `let _sampulIv = null, _sampulT = 0;` → `let _sampulIv = null, _sampulT = 0, _sampulCounter = 0;`
+- Uji baru scripts/kinostra-v311-sampul-test.mjs (Xvfb :99 + CDP port 9446, media podcast.mp4) mensimulasikan PERSIS alur user: openSampul → klik M.c.onclick (SIMPAN PNG) 2x + judul kosong 1x; _lastOutDir di-pre-set via CDP agar dialog native tidak menggantung; MutationObserver #toasts menangkap toast error
+- HASIL 12/12 LULUS: modal terbuka, tombol SIMPAN PNG, kanvas 1280×720 tergambar, _sampulCounter terdefinisi, simpan 1x & 2x sukses (toast "Sampul tersimpan"), NOL toast error, 2 file pola nama benar, nomor urut 01→02, PNG >50KB + magic number valid, judul kosong → fallback state.title (nomor 03)
+- Versi 3.1.1: package.json (version+deskripsi), installer.nsi (APPVERSION/OutFile/VIProductVersion/VIAddVersionKey), afterpack.js (3.1.1.0), README.md (badge), KINOSTRA-PANDUAN.md (Setup/Portable 3.1.1), index.html (boot+header)
+- Build: dist:full → Portable 132.1MB + win-unpacked (3.1.1 UTF-16 ✓ posisi 187MB, exe=KINOSTRA.exe); makensis manual → Setup 95.7MB (3.1.1.0 UTF-16 ✓ posisi 53980); artefak lama 3.1.0 dihapus dari dist_out
+- Commit lokal 9e2f903 (8 file). PUSH & RELEASE v3.1.1 TERTUNDA: token GitHub sesi sebelumnya tidak tersimpan di lingkungan ini (git remote kosong, tanpa gh CLI, tanpa git-credentials) — menunggu token dari user utk push main + release 3 aset (Setup/Portable/PANDUAN)
+
+Stage Summary:
+- Bug: sampul.js `_sampulCounter` tak dideklarasikan → fix 1 baris; pelajaran: uji regresi harus menekan jalur klik ASLI modal (bukan hanya fungsi gambarnya)
+- Artefak siap di dist_out/: KINOSTRA-Setup-3.1.1.exe (95.7MB), KINOSTRA-Portable-3.1.1-win64.zip (132.1MB); PANDUAN.md di root repo
+- Release notes v3.1.1 (draft utk GitHub): perbaikan error simpan PNG di STUDIO SAMPUL + nomor urut otomatis kini berfungsi (01→99 melingkar)
+
