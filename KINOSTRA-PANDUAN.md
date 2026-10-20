@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.1.1
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.2.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.1.1.exe`
+1. Jalankan `KINOSTRA-Setup-3.2.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.1.1-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.2.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -23,7 +23,7 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 |----|-------|--------|
 | 00 | **Kotak Video · Urutan** ⭐v2.2 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH FILE batch. Berurutan dari atas ke bawah. Thumbnail otomatis, tombol naik/turun urutan, hapus & pratinjau |
 | 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. **v2.6: geser KIRI/KANAN/ATAS/BAWAH selalu berfungsi** (termasuk zoom 1× — memindahkan posisi video di dalam frame 9:16), Zoom Fokus 1–4×, latar BLUR SINEMATIK tampil otomatis (tidak hitam lagi) |
-| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah** — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
+| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah** — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
 | 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
 | 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
@@ -32,6 +32,17 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.2 — JUMLAH PART OTOMATIS (modul 02)
+
+Sekarang kamu tidak perlu menghitung durasi sendiri: **tulis saja berapa part yang kamu mau**.
+
+- **Cara pakai**: modul 02 → kolom **JUMLAH PART OTOMATIS** → isi angka (mis. `10`)
+- Aplikasi langsung membagi durasi video secara **merata**: video 60 menit ÷ 10 = **10 part × 6 menit** — potongan eksak per detik
+- Hasil hitungan tampil di kolom durasi (ATUR SENDIRI) dan HUD atas (`SPLIT OTOMATIS 10 PART × 6 DTK`)
+- **Ikut menyesuaikan tiap video**: setelan "10 part" tetap aktif untuk video berikutnya — video 30 menit otomatis jadi 10 part × 3 menit
+- Aman dari angka ekstrem: N yang lebih besar dari durasi video otomatis dibatasi (minimal ±1 detik per part)
+- Kosongkan angka / isi durasi manual / klik chip preset 20–60 dtk untuk kembali ke cara lama; **MODE SPLIT PER ADEGAN** tetap berfungsi seperti biasa
 
 ## Yang Baru di v3.1 — ZOOM PEMBICARA OTOMATIS (modul 02C)
 

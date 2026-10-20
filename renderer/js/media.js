@@ -129,7 +129,9 @@ async function loadFileBlob(file, force = false) {
   }
   $('#fDur').textContent = fmtT(state.duration);
   $('#fRes').textContent = state.isAudio ? 'AUDIO ONLY' : `${videoEl.videoWidth}×${videoEl.videoHeight}`;
-  $('#tInfo').textContent = `SPLIT ${state.splitSec} DTK/PART`;
+  /* v3.2: bila JUMLAH PART aktif → hitung ulang durasi per part utk video ini */
+  applySplitParts();
+  syncTInfoSplit();
   /* v2.9: terapkan preset TERAPKAN-KE-SEMUA (bila aktif) ke video yang baru dimuat,
      lalu segarkan input waktu mulai/berhenti di modul 02 */
   applyRangePreset(); syncRangeInputs();
@@ -213,6 +215,42 @@ function cutsLen() {
 }
 /* total durasi yang BENAR-BENAR diekspor (rentang − potongan) */
 function expLen() { return Math.max(0.1, rangeInfo().len - cutsLen()); }
+
+/* ---------- v3.2: JUMLAH PART OTOMATIS ----------
+   Isi angka N (mis. 10) → durasi per part = durasi video / N (pembagian
+   merata). Dihitung ulang otomatis setiap video dimuat, jadi setelan
+   "10 part" tetap berlaku untuk video berikutnya tanpa dihitung manual.
+   splitSec hasilnya boleh pecahan — mesin split (segBoundsList) memakai
+   float langsung, jadi 10 part selalu eksak. */
+function applySplitParts(fromInput) {
+  const dur = state.duration || 0;
+  let n = state.splitParts > 0 ? Math.round(state.splitParts) : 0;
+  if (n > 0 && dur > 0) {
+    if (n > dur) n = Math.max(1, Math.floor(dur));   /* jaga minimal ±1 dtk/part */
+    state.splitSec = dur / n;
+    const fx = +state.splitSec.toFixed(2);
+    try {
+      const inp = $('#inSplit'); if (inp) inp.value = fx;
+      const st = $('#splitPartsStat');
+      if (st) st.innerHTML = `<b>${n} PART</b> × ${fx} dtk/part — dihitung otomatis dari durasi ${fmtT(dur)}`;
+    } catch (e) { }
+    if (fromInput && typeof toast === 'function') toast(`Split otomatis: ${n} part × ${fx} dtk`, 'ok');
+  }
+  state.splitParts = n;
+  return state.splitSec;
+}
+/* reset tampilan stat JUMLAH PART ke teks default */
+function resetSplitPartsUI() {
+  try { const st = $('#splitPartsStat'); if (st) st.textContent = 'Isi angka → durasi per part dihitung otomatis dari durasi video'; } catch (e) { }
+}
+/* teks HUD atas: tunjukkan mode jumlah part saat aktif */
+function syncTInfoSplit() {
+  try {
+    $('#tInfo').textContent = state.splitParts > 0
+      ? `SPLIT OTOMATIS ${state.splitParts} PART × ${+(state.splitSec.toFixed(2))} DTK`
+      : `SPLIT ${state.splitSec} DTK/PART`;
+  } catch (e) { }
+}
 
 /* ---------- v3.0: BATAS PART — MODE DURASI / MODE ADEGAN ----------
    Mode 'scene' memecah di titik pergantian adegan (state.sceneCuts, hasil

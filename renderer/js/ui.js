@@ -57,9 +57,12 @@ syncFrameLabels();
 
 /* ---------- 02 JUDUL & PART ---------- */
 bindSeg('segSplit', v => {
+  /* v3.2: memilih preset durasi = matikan JUMLAH PART (keduanya saling eksklusif) */
+  if (state.splitParts) { state.splitParts = 0; $('#inSplitParts').value = ''; resetSplitPartsUI(); }
   if (v === 'custom') { state.splitCustom = true; $('#splitCustom').style.display = '';
     state.splitSec = clamp(parseInt($('#inSplit').value) || 45, 3, 600); }
   else { state.splitCustom = false; $('#splitCustom').style.display = 'none'; state.splitSec = parseInt(v); }
+  syncTInfoSplit();
   updateAll();
 });
 /* v2.6: posisi PART (kiri/kanan & atas/bawah) + posisi JUDUL (atas/bawah) */
@@ -75,7 +78,26 @@ $('#inPartY').oninput = e => { state.partPosY = clamp(parseFloat(e.target.value)
 $('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.value) || 0, -1, 1); syncTextPosLabels(); };
 $('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
 syncTextPosLabels();
-$('#inSplit').oninput = e => { state.splitSec = clamp(parseInt(e.target.value) || 3, 3, 600); updateAll(); };
+$('#inSplit').oninput = e => {
+  /* v3.2: edit durasi manual = matikan JUMLAH PART (nilai hasil hitungan dibekukan jadi manual) */
+  if (state.splitParts) { state.splitParts = 0; $('#inSplitParts').value = ''; resetSplitPartsUI(); syncTInfoSplit(); }
+  state.splitSec = clamp(parseInt(e.target.value) || 3, 3, 600); updateAll();
+};
+
+/* v3.2: JUMLAH PART OTOMATIS — isi N → durasi/part = durasi video ÷ N */
+$('#inSplitParts').oninput = e => {
+  const v = parseInt(e.target.value);
+  if (!v || v < 1) {
+    state.splitParts = 0; resetSplitPartsUI(); syncTInfoSplit(); updateAll(); return;
+  }
+  state.splitParts = clamp(v, 1, 500);
+  /* pilih chip ATUR SENDIRI + tampilkan hasil hitungan di kolom durasi/part */
+  state.splitCustom = true; $('#splitCustom').style.display = '';
+  [...document.querySelectorAll('#segSplit button')].forEach(b => b.classList.toggle('on', b.dataset.v === 'custom'));
+  applySplitParts(true);
+  syncTInfoSplit();
+  updateAll();
+};
 
 /* ---------- 02b WAKTU MULAI & BERHENTI EKSPOR (v2.9) ----------
    Contoh: video 5 menit, mulai 2:00 berhenti 4:00 → hanya 2:00–4:00

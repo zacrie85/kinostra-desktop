@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.1.1 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.2.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.1.1</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.2.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -124,6 +124,13 @@
           <input type="number" class="in mono" id="inSplit" min="3" max="600" value="45">
           <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">DETIK</span>
         </div>
+        <div class="lbl" style="margin-top:4px">JUMLAH PART OTOMATIS <span class="beta">BARU · v3.2</span></div>
+        <div class="row">
+          <input type="number" class="in mono" id="inSplitParts" min="1" max="500" placeholder="mis. 10">
+          <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">PART</span>
+        </div>
+        <div class="substat" id="splitPartsStat">Isi angka → durasi per part dihitung otomatis dari durasi video</div>
+        <div class="note"><b>JUMLAH PART</b>: tulis berapa part yang kamu mau (mis. <b>10</b>) — aplikasi langsung membagi durasi video secara <b>merata otomatis</b> (video 60 menit → 10 part × 6 menit) dan memotongnya tepat begitu di-ekspor. Hitungan diperbarui otomatis untuk setiap video yang diimpor. Kosongkan angka / isi durasi manual untuk kembali ke cara lama.</div>
         <div class="lbl">MODE SPLIT <span class="beta">BARU · v3.0</span></div>
         <div class="seg wrap" id="segSplitMode">
           <button data-v="dur" class="on">PER DURASI</button><button data-v="scene">PER ADEGAN</button>

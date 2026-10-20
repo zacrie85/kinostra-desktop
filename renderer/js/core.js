@@ -100,6 +100,9 @@ const state = {
   /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
   frame: { zoom: 1, panX: 0, panY: 0 },
   splitSec: 30, splitCustom: false, partPrefix: 'PART', partShow: 'intro',
+  /* v3.2: JUMLAH PART OTOMATIS — isi N → durasi per part = durasi video / N
+     (0 = mati; dihitung ulang otomatis tiap video baru dimuat) */
+  splitParts: 0,
   /* v2.6: posisi teks bisa digeser (−1..1, 0 = posisi default) */
   titlePosY: 0, partPosX: 0, partPosY: 0,
   font: 'Bebas Neue', titleScale: 1, subScale: 1, upper: true,
