@@ -177,3 +177,29 @@ Stage Summary:
 - Status Task 9: SELESAI PENUH (kode+uji+build+push+rilis)
 - Aset rilis konsisten dgn build sebelum-reset (ukuran UTF-16 offset identik) — tidak ada regresi build
 - Catatan operasional: token diterima via chat hanya hidup selama sesi shell; bila konteks reset lagi sebelum rilis, build dist_out ikut hilang → urutan aman = push dulu, baru build, lalu rilis segera
+
+---
+Task ID: 10
+Agent: main (Super Z)
+Task: KINOSTRA v3.5.0 — CARA PERPINDAHAN FOKUS ZOOM PEMBICARA: chip GESER HALUS / FADE·LEBUR / LANGSUNG·CUT di modul 02C; uji otomatis, build & rilis GitHub
+
+Work Log:
+- Permintaan user: perpindahan fokus zoom pembicara kini bisa pakai "fade atau langsung pindah ke orang yang berbicara tanpa terlihat pergeseran kamera atau zoom nya"
+- Audit dulu: spkCropAt() (speaker.js) = fungsi murni dari t — dipakai compose.js satu-satunya; exporter (part/merge/batch) memanggil drawComposition → cukup ubah speaker.js + compose.js, semua jalur ekspor otomatis dapat mode baru; deterministik per-t terjaga
+- speaker.js: SPK_FADE=0.55 (durasi crossfade); spkFinishRect() (refactor finalisasi rect); spkCropAt() baca state.spk.trans — 'geser' (smoothstep SPK_EASE lama persis), 'langsung' (tanpa interpolasi = potong instan), 'fade' (return {...rectB, fadeFrom:rectA@seg.t0, fadeK smoothstep}) — semua tetap fungsi murni t
+- compose.js: blok fade — drawImage(fadeFrom) penuh + drawImage(main) dengan globalAlpha=fadeK → crossfade eksak; guard spk && (bug awal: akses spk.fadeFrom saat spk null membuat 4 suite regresi FATAL — ditemukan oleh regresi, diperbaiki)
+- core.js: state.spk.trans = 'geser' (setelan global semua video); ui.js bindSeg segSpkTrans + toast; index.html modul 02C: chip CARA PERPINDAHAN FOKUS (GESER HALUS/FADE·LEBUR/LANGSUNG·CUT) + note diperbarui (kecepatan tetap atur keputusan gantian di semua mode)
+- Media uji: testmedia/v35-2tone.mp4 (8 dtk 640×360, KIRI MERAH / KANAN BIRU 0x2222FF + sine) — membuktikan mode via warna pixel
+- UJI scripts/kinostra-v35-test.mjs (CDP 9454): 27/27 LULUS — smoke 3 chip + default geser; klik → state berganti; mock timeline 2 pembicara (tukar t=4): GESER mid-crop di antara 2 target, LANGSUNG lompat instan 4.01→statis, FADE fadeFrom/fadeK 0→1 lalu hilang + kedua rect statis (tanpa gerak kamera) + dari kiri ke kanan; pixel drawComposition (overlay mati, 9:16): merah→campuran→biru; EKSPOR NYATA FADE 2 part (split di t=4): PART_01 merah, PART_02 @0.12 merah dominan, @0.3 CAMPURAN (bukti dissolve di MP4 final), @0.8 biru; EKSPOR NYATA LANGSUNG: @0.1 biru seketika
+- Bug skrip uji (bukan aplikasi): fc() selalu baca PART_02 (PART_01 tak teruji) → fc(file,ts); section D reset rasio 16:9 menyebabkan ekspor E/F 16:9 (gradient kiri-merah palsu) → 9:16 dipasang ulang di E
+- Regresi: v30 39/39; v31 29/30 (1 asersi teks "3.1.0"); v32 20/21 (1 teks "3.2.0"); v33 14/14; v34 34/34 — nol regresi fungsi
+- Versi 3.5.0: package.json (version+deskripsi), installer.nsi, afterpack.js (3.5.0.0), README badge, PANDUAN (bagian "Yang Baru di v3.5" + Setup/Portable 3.5.0), index.html boot/header
+- Build: dist:full → Portable 132.1MB (3.5.0 UTF-16 ✓ pos 187MB); makensis manual → Setup 91.3MB (3.5.0.0 UTF-16 ✓ pos 53980)
+- Commit 91f60cc + push main OK; Release v3.5.0 (id 418990891) + 3 aset HTTP 201 (Setup 91.3MB, Portable 126.0MB, PANDUAN.md) — skrip scripts/release-v350.sh (env GH_TOKEN)
+
+Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.5.0
+- Fungsi baru: state.spk.trans; SPK_FADE + spkFinishRect + mode di spkCropAt (speaker.js); blok blend FADE di compose.js; chip segSpkTrans (index.html/ui.js)
+- Uji baru: scripts/kinostra-v35-test.mjs (27/27) + testmedia/v35-2tone.mp4
+- Keputusan: FADE = crossfade DUA BINGKAI STATIS (bukan interpolasi posisi) — persis permintaan "tanpa terlihat pergeseran kamera"; LANGSUNG = skip interpolasi; kecepatan pindah fokus TIDAK didim (masih relevan: mengatur histeresis keputusan gantian di semua mode); fadeFrom dievaluasi di seg.t0 (statis) sedangkan main rect tetap hidup mengikuti kotak pembicara
+- PELAJARAN regresi: guard null (spk && spk.fadeFrom) — kode baru di jalur bersama wajib aman saat fitur MATI; regresi suite v30-v34 menangkapnya sebelum rilis
