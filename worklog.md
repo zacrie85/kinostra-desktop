@@ -79,3 +79,29 @@ Stage Summary:
 - Bug: sampul.js `_sampulCounter` tak dideklarasikan → fix 1 baris; pelajaran: uji regresi harus menekan jalur klik ASLI modal (bukan hanya fungsi gambarnya)
 - Uji baru: scripts/kinostra-v311-sampul-test.mjs (12/12); skrip rilis: scripts/release-v311.sh
 
+
+---
+Task ID: 7
+Agent: main (Super Z)
+Task: KINOSTRA v3.2.0 — JUMLAH PART OTOMATIS: user isi angka N → durasi per part dihitung & dipotong merata otomatis (kebalikan mode "durasi per part"); uji otomatis, build & rilis GitHub
+
+Work Log:
+- Permintaan user: "aku tinggal memasukan angka saja ingin menjadikan video tersebut menjadi berapa part" (contoh: video 60 mnt → 10 part, waktu diatur otomatis aplikasi)
+- core.js: state.splitParts = 0 (0 = mati; N aktif) di samping splitSec
+- media.js: applySplitParts() — splitSec = durasi ÷ N (float eksak, mesin split while-loop menerima pecahan); clamp N > durasi → floor(durasi) part (min ±1 dtk/part); dipanggil ulang SETIAP video dimuat (hook jalur metadata, sebelum tInfo) sehingga setelan "10 part" otomatis menyesuaikan video berikutnya; resetSplitPartsUI() + syncTInfoSplit() (HUD: "SPLIT OTOMATIS 10 PART × 6 DTK")
+- ui.js: #inSplitParts.oninput → set splitParts + auto-pindah chip ke ATUR SENDIRI + isi kolom durasi dgn hasil hitungan + toast; edit durasi manual ATAU klik chip preset 20–60 dtk → splitParts=0 (eksklusif dua arah); kosong → mati
+- index.html: modul 02 — input JUMLAH PART OTOMATIS (BARU · v3.2) + substat + note; boot/header v3.2.0
+- segBoundsList TIDAK diubah (cache key sudah memuat splitSec yang berubah) — mode PER ADEGAN tak tersentuh
+- Media uji: testmedia/v32-60s.mp4 (testsrc2 60 dtk + sine AAC)
+- UJI (scripts/kinostra-v32-test.mjs, CDP 9448): 21/21 LULUS — smoke UI, 60s→10 part × 6.0 dtk eksak (indeks urut, batas 0/6/12/…/54), HUD+stat+chip+kolom, ganti 4 part × 15 dtk, clamp N=1000→60 part × 1 dtk, edit durasi manual → mati otomatis, chip preset → mati, setelan ikut video baru (60s: 5×12; 30s: 5×6), EKSPOR NYATA 10 MP4 (ffprobe semua ±6 dtk, PART_01…PART_10), regresi mode durasi + adegan (potong di 3 dtk)
+- Regresi: suite v3.0 39/39; suite v3.1 29/30 (satu-satunya "gagal" = asersi versi "3.1.0 tampil" yang memang sudah jadi 3.2.0 — bukan regresi fungsi)
+- Versi 3.2.0: package.json (+deskripsi JUMLAH PART), installer.nsi, afterpack.js (3.2.0.0), README badge, KINOSTRA-PANDUAN.md (tabel modul 02 + bagian "Yang Baru di v3.2"), index.html
+- Build: dist:full → Portable 132.1MB + win-unpacked (3.2.0 UTF-16 ✓ posisi 187MB); makensis manual → Setup 95.7MB (3.2.0.0 UTF-16 ✓ posisi 53980)
+- INSIDEN PUSH: GitHub Push Protection MENOLAK push — scripts/release-v311.sh (Task 6) menyimpan token hardcode dan terbawa commit sinkronisasi 4c6f001 → token di-scrub jadi env GH_TOKEN, 2 commit lokal ditulis-ulang (reset --soft 59da70f → 1 commit bersih 40ffd02) → push LULUS. PELAJARAN: JANGAN PERNAH hardcode token di file repo; skrip rilis selanjutnya wajib baca env GH_TOKEN
+- Rilis GitHub v3.2.0 (id 418447532) + 3 aset HTTP 201: Setup 91.3MB, Portable 126.0MB, PANDUAN.md — skrip scripts/release-v320.sh (env GH_TOKEN)
+
+Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.2.0
+- Fungsi baru: state.splitParts, applySplitParts(), resetSplitPartsUI(), syncTInfoSplit() (media.js); binding #inSplitParts (ui.js); #inSplitParts/#splitPartsStat (index.html)
+- Uji baru: scripts/kinostra-v32-test.mjs (21/21) + testmedia/v32-60s.mp4
+- Keputusan: splitParts eksklusif dgn chip preset & durasi manual (saling mematikan); nilai pecahan diperbolehkan (splitSec float) agar N part selalu eksak; PER ADEGAN tidak digabung dgn JUMLAH PART (beda filosofi: adegan = titik alami, jumlah = pembagian merata)
