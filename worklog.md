@@ -157,3 +157,23 @@ Stage Summary:
 - Uji baru: scripts/kinostra-v34-test.mjs (34/34) + testmedia/v34-8s.mp4, v34-6s.mp4
 - Keputusan: AUTO=''(bukan nilai khusus) agar seluruh kode lama tak tersentuh saat chip tak dipakai; bitrate dari luas piksel bukan tabel manual (2K=1.78×, 4K=4×); level H.264 naik otomatis >1080p sesuai spek (4.0 maks 1080p); KOMPRES PINTAR tetap menimpa bitrate per part; skala & resolusi tetap eksklusif dua arah
 - PENDING: push + GitHub Release v3.4.0 (3 aset) menunggu GH_TOKEN baru dari user
+
+---
+Task ID: 9 (lanjutan — selesai)
+Agent: main (Super Z)
+Task: Penyelesaian push + GitHub Release v3.4.0 (lanjutan Task 9 yang PENDING menunggu GH_TOKEN)
+
+Work Log:
+- User memberi GH_TOKEN baru via chat → dipakai HANYA via env export (tidak pernah ditulis ke file repo — pelajaran Push Protection Task 7)
+- Validasi token: GET /user → zacrie85; GET /repos/zacrie85/kinostra-desktop → push:true
+- Push main: b7b2735..609e2e4 LULUS (membawa bfeb775 v3.4.0 + 609e2e4 worklog); audit git diff pra-push: hanya perubahan mode file (0 insert/delete), tidak ada token bocor
+- dist_out ternyata sudah terbersihkan setelah reset konteks → REBUILD penuh: npm run dist:full → Portable 132.1MB + win-unpacked (error NSIS "VIProductVersion already defined" yang dikenal = abaikan); verifikasi UTF-16 '3.4.0' di KINOSTRA.exe posisi 187765056 (±187MB, cocok catatan Task 9)
+- makensis manual (build/, nsis-3.0.4.1) → Setup 91.3MB; verifikasi UTF-16 '3.4.0.0' posisi 53980 (cocok catatan Task 9)
+- bash scripts/release-v340.sh (env GH_TOKEN): Release ID 418932936; 3 aset HTTP 201 — Setup 91.3MB, Portable 126.0MB, PANDUAN.md; verifikasi API: draft=false, prerelease=false, state=uploaded semua
+- Commit artefak TIDAK mengubah kode aplikasi (rebuild murni binary sama versi; tak ada commit baru diperlukan)
+
+Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.4.0 (RESOLUSI OUTPUT 720p/1080p/2K/4K)
+- Status Task 9: SELESAI PENUH (kode+uji+build+push+rilis)
+- Aset rilis konsisten dgn build sebelum-reset (ukuran UTF-16 offset identik) — tidak ada regresi build
+- Catatan operasional: token diterima via chat hanya hidup selama sesi shell; bila konteks reset lagi sebelum rilis, build dist_out ikut hilang → urutan aman = push dulu, baru build, lalu rilis segera
