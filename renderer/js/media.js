@@ -67,6 +67,10 @@ async function loadFileBlob(file, force = false) {
   // reset
   /* v2.12: potongan bersifat per-video — bersihkan saat ganti media */
   Object.assign(state, { subs: [], peaks: null, cuts: [], rangeStart: 0, rangeEnd: 0, sceneCuts: [] });
+  /* v3.1: hasil analisis ZOOM PEMBICARA juga per-video — setelan global
+     (on/speed/silence/auto) tetap terbawa ke video berikutnya */
+  state.spk.ready = false; state.spk.scanning = false; state.spk.timeline = [];
+  state.spk.tracks = []; state.spk.nSpeak = 0; state.spk.epoch = -1;
   state.track = { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: state.track.label, color: state.track.color, vx: 0, vy: 0, scale: 1, lost: 0 };
   $('#trackStat').textContent = '0 titik terlacak';
   state.file = file;
@@ -85,13 +89,25 @@ async function loadFileBlob(file, force = false) {
   $('#emptyMsg').style.display = 'none';
   const url = isVirtual ? file.kurl : URL.createObjectURL(file);
   videoEl.srcObject = null; videoEl.src = url;
+  /* v3.1: ANTIANTRIAN META — bila metadata terbaca tapi DURASI TIDAK MASUK
+     AKAL (mis. 0.1 dtk utk file ratusan KB — balasan decoder/kfile kadang
+     terpotong di headless/disk lambat), muat ULANG sekali. Dulu durasi
+     sampah mengalir ke segments() → ekspor "berhasil" berisi 4 frame. */
+  const awaitMeta = () => new Promise((res, rej) => {
+    const ok = () => { clean(); res(); }, bad = () => { clean(); rej(); };
+    const clean = () => { videoEl.removeEventListener('loadedmetadata', ok); videoEl.removeEventListener('error', bad); };
+    videoEl.addEventListener('loadedmetadata', ok); videoEl.addEventListener('error', bad);
+    setTimeout(() => { if (videoEl.readyState >= 1) ok(); }, 4000);
+  });
   try {
-    await new Promise((res, rej) => {
-      const ok = () => { clean(); res(); }, bad = () => { clean(); rej(); };
-      const clean = () => { videoEl.removeEventListener('loadedmetadata', ok); videoEl.removeEventListener('error', bad); };
-      videoEl.addEventListener('loadedmetadata', ok); videoEl.addEventListener('error', bad);
-      setTimeout(() => { if (videoEl.readyState >= 1) ok(); }, 4000);
-    });
+    await awaitMeta();
+    if (videoEl.duration > 0 && videoEl.duration < 0.5 && (file.size || 0) > 200 * 1024) {
+      console.warn('metadata durasi tidak masuk akal (' + videoEl.duration + ' dtk) — muat ulang sekali');
+      videoEl.src = url;
+      await awaitMeta();
+      /* media efektifnya berubah → invalidasi SEMUA cache lapisan/komposisi */
+      state.mediaEpoch = (state.mediaEpoch || 0) + 1;
+    }
   } catch (e) {
     /* v2.10: muat gagal → bersihkan state agar pemanggil (terutama BATCH)
        tahu video ini TIDAK termuat. Dulu file & durasi lama tetap terpasang,
@@ -207,7 +223,10 @@ let _segKey = null, _segList = null;
 function segBoundsList() {
   const sc = state.sceneCuts || [];
   let scSum = 0; for (let i = 0; i < sc.length; i++) scSum += sc[i];
-  const key = `${state.mediaEpoch || 0}|${state.splitMode}|${state.splitSec}|${rangeInfo().start.toFixed(3)}|${(state.rangeEnd || 0).toFixed(3)}|${(state.cuts || []).length}|${sc.length}|${scSum.toFixed(3)}`;
+  /* v3.1 FIX: DURASI MASUK KUNCI CACHE — dulu metadata yang tadinya salah
+     (lalu diperbaiki muat-ulang) meninggalkan daftar part [0..0.1] yang
+     ter-cache selamanya → ekspor "berhasil" berisi 4 frame */
+  const key = `${state.mediaEpoch || 0}|${(state.duration || 0).toFixed(3)}|${state.splitMode}|${state.splitSec}|${rangeInfo().start.toFixed(3)}|${(state.rangeEnd || 0).toFixed(3)}|${(state.cuts || []).length}|${sc.length}|${scSum.toFixed(3)}`;
   if (_segKey === key && _segList) return _segList;
   const ivs = effIntervals(), out = [];
   if (state.splitMode === 'scene' && sc.length) {

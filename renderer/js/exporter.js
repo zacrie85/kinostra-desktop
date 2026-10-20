@@ -588,6 +588,14 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
             if (state.abort) return fail(new Error('Dibatalkan'));
             if (state.exportFatal) return fail(state.exportFatal);   /* v2.10 */
             const m = meta.mediaTime;
+            /* v3.1 ANTI-GLITCH: laporan mediaTime yang TIDAK WAJAR (melompat
+               jauh melebihi posisi putar elemen — decoder/kfile sesekali
+               melaporkan durasi file sebagai mediaTime) TIDAK boleh dianggap
+               akhir part & tidak di-encode. Dulu ini bikin ekspor "selesai"
+               berisi cuma 3-4 frame (video+audio terpotong serentak). */
+            if (hadFirst && !v.ended && !v.seeking && m - lastM > 1.0 && Math.abs(m - v.currentTime) > 0.75) {
+              return pump();   /* buang laporan palsu, minta frame berikutnya */
+            }
             if (v.ended || m >= seg.end - 0.004) return fin();
             if (m >= seg.start - 0.06 && m > lastM) {
               /* v2.11: DETEKSI FRAME HILANG — lompatan mediaTime > 1.8× durasi
@@ -729,6 +737,23 @@ async function exportPartsToDir(dir, ui) {
   /* v2.6: pastikan decode audio asli (yang kini berjalan di belakang saat
      loading) sudah selesai sebelum menentukan ada tidaknya track audio */
   if (state.audioReady) { try { await state.audioReady; } catch (e) { } }
+  /* v3.1: ZOOM PEMBICARA — analisis otomatis bila setelan aktif & video
+     belum dianalisis (berlaku untuk ekspor tunggal, split & BATCH EKSPOR:
+     semua video di kotak otomatis dianalisis satu per satu saat diproses).
+     Gagal internal (tanpa internet pertama kali dsb.) → lanjut TANPA zoom. */
+  if (state.spk && state.spk.on && !state.isAudio && !state.spk.ready && !state.spk.scanning) {
+    if (state.spk.auto) {
+      try {
+        if (ui.sub) ui.sub('Zoom pembicara · menganalisis siapa yang bicara…');
+        await analyzeSpeakers({
+          prog: p => { if (ui.prog) ui.prog(p * 0.85); },
+          stat: s => { if (ui.sub) ui.sub('Zoom pembicara · ' + s); }
+        });
+      } catch (e) {
+        console.warn('analisis pembicara gagal — lanjut tanpa zoom:', e && e.message);
+      }
+    } else if (ui.sub) ui.sub('Zoom pembicara aktif tapi video belum dianalisis — hasil TANPA zoom');
+  }
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
   /* v2.12: kecepatan video global — durasi output = sumber ÷ spd */
   const spd = clamp(state.speed || 1, 0.25, 4);
@@ -984,7 +1009,9 @@ function updateExportInfo() {
   /* v3.0: KOMPRES PINTAR + AUDIO SEHAT tampil di ringkasan */
   const tgtLine = state.targetMB > 0 ? ` · <b>TARGET ${state.targetMB} MB/PART</b>` : '';
   const afixLine = state.audioFix.on ? ` · AUDIO SEHAT${state.audioFix.hiss ? '+REDAM DESIS' : ''}` : '';
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}
+  /* v3.1: ZOOM PEMBICARA tampil di ringkasan */
+  const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }
@@ -1049,6 +1076,17 @@ async function exportMergeToDir(paths, dir, ui) {
       if (!state.duration) throw new Error(`durasi ${nmv} tidak terbaca — format tak didukung`);
       if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${nmv} · ${fmtT(state.duration)} · memeriksa subtitel…`);
       await ensureAutoSubs({ sub: s => { if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${s}`); }, prog: () => { } });
+      /* v3.1: ZOOM PEMBICARA per film — tiap video di kotak dianalisis
+         sendiri (pembicara tiap film berbeda) bila setelan aktif */
+      if (state.spk && state.spk.on && !state.isAudio && !state.spk.ready && state.spk.auto && !state.spk.scanning) {
+        try {
+          if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${nmv} · menganalisis pembicara…`);
+          await analyzeSpeakers({
+            prog: p => { if (ui.prog) ui.prog(clamp(((i + p) / paths.length) * 0.5, 0, 1)); },
+            stat: s => { if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${s}`); }
+          });
+        } catch (e) { console.warn('analisis pembicara gagal utk', nmv, e && e.message); }
+      }
       if (state.music.buffer) await composeMusic(false, true, true);
       const srcUrl = state.file.virtual ? state.file.kurl : URL.createObjectURL(state.file);
       try {

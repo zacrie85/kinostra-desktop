@@ -143,19 +143,29 @@ function drawComposition(x, W, H, t) {
     drawWaveBg(x, W, H, t, u);
   } else if (compSrc().videoWidth) {
     const vid = compSrc();
-    const fit = videoFrameRect(vid.videoWidth, vid.videoHeight, W, H, t);
+    /* v3.1: ZOOM PEMBICARA — crop kamera otomatis mengisi PENUH kanvas.
+       spkCropAt = fungsi murni dari t (deterministik) → preview, ekspor
+       tunggal, split & batch menghasilkan kamera yang persis sama. */
+    const spk = (typeof spkCropAt === 'function')
+      ? spkCropAt(vid.videoWidth, vid.videoHeight, W, H, t) : null;
+    const fit = spk
+      ? { x: 0, y: 0, w: W, h: H, covers: true }
+      : videoFrameRect(vid.videoWidth, vid.videoHeight, W, H, t);
     /* v2.12: frame bergaya punya LATAR SENDIRI bertema (mis. merah bioskop,
-       biru panel) — menggantikan blur saat frame aktif, persis referensi. */
-    const useBlur = state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers && !(FST && FST.bg);
-    if (FST && FST.bg) {
-      drawFrameBg(x, W, H, t, u);
-    } else if (useBlur) {
-      const live = vid === videoEl ? t : null;
-      const bg = getLayer(bgLayerKey(vid, W, H, live), () => buildBlurBg(vid, W, H));
-      x.drawImage(bg, 0, 0);
-    } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
-    /* v2.12: lapisan SEBELUM video (mis. panel putih gaya Exploraship) */
-    if (FST && FST.under) drawFrameUnder(x, W, H, t, u, fit);
+       biru panel) — menggantikan blur saat frame aktif, persis referensi.
+       v3.1: zoom pembicara aktif → video full-bleed, tanpa latar. */
+    const useBlur = !spk && state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers && !(FST && FST.bg);
+    if (!spk) {
+      if (FST && FST.bg) {
+        drawFrameBg(x, W, H, t, u);
+      } else if (useBlur) {
+        const live = vid === videoEl ? t : null;
+        const bg = getLayer(bgLayerKey(vid, W, H, live), () => buildBlurBg(vid, W, H));
+        x.drawImage(bg, 0, 0);
+      } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
+      /* v2.12: lapisan SEBELUM video (mis. panel putih gaya Exploraship) */
+      if (FST && FST.under) drawFrameUnder(x, W, H, t, u, fit);
+    }
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video
        v3.0: + FILTER WARNA sinematik (katalog COLORFILTERS) — css digabung
        dgn setelan manual VFX; lapisan tint tipis hanya di area video */
@@ -168,7 +178,10 @@ function drawComposition(x, W, H, t) {
     if (V.saturate !== 1) fl.push(`saturate(${V.saturate})`);
     if (CF && CF.css) fl.push(CF.css);
     x.filter = fl.length ? fl.join(' ') : 'none';
-    x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
+    /* v3.1: crop kamera pembicara (9-argumen: potong sumber → penuh kanvas)
+       atau jalur lama (muat/zoom manual) */
+    if (spk) x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
+    else x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
     x.filter = 'none';
     if (CF && CF.tint) {
       x.globalCompositeOperation = CF.op || 'overlay';

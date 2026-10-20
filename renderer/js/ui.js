@@ -476,6 +476,37 @@ $('#btnTtsClear').onclick = () => ttsClear();
 $('#ttsGain').oninput = e => { state.tts.gain = parseFloat(e.target.value) || 0.9; $('#ttsGainV').textContent = Math.round(state.tts.gain * 100) + '%'; };
 syncTtsUI();
 
+/* ---------- v3.1: ZOOM PEMBICARA OTOMATIS ---------- */
+$('#spkOn').onchange = e => {
+  state.spk.on = e.target.checked;
+  syncSpkUI(); updateAll();
+  toast(state.spk.on
+    ? 'ZOOM PEMBICARA: AKTIF — kamera mengikuti orang yang bicara (pilih rasio 9:16 untuk hasil vertikal)'
+    : 'Zoom pembicara: mati — kembali ke komposisi normal', state.spk.on ? 'ok' : 'info');
+};
+$('#spkAuto').onchange = e => {
+  state.spk.auto = e.target.checked;
+  toast(state.spk.auto
+    ? 'Analisis otomatis: AKTIF — semua video yang diekspor/batch dianalisis sendiri'
+    : 'Analisis otomatis: mati — jalankan ANALISIS PEMBICARA manual', 'ok');
+};
+bindSeg('segSpkSpeed', v => {
+  state.spk.speed = v;
+  toast(v === 'cepat' ? 'Pindah fokus CEPAT (±1 dtk)' : v === 'lambat' ? 'Pindah fokus LAMBAT (±3 dtk — tenang)' : 'Pindah fokus NORMAL (±2 dtk)', 'ok');
+});
+bindSeg('segSpkSilence', v => {
+  state.spk.silence = v;
+  toast(v === 'wide' ? 'Saat senyap: TAMPILKAN SEMUA orang' : 'Saat senyap: kamera TETAP DI PEMBICARA terakhir', 'ok');
+});
+$('#btnSpkAnalyze').onclick = () => spkAnalyzeUI();
+$('#btnSpkReset').onclick = () => {
+  state.spk.ready = false; state.spk.timeline = []; state.spk.tracks = [];
+  state.spk.nSpeak = 0; state.spk.epoch = -1;
+  renderSpkList(); syncSpkUI();
+  toast('Hasil analisis video ini dibuang', 'ok');
+};
+syncSpkUI();
+
 /* ---------- v2.12: KECEPATAN VIDEO (semua part) ---------- */
 function applyPreviewSpeed() {
   try { videoEl.playbackRate = clamp(state.speed || 1, 0.25, 4); } catch (e) { }

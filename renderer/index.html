@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.0.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.1.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.0.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.1.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -191,6 +191,25 @@
           <span class="substat" id="cutStat">0 potongan · 0 dtk dibuang</span>
         </div>
         <div class="note">Saat pratinjau, video <b>melompat otomatis</b> melewati bagian yang dipotong. Zona potongan tampil <b>merah</b> di TIMELINE SPLIT. Potongan berlaku untuk ekspor tunggal &amp; batch ekspor.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m2c">
+      <button class="mod-h"><span class="no">02C</span><span class="t">ZOOM PEMBICARA OTOMATIS · AI <span class="beta">BARU · v3.1</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <label class="chk"><input type="checkbox" id="spkOn"><span>ZOOM OTOMATIS KE ORANG YANG SEDANG BICARA <span class="beta">BARU · v3.1</span></span></label>
+        <div class="row">
+          <button class="btn" id="btnSpkAnalyze"><i data-lucide="user-search"></i> ANALISIS PEMBICARA</button>
+          <button class="btn sm" id="btnSpkReset" style="flex:0 0 auto" title="Buang hasil analisis video ini"><i data-lucide="rotate-ccw"></i></button>
+        </div>
+        <div class="cutlist" id="spkList" style="max-height:180px"><div class="empty">BELUM DIANALISIS — JALANKAN ANALISIS PEMBICARA</div></div>
+        <div class="substat" id="spkStat">Fitur mati — aktifkan ceklis di atas lalu jalankan analisis</div>
+        <div class="lbl">KECEPATAN PINDAH FOKUS</div>
+        <div class="seg wrap" id="segSpkSpeed"><button data-v="cepat">CEPAT</button><button data-v="normal" class="on">NORMAL</button><button data-v="lambat">LAMBAT</button></div>
+        <div class="lbl">SAAT SEMUA SENYAP</div>
+        <div class="seg wrap" id="segSpkSilence"><button data-v="hold" class="on">TETAP DI PEMBICARA</button><button data-v="wide">TAMPILKAN SEMUA</button></div>
+        <label class="chk"><input type="checkbox" id="spkAuto" checked><span>ANALISIS OTOMATIS SAAT EKSPOR — BILA VIDEO BELUM DIANALISIS</span></label>
+        <div class="note">Untuk <b>podcast/dialog 2 orang atau lebih</b>: kamera otomatis meng-zoom pembicara dan <b>pindah halus saat gantian</b>. Pilih rasio <b>9:16</b> (modul 01 / preset TIKTOK·REELS) untuk hasil <b>vertikal</b> yang langsung memfit orang yang bicara — seperti aplikasi AI potong podcast. Setelan ini <b>berlaku untuk semua video</b> yang diimpor, termasuk <b>Batch Ekspor</b> &amp; <b>Gabung Video</b> (analisis otomatis per video). Model AI deteksi orang (±10 MB) diunduh <b>sekali saja</b> lalu 100% offline. Cara kerja: <b>kapan ada suara</b> + <b>gerakan mulut tiap orang</b> dianalisis bersama — persis cara editor menentukan siapa yang bicara. Zoom manual &amp; Ken Burns diabaikan selagi fitur aktif.</div>
       </div></div></div>
     </div>
 
@@ -494,6 +513,7 @@
 <script src="js/compose.js"></script>
 <script src="js/frames.js"></script>
 <script src="js/scenes.js"></script>
+<script src="js/speaker.js"></script>
 <script src="js/sampul.js"></script>
 <script src="js/tracker.js"></script>
 <script src="js/music.js"></script>

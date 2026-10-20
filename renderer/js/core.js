@@ -156,6 +156,21 @@ const state = {
   autoShutdown: false,
   /* v3.0: GABUNG VIDEO — internum (matikan label PART saat merge) */
   _noPart: false,
+  /* v3.1: ZOOM PEMBICARA — kamera otomatis mengikuti orang yang bicara.
+     on/speed/silence/auto = SETELAN GLOBAL (berlaku semua video);
+     ready/timeline/tracks/epoch = hasil analisis PER VIDEO. */
+  spk: {
+    on: false,             /* fitur aktif */
+    ready: false,          /* analisis selesai utk video aktif */
+    scanning: false,       /* analisis sedang berjalan */
+    speed: 'normal',       /* cepat | normal | lambat — delay pindah fokus */
+    silence: 'hold',       /* hold = tetap di pembicara terakhir | wide = tampilkan semua */
+    auto: true,            /* analisis otomatis saat ekspor bila belum dianalisis */
+    nSpeak: 0,             /* jumlah pembicara terdeteksi */
+    timeline: [],          /* [{t0,t1,idx}] idx = indeks pembicara, -1 = tampil semua */
+    tracks: [],            /* [{id,label,samples:[{t,x,y,w,h,m}]}] kotak ternormalisasi */
+    epoch: -1              /* mediaEpoch saat analisis */
+  },
   /* UPGRADE: batch */
   batch: [],
   busy: false, abort: false, scanAbort: false,

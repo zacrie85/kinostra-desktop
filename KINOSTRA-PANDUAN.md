@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.0.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.1.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-2.16.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.1.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-2.16.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.1.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -32,6 +32,32 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.1 — ZOOM PEMBICARA OTOMATIS (modul 02C)
+
+Fitur sekelas aplikasi AI potong-podcast (Opus Clip dkk.), **100% offline**:
+
+### ZOOM OTOMATIS KE ORANG YANG SEDANG BICARA
+Podcast/dialog 2 orang berhadapan? Kamera otomatis **meng-zoom orang yang bicara** dan **pindah halus saat gantian** — seperti ada operator kamera virtual di PC-mu.
+
+**Cara kerja (tiga sinyal digabung):**
+1. **AI deteksi orang** — model YOLOS-tiny ONNX (±10 MB, diunduh **sekali saja** lalu offline permanen) menandai posisi setiap orang di frame tiap ±1 detik. Bila AI sulit mengenali (kartun/rekaman layar), otomatis jatuh ke mode analisis **2 bagian kiri/kanan**.
+2. **Gerakan mulut/wajah** — pita kepala tiap orang dibandingkan antar sampel: yang bicara = wajahnya bergerak lebih dari baseline pribadinya.
+3. **Kapan ada suara** — envelope RMS audio per detik: saat semua senyap tidak ada perpindahan fokus.
+
+**Cara pakai:**
+1. Buka modul **02C ZOOM PEMBICARA OTOMATIS** → centang **ZOOM OTOMATIS KE ORANG YANG SEDANG BICARA**
+2. Pilih rasio **9:16** (modul 01 atau preset TIKTOK/REELS) untuk hasil **vertikal**
+3. Klik **ANALISIS PEMBICARA** (atau biarkan **analisis otomatis saat ekspor**)
+4. Ekspor & split seperti biasa — tiap part sudah mengikuti pembicaranya
+
+**Pengaturan:**
+- **Kecepatan pindah fokus** — CEPAT (±1 dtk) / NORMAL (±2 dtk) / LAMBAT (±3 dtk)
+- **Saat semua senyap** — TETAP DI PEMBICARA terakhir / TAMPILKAN SEMUA orang (wide)
+- **Analisis otomatis saat ekspor** — aktifnya default: ekspor tunggal, **Batch Ekspor** & **Gabung Video** otomatis menganalisis tiap video (pembicara tiap film berbeda)
+- Daftar segmen kamera tampil berwarna per pembicara di modul 02C
+
+Catatan: selagi fitur aktif, **Zoom Fokus manual & Ken Burns diabaikan** (kamera sudah digerakkan AI). Semua proses di PC — tanpa internet, tanpa upload.
 
 ## Yang Baru di v3.0 (MEGA UPGRADE)
 
