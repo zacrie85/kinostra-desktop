@@ -30,3 +30,30 @@ Stage Summary:
 - File baru: renderer/js/scenes.js, renderer/js/sampul.js, renderer/js/tts.js, scripts/kinostra-v30-test.mjs
 - API baru: window.kinostra.statJoin / shutdownPC / abortShutdown
 - Keputusan: total gaya frame 28 (bukan 26 — v2.16 sebenarnya 22); model TTS = payam1394/traxlate-mms-tts-ind (Xenova/mms-tts-ind kosong, facebook hanya pytorch); merge memakai 1 muxer StreamTarget kontinu (part gabung tak menulis file sendiri); audio sehat menormalkan seluruh mix (asli+musik+narasi)
+
+---
+Task ID: 5
+Agent: main (Super Z)
+Task: KINOSTRA v3.1.0 — ZOOM PEMBICARA OTOMATIS (AI): kamera otomatis meng-zoom orang yang sedang bicara (podcast/dialog), output bisa vertikal 9:16, berlaku global semua video; uji otomatis, build & rilis GitHub
+
+Work Log:
+- User minta fitur ala aplikasi AI potong-podcast (Opus Clip): podcast 2 orang berhadapan → zoom otomatis ke yang bicara, bisa vertikal, setting global semua video, ikut saat eksport & split
+- Model dipilih: Xenova/yolos-tiny (object-detection, onnx/model_quantized.onnx, ±10 MB) — diverifikasi via HF API; unduh sekali via models:ensure lalu offline permanen (kmodels://), pola sama dgn TTS
+- speaker.js BARU: ensureSpeakerModel (pipeline object-detection dtype q8), spkAudioEnvelope (RMS per 1 dtk ternormalisasi, ambang adaptif p10), pindai offline seek 1 dtk/sampel (kanvas 448px, deteksi threshold 0.32 + merge kotak tumpang-tindih utk false-positive "kepala saja"), gerakan pita kepala per kotak (mean abs diff gray 0..0.35), cluster jejak TAHAN JEDA (TTL 3 langkah) + gabung jejak pecahan (avg posisi), keputusan = EWMA(0.55) × lonjakan-gerakan × prioritas-ukuran-kotak + histeresis (cepat/normal/lambat = 1/2/3 langkah), kebijakan senyap hold/wide, gabung segmen <1.4 dtk, label PEMBICARA urut kiri→kanan
+- spkCropAt: fungsi MURNI dari t (deterministik, aman render paralel) — aspek terkunci rasio output, zoom clamp [1..3.2×], clamp dalam bingkai, transisi smoothstep 0.7 dtk antar segmen; spkFitBox menerima kotak TERNORMALISASI lalu konversi piksel (BUG v1: dihitung sebagai piksel → crop 63×112 di pojok)
+- compose.js: cabang crop 9-argumen full-bleed di drawComposition (filter warna/tint/vignette/grain/decor tetap jalan); spk aktif → latar/blur di-skip
+- state.spk di core.js: on/speed/silence/auto = SETELAN GLOBAL (semua video); ready/timeline/tracks/epoch = per video (direset di loadFileBlob)
+- exporter.js: hook analisis otomatis di exportPartsToDir (juga menutupi BATCH EKSPOR) + per film di exportMergeToDir; gagal analisis → lanjut tanpa zoom; ringkasan ekspor menampilkan ZOOM PEMBICARA
+- index.html: modul 02C (cheklis, ANALISIS PEMBICARA, daftar segmen berwarna, kecepatan pindah, saat senyap, analisis otomatis) + script speaker.js + boot/header v3.1.0; ui.js binding + spkAnalyzeUI (modal+progres)
+- UJI (scripts/kinostra-v31-test.mjs, media generator kinostra-v31-mkmedia.mjs): podcast sintetis 640×360@30fps 30 dtk — 2 sosok (kiri MERAH/kanan BIRU), audio mono bersuku bergantian (0-5 senyap, 5-11 kiri, 15-21 kanan, 21-26 kiri, 26-30 kanan) → 30/30 LULUS: analisis 2 pembicara, timeline ikut gantian (t=8 kiri, 18 kanan, 23.5 kiri, 28.6 kanan), hold saat senyap, crop 9:16/16:9 aspek-persis, ekspor nyata 1080×1920 H.264+AAC 30 dtk, PIKSEL HASIL: t=8 merah dominan (kamera di kiri), t=18 biru dominan; wide mode saat senyap; setting global antar video
+- REGRESI v3.0: 39/39 LULUS (28 frame, filter warna, audio sehat, TTS, resume, ekspor nyata, gabung, deteksi adegan, sampul, laporan)
+- BUG DITEMUKAN & DIPERBAIKI saat uji: (1) keputusan histeresis menyimpan indeks array bukan ID jejak → pemetaan urutan meleset saat id≠indeks; (2) spkFitBox menghitung kotak ternormalisasi sebagai piksel → crop nyangkut pojok gelap; (3) deteksi AI flak-y → jejak pecahan habis tersaring, false-positive pojok menang → tracking TTL 3 langkah + merge jejak + prioritas kotak besar + threshold 0.32 + kanvas 448px; (4) KUNCI CACHE segBoundsList TIDAK MEMUAT DURASI (bug laten v3.0!) — metadata flak-y 0.1 dtk (balasan kfile/decoder terpotong) ter-cache → ekspor "berhasil" 4 frame/13KB → durasi masuk kunci + muat-ulang metadata durasi tak masuk akal + invalidasi epoch; (5) guard mediaTime palsu di worker (laporan ≥durasi saat currentTime masih 0.1) — anti ekspor terpotong
+- Versi 3.1.0: package.json (+deskripsi), installer.nsi (APPVERSION/OutFile/VIProductVersion/VIAddVersionKey), afterpack.js (3.1.0.0), README.md (badge + fitur 45), KINOSTRA-PANDUAN.md ("Yang Baru di v3.1" + Setup/Portable 3.1.0), index.html
+- Build: dist:full → Portable 132.1MB (zip) + win-unpacked (3.1.0.0 UTF-16 ✓ posisi 187MB); makensis manual → Setup 95.7MB (3.1.0.0 UTF-16 ✓)
+- Push source GitHub main (e020cb4, push via token-URL karena remote tanpa kredensial) + Release v3.1.0 (id 418141072) + 3 aset: Setup 91.3MB, Portable 126.0MB, PANDUAN.md
+
+Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.1.0
+- File baru: renderer/js/speaker.js, scripts/kinostra-v31-test.mjs, scripts/kinostra-v31-mkmedia.mjs, scripts/kinostra-v31-debug.mjs, testmedia/podcast.mp4
+- Keputusan: model = Xenova/yolos-tiny q8 (pipeline object-detection); zoom = crop kamera penuh-kanvas (bukan letterbox) dengan aspek mengikuti rasio output; keputusan pembicara menyimpan ID jejak (bukan indeks); saat senyap default TETAP DI PEMBICARA; prioritas kotak besar 0.6+0.4×(area/0.10) untuk menekan false-positive; zoom manual & Ken Burns diabaikan selagi spk aktif
+- Perbaikan kualitas lintas-versi: kunci cache segmentasi kini memuat durasi; metadata durasi tak masuk akal → muat ulang otomatis; mediaTime palsu diabaikan worker
