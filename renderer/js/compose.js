@@ -179,8 +179,16 @@ function drawComposition(x, W, H, t) {
     if (CF && CF.css) fl.push(CF.css);
     x.filter = fl.length ? fl.join(' ') : 'none';
     /* v3.1: crop kamera pembicara (9-argumen: potong sumber → penuh kanvas)
-       atau jalur lama (muat/zoom manual) */
-    if (spk) x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
+       atau jalur lama (muat/zoom manual)
+       v3.5: mode FADE — bingkai lama digambar penuh, bingkai baru di atasnya
+       dengan alpha naik 0→1 (melebur, tanpa gerakan kamera terlihat) */
+    if (spk && spk.fadeFrom && spk.fadeK < 1) {
+      x.drawImage(vid, spk.fadeFrom.sx, spk.fadeFrom.sy, spk.fadeFrom.sw, spk.fadeFrom.sh, 0, 0, W, H);
+      x.globalAlpha = Math.max(0, Math.min(1, spk.fadeK));
+      x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
+      x.globalAlpha = 1;
+    }
+    else if (spk) x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
     else x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
     x.filter = 'none';
     if (CF && CF.tint) {

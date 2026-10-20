@@ -185,6 +185,7 @@ const state = {
     ready: false,          /* analisis selesai utk video aktif */
     scanning: false,       /* analisis sedang berjalan */
     speed: 'normal',       /* cepat | normal | lambat — delay pindah fokus */
+    trans: 'geser',        /* v3.5: cara perpindahan fokus — geser | fade | langsung */
     silence: 'hold',       /* hold = tetap di pembicara terakhir | wide = tampilkan semua */
     auto: true,            /* analisis otomatis saat ekspor bila belum dianalisis */
     nSpeak: 0,             /* jumlah pembicara terdeteksi */

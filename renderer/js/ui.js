@@ -536,6 +536,13 @@ bindSeg('segSpkSpeed', v => {
   state.spk.speed = v;
   toast(v === 'cepat' ? 'Pindah fokus CEPAT (±1 dtk)' : v === 'lambat' ? 'Pindah fokus LAMBAT (±3 dtk — tenang)' : 'Pindah fokus NORMAL (±2 dtk)', 'ok');
 });
+/* v3.5: cara perpindahan fokus — geser | fade | langsung */
+bindSeg('segSpkTrans', v => {
+  state.spk.trans = v;
+  toast(v === 'fade' ? 'PERPINDAHAN FADE — bingkai lama melebur ke pembicara baru, tanpa gerakan kamera'
+    : v === 'langsung' ? 'PERPINDAHAN LANGSUNG — potong instan ke pembicara baru, gaya potongan TV'
+      : 'PERPINDAHAN GESER HALUS — kamera bergerak lembut ke pembicara (perilaku lama)', 'ok');
+});
 bindSeg('segSpkSilence', v => {
   state.spk.silence = v;
   toast(v === 'wide' ? 'Saat senyap: TAMPILKAN SEMUA orang' : 'Saat senyap: kamera TETAP DI PEMBICARA terakhir', 'ok');

@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.4.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.5.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.4.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.5.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.4.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.5.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -32,6 +32,19 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.5 — CARA PERPINDAHAN FOKUS: GESER / FADE / LANGSUNG (modul 02C)
+
+Sekarang kamu bisa memilih **bagaimana kamera pindah ke pembicara berikutnya** di ZOOM PEMBICARA OTOMATIS:
+
+- **Cara pakai**: modul **02C ZOOM PEMBICARA OTOMATIS** → **CARA PERPINDAHAN FOKUS** → pilih salah satu:
+  - **GESER HALUS** — perilaku lama: kamera bergerak lembut menyapu ke pembicara baru (±0,7 detik)
+  - **FADE · LEBUR** — bingkai lama **melebur** ke bingkai baru (crossfade ±0,55 detik) — **tanpa gerakan kamera terlihat sama sekali**, seperti transisi dissolve di editor
+  - **LANGSUNG · CUT** — **potong instan** persis saat gantian pembicara — gaya potongan kamera TV, tanpa pergeseran apa pun
+- Kecepatan pindah fokus (CEPAT/NORMAL/LAMBAT) tetap berlaku di semua mode — mengatur **seberapa cepat gantian diputuskan**
+- Berlaku **untuk semua video** dan semua jalur: **EKSPORT & SPLIT MP4**, **BATCH EKSPOR** & **GABUNG VIDEO** — setelan global, tersimpan untuk video berikutnya
+- Transisi tetap **deterministik per frame** (fungsi murni dari waktu) — hasil ekspor paralel/split/batch identik dengan pratinjau
+- Diuji otomatis **27/27 lulus** — termasuk ekspor nyata: mode FADE terbukti menghasilkan campuran dua bingkai (dissolve) di file MP4 final, mode LANGSUNG terbukti langsung pindah tanpa lebur
 
 ## Yang Baru di v3.4 — RESOLUSI OUTPUT 720p / 1080p / 2K / 4K (modul 09)
 

@@ -30,7 +30,8 @@ const SPK_FILES = {
   optional: ['quantize_config.json']
 };
 const SPK_STEP = 1.0;      /* jarak sampel deteksi (detik) */
-const SPK_EASE = 0.7;      /* durasi transisi kamera (detik) */
+const SPK_EASE = 0.7;      /* durasi transisi GESER (detik) */
+const SPK_FADE = 0.55;     /* v3.5: durasi crossfade FADE (detik) */
 const SPK_ZMAX = 3.2;      /* zoom maksimum terhadap video sumber */
 const SPK_PADW = 3.4;      /* lebar crop = lebar kotak orang × ini */
 const SPK_PADH = 2.3;      /* tinggi crop = tinggi kotak orang × ini */
@@ -436,28 +437,10 @@ function spkSpeakerAt(t) {
   for (const sg of tl) if (t >= sg.t0 && t < sg.t1) return sg.idx;
   return tl[tl.length - 1].idx;
 }
-/* RECT CROP utk drawComposition — fungsi murni dari t (aman paralel) */
-function spkCropAt(vw, vh, W, H, t) {
-  if (!spkActive()) return null;
-  if (!vw || !vh) return null;
-  const S = state.spk, tl = S.timeline;
-  let i = 0;
-  while (i < tl.length - 1 && t >= tl[i + 1].t0) i++;
-  const seg = tl[i];
-  const aspect = W / H;
-  const tgt = spkTarget(seg, t, vw, vh, aspect);
-  let cx = tgt.cx, cy = tgt.cy, cw = tgt.cw, ch = tgt.ch;
-  if (i > 0) {
-    /* transisi halus dari segmen sebelumnya (smoothstep) */
-    const e = clamp((t - seg.t0) / SPK_EASE, 0, 1);
-    if (e < 1) {
-      const pv = spkTarget(tl[i - 1], seg.t0, vw, vh, aspect);
-      const k = e * e * (3 - 2 * e);
-      cx = pv.cx + (cx - pv.cx) * k; cy = pv.cy + (cy - pv.cy) * k;
-      cw = pv.cw + (cw - pv.cw) * k; ch = pv.ch + (ch - pv.ch) * k;
-    }
-  }
-  /* jaminan ukuran: dalam bingkai, aspek persis, zoom terkendali */
+/* finalisasi param crop → rect piksel (jaminan: dalam bingkai, aspek
+   persis, zoom terkendali) — dipakai semua mode transisi v3.5 */
+function spkFinishRect(p, vw, vh, aspect) {
+  let cx = p.cx, cy = p.cy, cw = p.cw, ch = p.ch;
   const chMax = spkChMax(vw, vh, aspect);
   ch = clamp(ch, chMax / SPK_ZMAX, chMax);
   cw = ch * aspect;
@@ -468,6 +451,47 @@ function spkCropAt(vw, vh, W, H, t) {
     sx: Math.round(cx - cw / 2), sy: Math.round(cy - ch / 2),
     sw: Math.round(cw), sh: Math.round(ch)
   };
+}
+/* RECT CROP utk drawComposition — fungsi murni dari t (aman paralel)
+   v3.5: CARA PERPINDAHAN FOKUS (state.spk.trans, setelan global):
+   - 'geser'    (default) — kamera bergerak smoothstep SPK_EASE (lama)
+   - 'langsung' — potong instan di batas segmen (tanpa gerakan kamera)
+   - 'fade'     — crossfade dua bingkai statis SPK_FADE; hasil membawa
+                  fadeFrom (rect lama) + fadeK 0..1 → compose.js meleburkan
+   Semua tetap fungsi murni dari t → ekspor/split/batch deterministik. */
+function spkCropAt(vw, vh, W, H, t) {
+  if (!spkActive()) return null;
+  if (!vw || !vh) return null;
+  const S = state.spk, tl = S.timeline;
+  let i = 0;
+  while (i < tl.length - 1 && t >= tl[i + 1].t0) i++;
+  const seg = tl[i];
+  const aspect = W / H;
+  const tgt = spkTarget(seg, t, vw, vh, aspect);
+  const trans = S.trans || 'geser';
+  if (i > 0 && trans === 'fade') {
+    const e = clamp((t - seg.t0) / SPK_FADE, 0, 1);
+    if (e < 1) {
+      const pv = spkTarget(tl[i - 1], seg.t0, vw, vh, aspect);
+      const k = e * e * (3 - 2 * e);
+      return Object.assign(spkFinishRect(tgt, vw, vh, aspect), {
+        fadeFrom: spkFinishRect(pv, vw, vh, aspect), fadeK: k
+      });
+    }
+    return spkFinishRect(tgt, vw, vh, aspect);
+  }
+  let cx = tgt.cx, cy = tgt.cy, cw = tgt.cw, ch = tgt.ch;
+  if (i > 0 && trans !== 'langsung') {
+    /* transisi halus dari segmen sebelumnya (smoothstep) — mode GESER */
+    const e = clamp((t - seg.t0) / SPK_EASE, 0, 1);
+    if (e < 1) {
+      const pv = spkTarget(tl[i - 1], seg.t0, vw, vh, aspect);
+      const k = e * e * (3 - 2 * e);
+      cx = pv.cx + (cx - pv.cx) * k; cy = pv.cy + (cy - pv.cy) * k;
+      cw = pv.cw + (cw - pv.cw) * k; ch = pv.ch + (ch - pv.ch) * k;
+    }
+  }
+  return spkFinishRect({ cx, cy, cw, ch }, vw, vh, aspect);
 }
 
 /* ---------- 5. UI MODUL 02C ---------- */
