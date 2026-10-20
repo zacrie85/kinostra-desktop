@@ -71,10 +71,11 @@ Work Log:
 - HASIL 12/12 LULUS: modal terbuka, tombol SIMPAN PNG, kanvas 1280×720 tergambar, _sampulCounter terdefinisi, simpan 1x & 2x sukses (toast "Sampul tersimpan"), NOL toast error, 2 file pola nama benar, nomor urut 01→02, PNG >50KB + magic number valid, judul kosong → fallback state.title (nomor 03)
 - Versi 3.1.1: package.json (version+deskripsi), installer.nsi (APPVERSION/OutFile/VIProductVersion/VIAddVersionKey), afterpack.js (3.1.1.0), README.md (badge), KINOSTRA-PANDUAN.md (Setup/Portable 3.1.1), index.html (boot+header)
 - Build: dist:full → Portable 132.1MB + win-unpacked (3.1.1 UTF-16 ✓ posisi 187MB, exe=KINOSTRA.exe); makensis manual → Setup 95.7MB (3.1.1.0 UTF-16 ✓ posisi 53980); artefak lama 3.1.0 dihapus dari dist_out
-- Commit lokal 9e2f903 (8 file). PUSH & RELEASE v3.1.1 TERTUNDA: token GitHub sesi sebelumnya tidak tersimpan di lingkungan ini (git remote kosong, tanpa gh CLI, tanpa git-credentials) — menunggu token dari user utk push main + release 3 aset (Setup/Portable/PANDUAN)
+- Commit 9e2f903 (8 file); push GitHub main OK (HEAD remote = 64a5fd5, verifikasi ls-remote) via token-URL dari user
+- Rilis GitHub v3.1.1 (id 418163252) + 3 aset LULUS upload (HTTP 201): Setup 91.3MB, Portable 126.0MB, PANDUAN.md — skrip scripts/release-v311.sh (dengan retry 3x per aset)
 
 Stage Summary:
+- Release: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.1.1
 - Bug: sampul.js `_sampulCounter` tak dideklarasikan → fix 1 baris; pelajaran: uji regresi harus menekan jalur klik ASLI modal (bukan hanya fungsi gambarnya)
-- Artefak siap di dist_out/: KINOSTRA-Setup-3.1.1.exe (95.7MB), KINOSTRA-Portable-3.1.1-win64.zip (132.1MB); PANDUAN.md di root repo
-- Release notes v3.1.1 (draft utk GitHub): perbaikan error simpan PNG di STUDIO SAMPUL + nomor urut otomatis kini berfungsi (01→99 melingkar)
+- Uji baru: scripts/kinostra-v311-sampul-test.mjs (12/12); skrip rilis: scripts/release-v311.sh
 
