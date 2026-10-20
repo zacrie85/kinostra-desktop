@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.16.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.0.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.16.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.0.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -124,6 +124,16 @@
           <input type="number" class="in mono" id="inSplit" min="3" max="600" value="45">
           <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">DETIK</span>
         </div>
+        <div class="lbl">MODE SPLIT <span class="beta">BARU · v3.0</span></div>
+        <div class="seg wrap" id="segSplitMode">
+          <button data-v="dur" class="on">PER DURASI</button><button data-v="scene">PER ADEGAN</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnSceneDetect"><i data-lucide="scan-search"></i> DETEKSI ADEGAN OTOMATIS</button>
+        </div>
+        <div class="cutlist" id="sceneList"><div class="empty">BELUM ADA TITIK ADEGAN — JALANKAN DETEKSI</div></div>
+        <div class="substat" id="sceneStat">0 adegan terdeteksi · mode: PER DURASI</div>
+        <div class="note"><b>PER ADEGAN</b>: aplikasi memeriksa seluruh video (tanpa internet) dan memecah part tepat di <b>pergantian adegan</b> film — bukan per durasi. Cocok untuk film/klip dengan adegan panjang. Titik adegan bisa dihapus satu per satu. Bila deteksi belum dijalankan, split kembali mengikuti durasi.</div>
         <div class="lbl" style="margin-top:6px">WAKTU MULAI EKSPOR <span class="beta">BARU · v2.9</span></div>
         <div class="row">
           <input class="in mono" id="inRangeStart" placeholder="0:00">
@@ -273,8 +283,24 @@
         <input type="range" id="inMG" min="0" max="1" step="0.05" value="0.6">
         <div class="lbl">MIX AUDIO ASLI <b id="agV">90%</b></div>
         <input type="range" id="inAG" min="0" max="1" step="0.05" value="0.9">
+        <div class="lbl" style="margin-top:8px">AUDIO SEHAT — SATU KLIK <span class="beta">BARU · v3.0</span></div>
+        <label class="chk"><input type="checkbox" id="audioFixOn"><span>NORMALIZER VOLUME — SUARA TERLALU PELAN DIPERKUAT, TERLALU KERAS DIREDAM (SAMARATA ANTAR VIDEO)</span></label>
+        <label class="chk"><input type="checkbox" id="audioFixHiss"><span>REDAM DESIS &amp; DENGUNG RENDAH (FILTER SUARA BERSIH)</span></label>
+        <div class="note">Aktifkan sebelum ekspor — semua video (termasuk batch) diberi kekerasan yang <b>seimbang</b>. Cocok untuk kompilasi dari sumber berbeda.</div>
         <div class="substat" id="musStat">Skor belum tersusun</div>
         <div class="note">Mesin komposisi prosedural lokal: progresi akor, bass, arpeggio, perkusi &amp; reverb — unik per <b>seed</b>, sepanjang durasi videomu.</div>
+        <div class="lbl" style="margin-top:10px">NARASI AI — SUARA OFFLINE <span class="beta">BETA · v3.0</span></div>
+        <textarea class="in" id="ttsText" placeholder="Teks narasi bahasa Indonesia — mis. Halo semuanya, selamat menonton…" style="min-height:64px"></textarea>
+        <div class="row">
+          <button class="btn" id="btnTtsGen"><i data-lucide="audio-lines"></i> SUSUN SUARA</button>
+          <button class="btn sm" id="btnTtsPreview"><i data-lucide="play"></i></button>
+          <button class="btn sm" id="btnTtsPlace" title="Letakkan suara di posisi playhead — ter-mix saat ekspor"><i data-lucide="pin"></i> PASANG DI PLAYHEAD</button>
+          <button class="btn sm" id="btnTtsClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="lbl">VOLUME NARASI <b id="ttsGainV">90%</b></div>
+        <input type="range" id="ttsGain" min="0" max="1.5" step="0.05" value="0.9">
+        <div class="substat" id="ttsStat">Mesin suara belum termuat — model ±37 MB diunduh sekali saat pertama dipakai</div>
+        <div class="note">Suara AI bahasa Indonesia <b>100% offline</b> (mesin VITS MMS, model ±37 MB). Susun suara → dengarkan → <b>PASANG DI PLAYHEAD</b> → suara ter-mix otomatis ke hasil EKSPOR / SPLIT / BATCH pada posisi itu. Cocok untuk pembuka, tagline &amp; penutup film.</div>
       </div></div></div>
     </div>
 
@@ -302,6 +328,9 @@
           <label class="chk"><input type="checkbox" id="vignetteOn"><span>VIGNETTE</span></label>
           <label class="chk"><input type="checkbox" id="grainOn"><span>FILM GRAIN</span></label>
         </div>
+        <div class="lbl">FILTER WARNA — SATU KLIK <span class="beta">BARU · v3.0</span></div>
+        <div class="chips" id="colorFilters"></div>
+        <div class="note">Preset sinematik: <b>HOROR MISTIS</b> (dingin kehijauan) · <b>DANGDUT EMAS</b> (hangat keemasan) · SINEMA TEAL-ORANGE · NOIR · VINTAGE · VIVID · DINGIN BIRU · PUCAT MIMPI · SERAM MERAH. Tampil langsung di preview &amp; terbakar saat ekspor — juga ikut ke SAMPUL AUTO.</div>
         <div class="lbl">WATERMARK</div>
         <div class="seg" id="segWm"><button data-v="off" class="on">MATI</button><button data-v="text">TEKS</button><button data-v="logo">LOGO</button></div>
         <input class="in" id="wmText" placeholder="Teks watermark — mis. @KAMU" value="@KINOSTRA" maxlength="28">
@@ -330,9 +359,14 @@
         </div>
         <label class="chk"><input type="checkbox" id="neonDual" checked><span>DUA GARIS BERLAWANAN ARAH SEKALIGUS</span></label>
         <div class="note">Seperti gambar referensi: <b>garis neon bercahaya</b> mengelilingi pinggir video dalam bingkai membulat dan <b>terus berputar otomatis</b> sepanjang video — videomu tampil di bagian dalamnya. Berlaku untuk rasio <b>9:16 dan 16:9</b>, tampil di preview dan <b>terbakar ke video saat ekspor</b>. Pilih RAINBOW untuk warna pelangi yang ikut berputar.</div>
-        <div class="lbl" style="margin-top:10px">FRAME VIDEO — 20 GAYA <span class="beta">BARU · v2.16</span></div>
+        <div class="lbl" style="margin-top:10px">FRAME VIDEO — 28 GAYA <span class="beta">BARU · v3.0</span></div>
         <div class="chips" id="frameStyles"></div>
-        <div class="note">Pilih gaya frame: <b>BIOSKOP</b> · <b>MERAH PUTIH</b> · <b>KAYU &amp; BUNGA</b> · <b>GELOMBANG WARNA</b> · <b>PUTIH ELEGAN</b> · <b>AWAN BIRU</b> · <b>PANEL BIRU</b> · <b>GRADIEN TIPIS</b> — plus <b>12 FRAME KHUSUS v2.16</b> dengan papan judul tema terpasang di bagian atas frame: <b>HOROR ALAMGAIB</b> (Hutan Mistis, Kuburan, Rumah Berhantu, Darah Kutukan, Jejak Hantu, Lilin Malam — bertema horor misteri &amp; hantu) dan <b>DANGDUT IDOLADESA</b> (Panggung, Gendang, Gliter Emas, Neon Disko, Obor Desa, Kipas Gliter — bertema musik dangdut koplo). Judul videomu otomatis tampil di bawah papan tema, deskripsi di banner bawah, PART di pojok. Semua dianimasikan halus &amp; terbakar ke video saat ekspor.</div>
+        <div class="note">Pilih gaya frame: <b>BIOSKOP</b> · <b>MERAH PUTIH</b> · <b>KAYU &amp; BUNGA</b> · <b>GELOMBANG WARNA</b> · <b>PUTIH ELEGAN</b> · <b>AWAN BIRU</b> · <b>PANEL BIRU</b> · <b>GRADIEN TIPIS</b> — plus <b>12 FRAME KHUSUS v2.16</b> (<b>HOROR ALAMGAIB</b> &amp; <b>DANGDUT IDOLADESA</b>) dan <b>6 FRAME ALAM GAIB v3.0</b> paling menyeramkan: <b>POCONG KEBUN</b> · <b>TUYUL BERINGIN</b> · <b>KUNTILANAK</b> · <b>API SANGGAH</b> · <b>KABUT MAKAM</b> · <b>RITUAL TENGAH MALAM</b> — semua dengan papan judul tema terpasang di bagian atas frame. Judul videomu otomatis tampil di bawah papan, deskripsi di banner bawah, PART di pojok. Semua dianimasikan halus &amp; terbakar ke video saat ekspor.</div>
+        <div class="lbl" style="margin-top:10px">SAMPUL AUTO — THUMBNAIL OTOMATIS <span class="beta">BARU · v3.0</span></div>
+        <div class="row">
+          <button class="btn" id="btnSampul"><i data-lucide="image-plus"></i> BUKA STUDIO SAMPUL</button>
+        </div>
+        <div class="note">Ambil frame terbaik videomu + judul besar bergaya <b>HOROR/DANGDUT/SINEMA/NEON</b> + filter warna → simpan <b>PNG siap upload</b> (1280×720 / 720×1280). Bisa buat banyak sampul sekaligus — nomor urut otomatis.</div>
         <div class="lbl" style="margin-top:10px">KECEPATAN VIDEO <span class="beta">BARU · v2.12</span></div>
         <div class="seg wrap" id="segSpeed">
           <button data-v="0.5">0.5× PELAN</button><button data-v="1" class="on">1× NORMAL</button>
@@ -365,6 +399,12 @@
         <div class="lbl">PRESET EKSPOR — SATU KLIK <span class="beta">BARU · v2.12</span></div>
         <div class="chips" id="expPresets"></div>
         <div class="note"><b>YOUTUBE</b> 16:9 · 1080p · 30fps — <b>TIKTOK</b> 9:16 · penuh · 30fps — <b>REELS</b> 9:16 · penuh · 30fps — <b>SHORTS</b> 9:16 · penuh · 60fps. Satu klik langsung mengatur rasio, resolusi, fps &amp; kualitas — sisanya tetap bisa diubah manual di bawah.</div>
+        <div class="lbl">KOMPRES PINTAR — TARGET UKURAN PER PART <span class="beta">BARU · v3.0</span></div>
+        <div class="row">
+          <input type="number" class="in mono" id="inTargetMB" min="0" max="8000" step="10" value="0" style="flex:0 0 130px">
+          <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">MB / PART · 0 = MATI</span>
+        </div>
+        <div class="note">Isi angka &gt; 0 → bitrate video dihitung <b>otomatis</b> agar tiap part tepat di bawah target — pas untuk batas WhatsApp (mis. <b>500</b>) atau kuota upload. Kualitas MAKSIMAL/SEIMBANG diabaikan selagi mode ini aktif.</div>
         <div class="lbl">KUALITAS / TINGKAT KOMPRES</div>
         <div class="seg wrap" id="segQual">
           <button data-v="max">MAKSIMAL</button><button data-v="balanced" class="on">SEIMBANG</button>
@@ -392,7 +432,19 @@
         <button class="btn wide" id="btnExportAll"><i data-lucide="layers"></i> BATCH EKSPOR — SEMUA VIDEO DI KOTAK</button>
         <div class="substat" id="expAllStat">Kotak kosong — impor video dulu (modul 00 / IMPOR MEDIA)</div>
         <div class="note"><b>Batch ekspor:</b> semua video dalam <b>KOTAK VIDEO</b> diekspor <b>berurutan satu per satu</b> otomatis ke satu folder pilihanmu — memakai setelan ekspor saat ini (rasio, split, judul otomatis, deskripsi, efek, frame neon, musik &amp; kualitas). Setiap video menghasilkan part MP4 sesuai durasinya. Video berstatus SELESAI diproses ulang juga. <b>v2.13:</b> dengan AUTO-SUBTITEL aktif, semua video langsung bersubtitel.</div>
-        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.2 TURBO:</b> frame diambil sambil video <b>diputar cepat</b> (tanpa seek per frame), lapisan statis di-cache, semua part dirender <b>paralel</b> + encoder hardware GPU. Output: MP4 H.264 + AAC/Opus.</div>
+        <label class="chk"><input type="checkbox" id="resumeExport" checked><span>LANJUTKAN EKSPOR — LEWATI PART YANG FILENYA SUDAH ADA DI FOLDER OUTPUT <span class="beta">BARU · v3.0</span></span></label>
+        <label class="chk"><input type="checkbox" id="autoShutdown"><span>MATIKAN PC OTOMATIS SETELAH BATCH SELESAI <span class="beta">BARU · v3.0</span></span></label>
+        <div class="note">Ekspor yang tertidur/mati listrik tidak perlu diulang dari nol — jalankan lagi dan part yang sudah ada <b>dilewati</b>. Auto-shutdown tampil hitung mundur 30 detik yang bisa dibatalkan sebelum PC benar-benar mati. Laporan rekap <b>KINOSTRA-LAPORAN.txt</b> tersimpan otomatis di folder output.</div>
+        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.2 TURBO:</b> frame diambil sambil video <b>diputar cepat</b> (tanpa seek per frame), lapisan statis di-cache, semua part dirender <b>paralel</b> + encoder hardware GPU. Output: MP4 H.264 + AAC/Opus. <b>v3.0:</b> audio kini di-encode <b>bareng video</b> (paralel di dalam part) — ekspor ±30-45% lebih cepat.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m9b">
+      <button class="mod-h"><span class="no">09B</span><span class="t">GABUNG VIDEO → SATU FILE <span class="beta">BARU · v3.0</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Kebalikan split: <b>semua video di KOTAK VIDEO</b> (urutan atas → bawah) digabung menjadi <b>SATU file MP4 utuh</b> — stempel waktu video &amp; audio menyambung mulus antar film. Judul tiap film &amp; subtitel tetap ikut, label PART tidak dimasukkan. File besar mengalir langsung ke disk (RAM tetap aman). Auto-subtitel &amp; skor musik tetap berlaku per film bila aktif.</div>
+        <div class="substat" id="mergeStat">Kotak kosong — impor minimal 2 video</div>
+        <button class="btn acc big wide" id="btnMerge"><i data-lucide="combine"></i> GABUNG SEMUA VIDEO DI KOTAK → 1 MP4</button>
       </div></div></div>
     </div>
 
@@ -441,9 +493,12 @@
 <script src="js/media.js"></script>
 <script src="js/compose.js"></script>
 <script src="js/frames.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/sampul.js"></script>
 <script src="js/tracker.js"></script>
 <script src="js/music.js"></script>
 <script src="js/subs.js"></script>
+<script src="js/tts.js"></script>
 <script src="js/exporter.js"></script>
 <script src="js/batch.js"></script>
 <script src="js/ui.js"></script>

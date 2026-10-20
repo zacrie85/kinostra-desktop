@@ -156,15 +156,26 @@ function drawComposition(x, W, H, t) {
     } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
     /* v2.12: lapisan SEBELUM video (mis. panel putih gaya Exploraship) */
     if (FST && FST.under) drawFrameUnder(x, W, H, t, u, fit);
-    /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video */
+    /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video
+       v3.0: + FILTER WARNA sinematik (katalog COLORFILTERS) — css digabung
+       dgn setelan manual VFX; lapisan tint tipis hanya di area video */
     const V = state.vfx;
+    const CF = (typeof COLORFILTERS !== 'undefined' && COLORFILTERS.find(c => c.k === state.colorFilter)) || null;
     x.save();
     const fl = [];
     if (V.bright !== 1) fl.push(`brightness(${V.bright})`);
     if (V.contrast !== 1) fl.push(`contrast(${V.contrast})`);
     if (V.saturate !== 1) fl.push(`saturate(${V.saturate})`);
+    if (CF && CF.css) fl.push(CF.css);
     x.filter = fl.length ? fl.join(' ') : 'none';
     x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
+    x.filter = 'none';
+    if (CF && CF.tint) {
+      x.globalCompositeOperation = CF.op || 'overlay';
+      x.fillStyle = CF.tint;
+      x.fillRect(fit.x, fit.y, fit.w, fit.h);
+      x.globalCompositeOperation = 'source-over';
+    }
     x.restore();
     /* UPGRADE: vignette (v2.2: dari cache) */
     if (V.vignette) {
@@ -177,7 +188,10 @@ function drawComposition(x, W, H, t) {
        tampil DI ATAS pita & banner (persis skema posisi referensi pengguna) */
     if (FST && FST.decor) drawFrameDecor(x, W, H, t, u, vid === videoEl, fit);
   } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
-  /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang · v2.12 sadar-potong) --- */
+  /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang · v2.12 sadar-potong)
+         v3.0: state._noPart = true saat GABUNG VIDEO — label part tidak
+         masuk file gabungan (judul tiap film tetap tampil) --- */
+  if (!state._noPart) {
   const total = segmentsCount();
   const segB = (typeof currentSegBounds === 'function' && currentSegBounds(t))
     || { i: 0, start: rangeInfo().start, end: rangeInfo().end };
@@ -209,6 +223,7 @@ function drawComposition(x, W, H, t) {
     x.fillStyle = 'rgba(239,237,231,.5)'; x.font = `500 ${Math.round(20 * u)}px "JetBrains Mono"`;
     x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
     x.restore();
+  }
   }
   /* --- JUDUL & DESKRIPSI (v2.3 ukuran · v2.6 posisi bisa digeser atas/bawah) --- */
   let yTitleBase = 0;

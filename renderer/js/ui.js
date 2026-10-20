@@ -367,7 +367,7 @@ function renderFrameChips() {
     if (f.g && f.g !== lastG) {
       lastG = f.g;
       const h = document.createElement('div');
-      h.className = 'fghead ' + (f.g === 'HOROR ALAMGAIB' ? 'fg-horor' : 'fg-koplo');
+      h.className = 'fghead ' + (f.g === 'HOROR ALAMGAIB' ? 'fg-horor' : f.g === 'ALAM GAIB' ? 'fg-gaib' : 'fg-koplo');
       h.textContent = f.g;
       g.appendChild(h);
     }
@@ -377,6 +377,8 @@ function renderFrameChips() {
     if (f.k === 'neon') b.style.background = 'linear-gradient(90deg,#12325a,#0b1c33)';
     if (f.g === 'HOROR ALAMGAIB') { b.style.background = 'linear-gradient(90deg,#241126,#120a18)'; b.style.borderLeftColor = '#c23a5a'; }
     if (f.g === 'DANGDUT IDOLADESA') { b.style.background = 'linear-gradient(90deg,#33101d,#1d0a12)'; b.style.borderLeftColor = '#f5c94e'; }
+    /* v3.0: grup ALAM GAIB — hijau racun seram */
+    if (f.g === 'ALAM GAIB') { b.style.background = 'linear-gradient(90deg,#0f2418,#0a1611)'; b.style.borderLeftColor = '#4fdc84'; }
     b.onclick = () => {
       state.frameStyle = f.k;
       state.neon.on = (f.k === 'neon');   /* neon = gaya berputar; gaya lain mematikan neon */
@@ -387,6 +389,92 @@ function renderFrameChips() {
   });
 }
 renderFrameChips();
+
+/* ================================================================
+   v3.0 — FILTER WARNA (modul 08) + SPLIT ADEGAN (modul 02) +
+   SAMPUL AUTO (modul 08) + AUDIO SEHAT / TTS (modul 06) +
+   KOMPRES PINTAR / LANJUTKAN / AUTO-SHUTDOWN (modul 09) + GABUNG (09B)
+   ================================================================ */
+(function initColorFilters() {
+  const g = $('#colorFilters');
+  if (!g) return;
+  COLORFILTERS.forEach(cf => {
+    const b = document.createElement('button');
+    b.className = 'fchip' + (state.colorFilter === cf.k ? ' on' : '');
+    b.innerHTML = `<span>${cf.n}</span><em>${cf.d}</em>`;
+    /* swatch kecil per preset biar kelihatan nuansanya */
+    if (cf.tint) b.style.borderLeftColor = cf.tint.replace(/rgba?\(([^)]+)\).*/, 'rgba($1,.9)');
+    if (cf.k === 'noir') b.style.borderLeftColor = '#e8e8e8';
+    if (cf.k === 'horor') b.style.borderLeftColor = '#57e6a0';
+    if (cf.k === 'dangdut') b.style.borderLeftColor = '#f5c94e';
+    if (cf.k === 'teal') b.style.borderLeftColor = '#4d9dff';
+    if (cf.k === 'vivid') b.style.borderLeftColor = '#ff4fa3';
+    if (cf.k === 'seram') b.style.borderLeftColor = '#ff3244';
+    if (cf.k === 'dingin') b.style.borderLeftColor = '#7fb8ff';
+    if (cf.k === 'pucat') b.style.borderLeftColor = '#ffd7ec';
+    if (cf.k === 'vintage') b.style.borderLeftColor = '#d9a05b';
+    b.onclick = () => {
+      state.colorFilter = cf.k;
+      [...g.children].forEach(c => c.classList.remove('on'));
+      b.classList.add('on');
+      toast(cf.k === 'off' ? 'Filter warna: NORMAL (warna asli)' : `Filter warna: ${cf.n}`, 'ok');
+    };
+    g.appendChild(b);
+  });
+})();
+
+bindSeg('segSplitMode', v => {
+  state.splitMode = v;
+  if (v === 'scene' && !(state.sceneCuts || []).length) {
+    toast('Belum ada titik adegan — tekan DETEKSI ADEGAN OTOMATIS dulu', 'warn');
+  } else {
+    toast(v === 'scene' ? `Split PER ADEGAN — ${state.sceneCuts.length} titik adegan` : 'Split PER DURASI (setelan lama)', 'ok');
+  }
+  renderSceneList(); updateAll();
+});
+$('#btnSceneDetect').onclick = () => detectScenes();
+renderSceneList();
+
+$('#btnSampul').onclick = () => openSampul();
+
+$('#audioFixOn').onchange = e => { state.audioFix.on = e.target.checked; toast(state.audioFix.on ? 'AUDIO SEHAT: normalizer volume AKTIF — kekerasan disamaratakan saat ekspor' : 'AUDIO SEHAT: mati', 'ok'); };
+$('#audioFixHiss').onchange = e => { state.audioFix.hiss = e.target.checked; if (state.audioFix.hiss && !state.audioFix.on) { state.audioFix.on = true; $('#audioFixOn').checked = true; } toast(state.audioFix.hiss ? 'Redam desis/dengung: AKTIF' : 'Redam desis: mati', 'ok'); };
+
+$('#inTargetMB').oninput = e => {
+  const v = clamp(parseInt(e.target.value) || 0, 0, 8000);
+  state.targetMB = v;
+  if (v > 0) toast(`KOMPRES PINTAR: target ${v} MB per part — bitrate dihitung otomatis`, 'ok');
+  updateAll();
+};
+
+$('#resumeExport').onchange = e => { state.resumeExport = e.target.checked; toast(state.resumeExport ? 'LANJUTKAN EKSPOR: part yang sudah ada DILEWATI' : 'Lanjutkan ekspor: mati — semua part dirender ulang', 'ok'); };
+$('#autoShutdown').onchange = e => { state.autoShutdown = e.target.checked; toast(state.autoShutdown ? 'MATIKAN PC SETELAH BATCH: AKTIF — hitung mundur 30 dtk bisa dibatalkan' : 'Auto-shutdown PC: mati', 'ok'); };
+$('#btnMerge').onclick = () => doMerge();
+
+/* ---------- v3.0: TTS NARASI ---------- */
+$('#btnTtsGen').onclick = async () => {
+  const txt = $('#ttsText').value;
+  if (!txt.trim()) { toast('Tulis teks narasinya dulu', 'warn'); return; }
+  if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
+  state.busy = true;
+  showModal({ title: 'MESIN SUARA AI', sub: 'Menyiapkan mesin suara offline…' });
+  try {
+    await ttsSynthesize(txt, s => setSub(s));
+    hideModal();
+    ttsPreview();
+    syncTtsUI();
+    toast('Suara tersusun & diputar — PASANG DI PLAYHEAD untuk memakainya di ekspor', 'ok');
+  } catch (e) {
+    hideModal();
+    toast('TTS gagal: ' + (e.message || e), 'err');
+  }
+  state.busy = false;
+};
+$('#btnTtsPreview').onclick = () => ttsPreview();
+$('#btnTtsPlace').onclick = () => ttsPlaceAtPlayhead();
+$('#btnTtsClear').onclick = () => ttsClear();
+$('#ttsGain').oninput = e => { state.tts.gain = parseFloat(e.target.value) || 0.9; $('#ttsGainV').textContent = Math.round(state.tts.gain * 100) + '%'; };
+syncTtsUI();
 
 /* ---------- v2.12: KECEPATAN VIDEO (semua part) ---------- */
 function applyPreviewSpeed() {
@@ -709,6 +797,11 @@ window.addEventListener('resize', fitStage);
 setPreviewSize(); fitStage(); applyRatio();
 
 let lastTrack = 0, lastHud = 0, lastBusyDraw = 0;
+/* v3.0 OPTIMASI PRATINJAU — jangan gambar ulang 60×/dtk saat PAUSE & tanpa
+   animasi (tidak ada frame style/neon/transisi/tracking): pratinjau statis
+   digambar maksimal 1×/dtk → CPU & baterai jauh lebih hemat, UI lebih
+   lancar. Saat diputar semua tetap sehalus dulu. */
+let _lastDrawT = -1, _lastDrawAt = 0;
 function loop() {
   requestAnimationFrame(loop);
   if (state.file) {
@@ -723,7 +816,12 @@ function loop() {
     if (!videoEl.paused && state.track.active && performance.now() - lastTrack > 70) {
       lastTrack = performance.now(); trackStep(t);
     }
-    drawComposition(ctx, cv.width, cv.height, t);
+    const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
+    const animOn = !!state.neon.on || !!FSTa || (state.trans && state.trans.mode !== 'off') || state.track.active;
+    if (!(videoEl.paused && !animOn && t === _lastDrawT && now - _lastDrawAt < 1000)) {
+      drawComposition(ctx, cv.width, cv.height, t);
+      _lastDrawT = t; _lastDrawAt = now;
+    }
     // HUD & playhead
     if (performance.now() - lastHud > 80) {
       lastHud = performance.now();

@@ -265,6 +265,11 @@ span.qthumb{display:flex;align-items:center;justify-content:center;color:var(--t
 .fghead:first-child{margin-top:0}
 .fg-horor{color:#e89ab0;border-bottom-color:rgba(194,58,90,.5)}
 .fg-koplo{color:#f5d98a;border-bottom-color:rgba(245,201,78,.45)}
+/* v3.0: grup chip ALAM GAIB + studio sampul */
+.fg-gaib{color:#8ee8ae;border-bottom-color:rgba(79,220,132,.45)}
+#sampulCv{width:100%;border-radius:10px;background:#000;display:block}
+.sampulwrap .fchip em{display:none}
+.sampulwrap .fchip span{font-size:11px}
 
 /* ===== v2.12: POTONG & HAPUS BAGIAN ===== */
 .cutlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:170px;overflow-y:auto;margin-bottom:8px}

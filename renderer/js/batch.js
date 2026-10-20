@@ -177,6 +177,11 @@ function renderQueue() {
   if (ea) ea.textContent = n
     ? `${n} video dalam kotak · ${done} selesai · siap diekspor berurutan`
     : 'Kotak kosong — impor video dulu (modul 00 / IMPOR MEDIA)';
+  /* v3.0: status modul GABUNG VIDEO (09B) */
+  const mg = $('#mergeStat');
+  if (mg) mg.textContent = n >= 2
+    ? `${n} video siap digabung (urutan atas → bawah) → 1 file MP4`
+    : 'Kotak kosong — impor minimal 2 video untuk digabung';
 }
 /* alias kompatibilitas */
 const renderBatchList = renderQueue;
@@ -203,6 +208,7 @@ async function runBatch(forceAll = false) {
   const dir = await pickOutDir();
   if (!dir) return;
   _lastOutDir = dir;
+  const _batchT0 = performance.now();
 
   state.busy = true; state.abort = false; state.exportFatal = null;
   const reuseMusic = !!state.music.buffer;
@@ -237,6 +243,7 @@ async function runBatch(forceAll = false) {
           throw new Error('durasi tidak terbaca — format tak didukung engine');
         if (state.file.size) it.size = state.file.size;
         setSub(`Media siap · ${fmtT(state.duration)} · ${segmentsCount()} part`);
+        it._t0 = performance.now();
 
         /* --- v2.10 FIX: skor musik dirender ulang BENAR-BENAR untuk
                durasi file ini (dulu no-op karena guard busy — inilah
@@ -264,6 +271,10 @@ async function runBatch(forceAll = false) {
           sub: s => setSub(s)
         });
         it.status = 'done'; it.msg = `${results.length} part`;
+        /* v3.0: data utk LAPORAN REKAP */
+        it.durS = state.duration || 0;
+        it.outSize = results.reduce((a, r) => a + (r.size || 0), 0);
+        it.elapsed = (performance.now() - (it._t0 || performance.now())) / 1000;
         ok++;
       } catch (err) {
         const msg = String((err && err.message) || err);
@@ -289,6 +300,7 @@ async function runBatch(forceAll = false) {
         body: rows +
           (fail ? `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Video gagal dilewati — video lain tetap diproses. Perbaiki sumbernya lalu jalankan batch lagi; video yang sudah selesai tidak diulang.</span></div>` : '') +
           `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Folder: ${dir}</span></div>
+           <div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Laporan rekap tersimpan otomatis: KINOSTRA-LAPORAN.txt di folder output. Video gagal tidak perlu diulang dari nol — setelan LANJUTKAN EKSPOR (modul 09) melewati part yang sudah ada.</span></div>
            <button class="btn acc wide" id="openFolderBatch" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>`,
         cancel: true
       });
@@ -297,8 +309,72 @@ async function runBatch(forceAll = false) {
       const ofb = M.b.querySelector('#openFolderBatch');
       if (ofb) ofb.onclick = () => window.kinostra.openPath(dir);
     }
+    /* v3.0: laporan rekap + auto-shutdown (bila diaktifkan) */
+    try {
+      const rep = buildBatchReport(dir, ok, fail, performance.now() - _batchT0);
+      if (rep) await saveBlobToDir(new Blob([rep], { type: 'text/plain;charset=utf-8' }), dir, 'KINOSTRA-LAPORAN.txt');
+    } catch (e) { console.warn('laporan gagal:', e); }
+    await maybeAutoShutdown(ok);
   } finally {
     state.busy = false;
     renderQueue();
   }
+}
+
+/* ================================================================
+   v3.0 — BATCH PRO: LAPORAN REKAP & AUTO-SHUTDOWN
+   ================================================================
+   - buildBatchReport: teks rekap per video (status, durasi, ukuran,
+     waktu proses) → tersimpan otomatis sebagai KINOSTRA-LAPORAN.txt
+     di folder output.
+   - maybeAutoShutdown: bila setelan MATIKAN PC SETELAH BATCH aktif
+     (modul 09), tampil hitung mundur 30 detik yang BISA DIBATALKAN,
+     lalu PC dimatikan lewat sistem (shutdown /s Windows). */
+function buildBatchReport(dir, ok, fail, elapsedMs) {
+  const rows = state.batch.filter(b => b.status === 'done' || b.status === 'err');
+  if (!rows.length) return null;
+  const now = new Date();
+  const pad = (s, n) => String(s).padEnd(n, ' ');
+  const L = [];
+  L.push('KINOSTRA v3.0 — LAPORAN BATCH EKSPOR');
+  L.push(`Waktu  : ${now.toLocaleString('id-ID')}`);
+  L.push(`Folder : ${dir}`);
+  L.push(`Hasil  : ${ok} berhasil · ${fail} gagal · total proses ${fmtT(elapsedMs / 1000)}`);
+  L.push('='.repeat(66));
+  rows.forEach((b, i) => {
+    L.push(`${pad(i + 1 + '.', 4)}${b.name}`);
+    L.push(`${pad('', 4)}STATUS: ${b.status === 'done' ? 'SELESAI' : 'GAGAL'}${b.msg ? ' · ' + b.msg : ''}`);
+    if (b.durS) L.push(`${pad('', 4)}DURASI VIDEO: ${fmtT(b.durS)}`);
+    if (b.outSize) L.push(`${pad('', 4)}UKURAN HASIL: ${fmtMB(b.outSize)}`);
+    if (b.elapsed) L.push(`${pad('', 4)}WAKTU PROSES: ${b.elapsed < 90 ? b.elapsed.toFixed(0) + ' dtk' : (b.elapsed / 60).toFixed(1) + ' mnt'}`);
+  });
+  L.push('='.repeat(66));
+  return L.join('\n');
+}
+async function maybeAutoShutdown(okCount) {
+  if (!state.autoShutdown || state.abort || !okCount) return;
+  try { await window.kinostra.shutdownPC(); } catch (e) { /* API belum ada (mode uji) — abaikan */ return; }
+  let left = 30;
+  showModal({
+    title: 'PC AKAN DIMATIKAN OTOMATIS',
+    body: `<div style="text-align:center;padding:14px 6px">
+      <div style="font-size:46px;font-weight:800;color:var(--acc)" id="sdLeft">30</div>
+      <div style="opacity:.85;margin-top:8px;line-height:1.6">Semua ekspor <b>selesai</b>. Windows dimatikan otomatis dalam
+      <b id="sdLeft2">30</b> detik. Pastikan pekerjaan lain sudah disimpan.</div></div>`,
+    cancel: true
+  });
+  M.c.textContent = 'BATALKAN — PC TETAP MENYALA';
+  M.onCancel = () => {
+    clearInterval(iv);
+    hideModal();
+    window.kinostra.abortShutdown().catch(() => { });
+    toast('Auto-shutdown dibatalkan — PC tetap menyala', 'ok');
+  };
+  const iv = setInterval(() => {
+    left--;
+    const a = $('#sdLeft'), b = $('#sdLeft2');
+    if (a) a.textContent = String(left);
+    if (b) b.textContent = String(left);
+    if (left <= 0) { clearInterval(iv); hideModal(); toast('PC dimatikan…', 'ok'); }
+  }, 1000);
 }

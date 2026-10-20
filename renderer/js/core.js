@@ -45,7 +45,32 @@ const FRAMESTYLES = [
   { k: 'koplogliter', n: 'KOPLO · GLITER EMAS', d: 'Emas berkilau berjatuhan · catatan musik · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
   { k: 'koploneon', n: 'KOPLO · NEON DISKO', d: 'Neon pink-biru · bola disko berputar · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
   { k: 'koploobor', n: 'KOPLO · OBOR DESA', d: 'Obor kampung menyala · umbul bendera · kembang merah · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
-  { k: 'koplokipas', n: 'KOPLO · KIPAS GLITER', d: 'Kipas penari mengembang · sequin berkilau · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' }
+  { k: 'koplokipas', n: 'KOPLO · KIPAS GLITER', d: 'Kipas penari mengembang · sequin berkilau · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  /* v3.0: 6 FRAME ALAM GAIB — horor Indonesia paling menyeramkan,
+     papan judul bertuliskan "ALAM GAIB" tetap di bagian atas frame */
+  { k: 'gaibpocong', n: 'GAIB · POCONG KEBUN', d: 'Pocong melompat · kuburan gelap · kabut dingin · ALAM GAIB', g: 'ALAM GAIB' },
+  { k: 'gaibtuyul', n: 'GAIB · TUYUL BERINGIN', d: 'Beringin tua · tuyul di dahan · koin jatuhan · ALAM GAIB', g: 'ALAM GAIB' },
+  { k: 'gaibkunti', n: 'GAIB · KUNTILANAK', d: 'Sosok putih berambut panjang · melati berjatuhan · ALAM GAIB', g: 'ALAM GAIB' },
+  { k: 'gaibsanggah', n: 'GAIB · API SANGGAH', d: 'Api ritual menyala · perapian batu · asap misterius · ALAM GAIB', g: 'ALAM GAIB' },
+  { k: 'gaibmakam', n: 'GAIB · KABUT MAKAM', d: 'Kabut pekat · nisan tua · cahaya samar merambat · ALAM GAIB', g: 'ALAM GAIB' },
+  { k: 'gaibritual', n: 'GAIB · RITUAL TENGAH MALAM', d: 'Lingkar lilin ungu · mantera berputar · jam 12 malam · ALAM GAIB', g: 'ALAM GAIB' }
+];
+
+/* v3.0: KATALOG FILTER WARNA — satu klik mengganti nuansa seluruh video.
+   css  = string canvas ctx.filter (dipakai saat menggambar video),
+   tint = lapisan warna tipis di atas video (opsional) + mode campur.
+   Semua diterapkan DI pipeline canvas → preview & ekspor identik. */
+const COLORFILTERS = [
+  { k: 'off', n: 'NORMAL', d: 'Warna asli videomu', css: '', tint: null },
+  { k: 'horor', n: 'HOROR MISTIS', d: 'Dingin kehijauan · seram', css: 'saturate(.72) contrast(1.13) brightness(.93) hue-rotate(-12deg)', tint: 'rgba(90,255,170,.07)', op: 'overlay' },
+  { k: 'dangdut', n: 'DANGDUT EMAS', d: 'Hangat keemasan pesta', css: 'saturate(1.32) contrast(1.06) brightness(1.04) sepia(.16)', tint: 'rgba(255,190,60,.06)', op: 'soft-light' },
+  { k: 'teal', n: 'SINEMA TEAL-ORANGE', d: 'Warna film Hollywood', css: 'contrast(1.14) saturate(1.16)', tint: 'rgba(0,140,255,.08)', op: 'soft-light' },
+  { k: 'noir', n: 'NOIR HITAM-PUTIH', d: 'Monokrim klasik tegas', css: 'grayscale(1) contrast(1.24) brightness(1.02)', tint: null },
+  { k: 'vintage', n: 'VINTAGE 80-an', d: 'Pudar hangat nostalgia', css: 'sepia(.42) contrast(.94) brightness(1.05) saturate(.85)', tint: 'rgba(255,170,90,.05)', op: 'soft-light' },
+  { k: 'vivid', n: 'VIVID TAJAM', d: 'Warna pekat berani', css: 'saturate(1.45) contrast(1.1)', tint: null },
+  { k: 'dingin', n: 'DINGIN BIRU', d: 'Nuansa malam sejuk', css: 'hue-rotate(14deg) saturate(.92) brightness(.98)', tint: 'rgba(60,120,255,.07)', op: 'overlay' },
+  { k: 'pucat', n: 'PUCAT MIMPI', d: 'Lembut terang fantasi', css: 'saturate(.6) brightness(1.12) contrast(.92)', tint: 'rgba(255,220,240,.06)', op: 'soft-light' },
+  { k: 'seram', n: 'SERAM MERAH', d: 'Darah & bayangan gelap', css: 'saturate(.82) contrast(1.28) brightness(.9)', tint: 'rgba(255,20,40,.08)', op: 'overlay' }
 ];
 const FONTS = [
   { n: 'Cinzel', d: 'TRAJAN · GLADIATOR / TROY' },
@@ -113,6 +138,24 @@ const state = {
   speed: 1,
   /* v2.12: HAPUS BAGIAN — daftar rentang yang dibuang saat ekspor [{s,e}] */
   cuts: [],
+  /* v3.0: FILTER WARNA — kunci COLORFILTERS (default 'off') */
+  colorFilter: 'off',
+  /* v3.0: SPLIT MODE — 'dur' (per durasi) | 'scene' (per adegan terdeteksi) */
+  splitMode: 'dur',
+  sceneCuts: [],            /* daftar titik pergantian adegan (detik) */
+  /* v3.0: KOMPRES PINTAR — target ukuran per part (MB; 0 = mati) */
+  targetMB: 0,
+  /* v3.0: AUDIO SEHAT — normalizer loudness + filter desis/brum */
+  audioFix: { on: false, hiss: false },
+  audioRms: 0,              /* RMS audio aktif (cache; 0 = belum diukur) */
+  /* v3.0: TTS NARASI — suara AI offline (buffer null = belum tersusun) */
+  tts: { buffer: null, at: 0, gain: 0.9, text: '', ready: false },
+  /* v3.0: EKSPOR — lanjutkan batch/part (lewati part yang sudah ada) */
+  resumeExport: true,
+  /* v3.0: BATCH PRO — matikan PC otomatis setelah batch selesai */
+  autoShutdown: false,
+  /* v3.0: GABUNG VIDEO — internum (matikan label PART saat merge) */
+  _noPart: false,
   /* UPGRADE: batch */
   batch: [],
   busy: false, abort: false, scanAbort: false,

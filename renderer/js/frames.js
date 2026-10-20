@@ -532,6 +532,126 @@ function frBottomPlate(g, W, H, u, kind) {
 }
 
 /* ================================================================
+   v3.0 — ALAM GAIB: papan judul & tokoh khusus
+   Papan batu hitam kehijauan + glow racun + teks "ALAM GAIB".
+   ================================================================ */
+const GAIB_TXT = 'ALAM GAIB';
+function frGaibPlate(g, W, u) {
+  const pw = Math.min(W * 0.66, 760 * u), ph = 86 * u;
+  const px = (W - pw) / 2, py = 20 * u;
+  const gg = g.createRadialGradient(W / 2, py + ph / 2, ph * 0.2, W / 2, py + ph / 2, pw * 0.62);
+  gg.addColorStop(0, 'rgba(70,190,120,.34)'); gg.addColorStop(1, 'rgba(70,190,120,0)');
+  g.fillStyle = gg; g.fillRect(px - pw * 0.3, py - ph * 0.6, pw * 1.6, ph * 2.2);
+  const pg = g.createLinearGradient(0, py, 0, py + ph);
+  pg.addColorStop(0, '#10241a'); pg.addColorStop(0.5, '#0a1811'); pg.addColorStop(1, '#050d09');
+  roundedRectPath(g, px, py, pw, ph, 10 * u);
+  g.fillStyle = pg; g.fill();
+  g.strokeStyle = 'rgba(96,178,128,.62)'; g.lineWidth = 2 * u; g.stroke();
+  roundedRectPath(g, px + 6 * u, py + 6 * u, pw - 12 * u, ph - 12 * u, 7 * u);
+  g.strokeStyle = 'rgba(64,220,130,.45)'; g.lineWidth = 1.6 * u; g.stroke();
+  /* akar menjuntai di kedua ujung papan (khas alam gaib) */
+  g.strokeStyle = 'rgba(16,44,28,.95)'; g.lineCap = 'round';
+  [[px + 14 * u, 1], [px + pw - 14 * u, -1]].forEach(([rx, dir]) => {
+    for (let i = 0; i < 3; i++) {
+      g.lineWidth = (2.4 - i * 0.6) * u;
+      g.beginPath(); g.moveTo(rx, py + ph - 4 * u);
+      g.quadraticCurveTo(rx + dir * (6 + i * 4) * u, py + ph + 14 * u, rx + dir * (2 + i * 6) * u, py + ph + (22 + i * 7) * u);
+      g.stroke();
+    }
+  });
+  g.font = `900 ${frFitFont(g, GAIB_TXT, 900, 'Cinzel', pw - 120 * u, 44 * u)}px "Cinzel"`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(70,235,140,.95)'; g.shadowBlur = 14 * u;
+  g.fillStyle = '#dbe9d3';
+  g.fillText(GAIB_TXT, W / 2, py + ph / 2 + 2 * u);
+  g.shadowBlur = 0;
+  g.textBaseline = 'alphabetic';
+  [[px + 22 * u, py - 2 * u], [px + pw - 22 * u, py + 4 * u]].forEach(([fx, fy]) => {
+    g.fillStyle = 'rgba(150,255,180,.9)';
+    g.beginPath(); g.arc(fx, fy, 2.4 * u, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(150,255,180,.25)';
+    g.beginPath(); g.arc(fx, fy, 6 * u, 0, Math.PI * 2); g.fill();
+  });
+}
+/* POCONG — kain kafan + tali 3 ikat + wajah gelap; hop = tinggi lompatan */
+function frPocong(x, cx, cy, s, hop, sway) {
+  x.save(); x.translate(cx, cy - Math.abs(Math.sin(hop)) * s * 0.55);
+  x.rotate(Math.sin(sway) * 0.08);
+  const g = x.createRadialGradient(0, -s * 0.5, s * 0.2, 0, -s * 0.5, s * 1.7);
+  g.addColorStop(0, 'rgba(200,255,225,.16)'); g.addColorStop(1, 'rgba(200,255,225,0)');
+  x.fillStyle = g; x.beginPath(); x.arc(0, -s * 0.5, s * 1.7, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(226,230,222,.96)';
+  roundedRectPath(x, -s * 0.42, -s * 1.1, s * 0.84, s * 1.6, s * 0.4); x.fill();
+  x.fillStyle = 'rgba(196,202,194,.92)';
+  roundedRectPath(x, -s * 0.42, -s * 0.1, s * 0.84, s * 0.6, s * 0.28); x.fill();
+  x.beginPath(); x.ellipse(0, -s * 1.12, s * 0.3, s * 0.34, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(10,14,12,.92)';
+  x.beginPath(); x.ellipse(0, -s * 1.14, s * 0.2, s * 0.26, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(225,255,235,.95)';
+  x.beginPath(); x.arc(-s * 0.08, -s * 1.18, s * 0.032, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(s * 0.08, -s * 1.18, s * 0.032, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(160,148,120,.95)'; x.lineWidth = Math.max(1.2, s * 0.06);
+  [-0.72, -0.3, 0.12].forEach(k => {
+    x.beginPath(); x.moveTo(-s * 0.42, s * k); x.quadraticCurveTo(0, s * (k + 0.09), s * 0.42, s * k); x.stroke();
+  });
+  x.beginPath(); x.moveTo(0, -s * 1.34); x.lineTo(-s * 0.1, -s * 1.5); x.moveTo(0, -s * 1.34); x.lineTo(s * 0.1, -s * 1.5); x.stroke();
+  x.restore();
+}
+/* KUNTILANAK — sosok putih berambut panjang; sway = gerak rambut */
+function frKunti(x, cx, cy, s, sway, alpha) {
+  if (alpha <= 0.015) return;
+  x.save(); x.translate(cx, cy); x.globalAlpha = clamp(alpha, 0, 1);
+  const g = x.createRadialGradient(0, -s * 0.6, s * 0.2, 0, -s * 0.6, s * 1.9);
+  g.addColorStop(0, 'rgba(255,240,250,.14)'); g.addColorStop(1, 'rgba(255,240,250,0)');
+  x.fillStyle = g; x.beginPath(); x.arc(0, -s * 0.6, s * 1.9, 0, Math.PI * 2); x.fill();
+  /* gaun putih panjang */
+  x.fillStyle = 'rgba(238,236,240,.95)';
+  x.beginPath();
+  x.moveTo(-s * 0.3, -s * 0.85);
+  x.quadraticCurveTo(-s * 0.52, -s * 0.1, -s * 0.46, s * 1.05);
+  x.quadraticCurveTo(0, s * 1.18, s * 0.46, s * 1.05);
+  x.quadraticCurveTo(s * 0.52, -s * 0.1, s * 0.3, -s * 0.85);
+  x.closePath(); x.fill();
+  /* bahu & kepala pucat */
+  x.fillStyle = 'rgba(224,222,230,.98)';
+  x.beginPath(); x.ellipse(0, -s * 0.98, s * 0.2, s * 0.16, 0, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(0, -s * 1.16, s * 0.15, 0, Math.PI * 2); x.fill();
+  /* rambut panjang menutup wajah + bergoyang */
+  x.fillStyle = 'rgba(8,8,12,.96)';
+  x.beginPath();
+  x.moveTo(-s * 0.17, -s * 1.28);
+  x.quadraticCurveTo(-s * (0.26 + Math.sin(sway) * 0.03), -s * 0.6, -s * (0.2 + Math.sin(sway) * 0.05), s * 0.5);
+  x.quadraticCurveTo(0, s * 0.62, s * (0.2 + Math.sin(sway + 1) * 0.05), s * 0.5);
+  x.quadraticCurveTo(s * (0.26 + Math.sin(sway + 1) * 0.03), -s * 0.6, s * 0.17, -s * 1.28);
+  x.closePath(); x.fill();
+  /* bunga melati di rambut */
+  x.fillStyle = 'rgba(250,250,245,.9)';
+  for (let i = 0; i < 3; i++) {
+    x.beginPath(); x.arc(-s * 0.1 + i * s * 0.09, -s * (1.3 + (i % 2) * 0.05), s * 0.024, 0, Math.PI * 2); x.fill();
+  }
+  x.restore();
+}
+/* TUYUL — anak kecil botak duduk (s = ukuran) */
+function frTuyul(x, cx, cy, s, sway) {
+  x.save(); x.translate(cx, cy); x.rotate(Math.sin(sway) * 0.05);
+  const g = x.createRadialGradient(0, 0, s * 0.1, 0, 0, s * 1.4);
+  g.addColorStop(0, 'rgba(255,225,150,.14)'); g.addColorStop(1, 'rgba(255,225,150,0)');
+  x.fillStyle = g; x.beginPath(); x.arc(0, 0, s * 1.4, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(150,138,120,.92)';            /* badan kecil */
+  roundedRectPath(x, -s * 0.22, -s * 0.3, s * 0.44, s * 0.62, s * 0.2); x.fill();
+  x.fillStyle = 'rgba(196,182,158,.95)';            /* kepala botak */
+  x.beginPath(); x.arc(0, -s * 0.44, s * 0.24, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(20,14,10,.9)';                /* mata berbinar */
+  x.beginPath(); x.arc(-s * 0.09, -s * 0.46, s * 0.035, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(s * 0.09, -s * 0.46, s * 0.035, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.ellipse(0, -s * 0.37, s * 0.028, s * 0.04, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(120,106,88,.9)';              /* telinga runcing */
+  x.beginPath(); x.moveTo(-s * 0.22, -s * 0.5); x.lineTo(-s * 0.33, -s * 0.58); x.lineTo(-s * 0.2, -s * 0.4); x.closePath(); x.fill();
+  x.beginPath(); x.moveTo(s * 0.22, -s * 0.5); x.lineTo(s * 0.33, -s * 0.58); x.lineTo(s * 0.2, -s * 0.4); x.closePath(); x.fill();
+  x.restore();
+}
+
+/* ================================================================
    KATALOG FRAME
    Tiap frame: { bg(x,W,H,t,u) — latar (opsional),
                  under(...)  — digambar SEBELUM video (opsional),
@@ -1701,6 +1821,361 @@ const FRAMES = {
       }
       frSparkle(x, W * 0.3, H * 0.16, 8 * u, 0.35 + 0.5 * Math.sin(t * 3));
       frSparkle(x, W * 0.7, H * 0.2, 8 * u, 0.35 + 0.5 * Math.sin(t * 3.5 + 2));
+    }
+  },
+
+  /* ================================================================
+     v3.0 — 6 FRAME ALAM GAIB (horor Indonesia paling menyeramkan)
+     Papan judul "ALAM GAIB" (frGaibPlate) tetap di bagian atas.
+     ================================================================ */
+
+  /* ---------------- GAIB 1 · POCONG KEBUN ---------------- */
+  gaibpocong: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#060b12'); g.addColorStop(0.55, '#081209'); g.addColorStop(1, '#030706');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const rnd = frSeed(90210);
+      x.fillStyle = 'rgba(205,220,235,.4)';
+      for (let i = 0; i < 34; i++) x.fillRect(rnd() * W, rnd() * H * 0.5, (0.7 + rnd() * 1.3) * u, (0.7 + rnd() * 1.3) * u);
+      const v = x.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.72);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgp|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* gundukan tanah + salib kayu */
+        g.fillStyle = '#05090a';
+        g.beginPath(); g.ellipse(W * 0.5, H * 1.04, W * 0.62, H * 0.1, 0, 0, Math.PI * 2); g.fill();
+        [[W * 0.16, H * 0.96, 40], [W * 0.84, H * 0.97, 32]].forEach(([bx, by, hh]) => {
+          g.strokeStyle = '#150f08'; g.lineCap = 'round'; g.lineWidth = 7 * u;
+          g.beginPath(); g.moveTo(bx, by); g.lineTo(bx, by - hh * u); g.stroke();
+          g.lineWidth = 5 * u;
+          g.beginPath(); g.moveTo(bx - 13 * u, by - hh * u * 0.72); g.lineTo(bx + 13 * u, by - hh * u * 0.72); g.stroke();
+        });
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* pocong melompat menyeberang layar */
+      const px = ((t * 46) % (W + 320 * u)) - 160 * u;
+      frPocong(x, px, H * 0.92, 46 * u, t * 3.4, t * 2.2);
+      /* kunang-kunang hijau */
+      const rnd = frSeed(777);
+      for (let i = 0; i < 9; i++) {
+        const fx = rnd() * W, fy0 = H * (0.35 + rnd() * 0.5), sp = 4 + rnd() * 7;
+        const fy = ((fy0 - t * sp) % (H * 0.9) + H * 0.9) % (H * 0.9);
+        const a = 0.3 + 0.35 * Math.sin(t * 2.6 + i * 2.1);
+        x.fillStyle = `rgba(160,255,190,${clamp(a, 0, 1).toFixed(2)})`;
+        x.beginPath(); x.arc(fx + Math.sin(t + i * 2) * 18 * u, fy, 2.2 * u, 0, Math.PI * 2); x.fill();
+        x.fillStyle = `rgba(160,255,190,${(a * 0.25).toFixed(2)})`;
+        x.beginPath(); x.arc(fx + Math.sin(t + i * 2) * 18 * u, fy, 6.5 * u, 0, Math.PI * 2); x.fill();
+      }
+      frKabut(x, W, H, t, u, 0.62, 13, '150,235,180', 0.17, true);
+    }
+  },
+
+  /* ---------------- GAIB 2 · TUYUL BERINGIN ---------------- */
+  gaibtuyul: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#07100a'); g.addColorStop(0.6, '#0a140c'); g.addColorStop(1, '#040806');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * 0.4, Math.min(W, H) * 0.22, W / 2, H / 2, Math.max(W, H) * 0.7);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.5)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgt|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* batang beringin kanan */
+        g.strokeStyle = '#0a0c07'; g.lineCap = 'round';
+        g.lineWidth = 30 * u;
+        g.beginPath(); g.moveTo(W - 40 * u, H * 1.02); g.quadraticCurveTo(W - 60 * u, H * 0.6, W - 30 * u, H * 0.3); g.stroke();
+        /* akar gantung */
+        g.lineWidth = 3.4 * u;
+        for (let i = 0; i < 7; i++) {
+          const rx = W - (70 + i * 26) * u;
+          g.beginPath(); g.moveTo(rx, H * 0.3 + (i % 3) * 26 * u);
+          g.quadraticCurveTo(rx + 8 * u, H * 0.5, rx + 3 * u, H * (0.62 + (i % 4) * 0.08)); g.stroke();
+        }
+        /* tajuk rimbun */
+        const rnd = frSeed(4242);
+        for (let i = 0; i < 12; i++) {
+          g.fillStyle = `rgba(${10 + rnd() * 14},${26 + rnd() * 18},${12 + rnd() * 10},.96)`;
+          frCloud(g, W - (150 + rnd() * 210) * u, H * (0.1 + rnd() * 0.24), (36 + rnd() * 52) * u, null);
+        }
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* tuyul duduk di dahan, bergoyang */
+      frTuyul(x, W * 0.72, H * 0.34 + Math.sin(t * 1.8) * 4 * u, 40 * u, t * 2.4);
+      /* koin emas berjatuhan berputar */
+      for (let i = 0; i < 8; i++) {
+        const cx2 = W * (0.1 + 0.72 * ((i * 0.37) % 1));
+        const cy2 = ((t * (55 + i * 9) + i * 130 * u) % (H * 1.1));
+        const r = (5 + (i % 3) * 1.6) * u, sq = Math.abs(Math.sin(t * 3 + i));
+        const gy = H * 0.16;
+        x.fillStyle = 'rgba(255,208,70,.55)';
+        x.beginPath(); x.arc(cx2, cy2, r * 1.5, 0, Math.PI * 2); x.fill();
+        x.fillStyle = '#ffd254';
+        x.beginPath(); x.ellipse(cx2, cy2, r, Math.max(r * 0.25, r * sq), 0, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = 'rgba(120,80,10,.8)'; x.lineWidth = 1.2 * u; x.stroke();
+      }
+      frKabut(x, W, H, t, u, 0.82, 12, '150,230,170', 0.15, false);
+    }
+  },
+
+  /* ---------------- GAIB 3 · KUNTILANAK ---------------- */
+  gaibkunti: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#120a1c'); g.addColorStop(0.55, '#0d0716'); g.addColorStop(1, '#060410');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      /* bulan merah berdenyut */
+      const mx = W * 0.8, my = H * 0.24, mr = 44 * u, pl = 0.75 + 0.25 * Math.sin(t * 1.1);
+      const mg = x.createRadialGradient(mx, my, mr * 0.3, mx, my, mr * 2.8);
+      mg.addColorStop(0, `rgba(255,80,80,${(0.34 * pl).toFixed(2)})`); mg.addColorStop(1, 'rgba(255,60,60,0)');
+      x.fillStyle = mg; x.beginPath(); x.arc(mx, my, mr * 2.8, 0, Math.PI * 2); x.fill();
+      x.fillStyle = `rgba(255,120,110,${(0.8 * pl).toFixed(2)})`;
+      x.beginPath(); x.arc(mx, my, mr, 0, Math.PI * 2); x.fill();
+      x.fillStyle = 'rgba(120,30,30,.4)';
+      [[-0.25, -0.15, 0.18], [0.2, 0.12, 0.13]].forEach(([dx, dy, rr]) => {
+        x.beginPath(); x.arc(mx + dx * mr, my + dy * mr, rr * mr, 0, Math.PI * 2); x.fill();
+      });
+      const v = x.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.24, W / 2, H / 2, Math.max(W, H) * 0.72);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.5)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgk|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* dahan rimbun dari kiri atas & kanan atas */
+        g.strokeStyle = '#07050c'; g.lineCap = 'round';
+        g.lineWidth = 16 * u;
+        g.beginPath(); g.moveTo(-10, 0); g.quadraticCurveTo(W * 0.18, H * 0.05, W * 0.34, H * 0.02); g.stroke();
+        g.lineWidth = 10 * u;
+        g.beginPath(); g.moveTo(W + 10, 0); g.quadraticCurveTo(W * 0.8, H * 0.06, W * 0.62, H * 0.02); g.stroke();
+        const rnd = frSeed(616);
+        for (let i = 0; i < 10; i++) {
+          g.fillStyle = `rgba(${9 + rnd() * 10},${6 + rnd() * 8},${16 + rnd() * 12},.96)`;
+          frCloud(g, W * (0.05 + rnd() * 0.9), H * (0.015 + rnd() * 0.07), (26 + rnd() * 40) * u, null);
+        }
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* kuntilanak berdiri melayang di kiri */
+      const ka = 0.78 + 0.22 * Math.sin(t * 0.8);
+      frKunti(x, W * 0.22, H * 0.94 - Math.sin(t * 0.9) * 10 * u, 110 * u, t * 1.6, ka);
+      /* melati berjatuhan */
+      for (let i = 0; i < 10; i++) {
+        const px2 = W * ((i * 0.41) % 1) + Math.sin(t * 1.4 + i) * 30 * u;
+        const py2 = ((t * (30 + i * 7) + i * 170 * u) % (H * 1.08));
+        x.fillStyle = 'rgba(250,250,244,.85)';
+        x.beginPath(); x.ellipse(px2, py2, 3 * u, 4.4 * u, t * 2 + i, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(255,225,90,.9)';
+        x.beginPath(); x.arc(px2, py2, 1.3 * u, 0, Math.PI * 2); x.fill();
+      }
+      frKabut(x, W, H, t, u, 0.86, 12, '190,160,220', 0.14, true);
+    }
+  },
+
+  /* ---------------- GAIB 4 · API SANGGAH ---------------- */
+  gaibsanggah: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#100b07'); g.addColorStop(0.55, '#0d0906'); g.addColorStop(1, '#060402');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const gl = 0.5 + 0.5 * Math.sin(t * 2.3);
+      const fg = x.createRadialGradient(W / 2, H * 0.78, 10, W / 2, H * 0.78, Math.max(W, H) * 0.5);
+      fg.addColorStop(0, `rgba(255,140,40,${(0.16 + 0.08 * gl).toFixed(2)})`); fg.addColorStop(1, 'rgba(255,120,30,0)');
+      x.fillStyle = fg; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.24, W / 2, H / 2, Math.max(W, H) * 0.72);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.5)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgs|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* altar batu 2 tingkat di tengah bawah */
+        const ax = W / 2, ay = H * 0.985, aw = Math.min(W * 0.3, 300 * u);
+        g.fillStyle = '#1a140d';
+        roundedRectPath(g, ax - aw / 2, ay - 64 * u, aw, 64 * u, 6 * u); g.fill();
+        g.fillStyle = '#221a10';
+        roundedRectPath(g, ax - aw * 0.34, ay - 112 * u, aw * 0.68, 52 * u, 5 * u); g.fill();
+        g.strokeStyle = 'rgba(255,170,80,.25)'; g.lineWidth = 1.6 * u;
+        g.strokeRect(ax - aw * 0.34, ay - 112 * u, aw * 0.68, 52 * u);
+        /* tengkorak kecil di atas altar */
+        frSkull(g, ax - aw * 0.18, ay - 128 * u, 15 * u, 'rgba(214,204,182,.9)', 'rgba(16,10,6,.9)');
+        frSkull(g, ax + aw * 0.18, ay - 128 * u, 15 * u, 'rgba(214,204,182,.9)', 'rgba(16,10,6,.9)');
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* lidah api menyala di atas altar */
+      const ax = W / 2, fy = H * 0.985 - 112 * u;
+      for (let i = 0; i < 3; i++) {
+        const fw = (30 - i * 8) * u, fh = (58 + i * 14) * u;
+        const wob = Math.sin(t * (9 + i * 3) + i * 2) * 6 * u;
+        const fg = x.createLinearGradient(ax, fy - fh, ax, fy);
+        fg.addColorStop(0, i === 0 ? 'rgba(255,240,160,.95)' : 'rgba(255,180,60,.6)');
+        fg.addColorStop(0.6, 'rgba(255,110,20,.75)'); fg.addColorStop(1, 'rgba(180,40,0,0)');
+        x.fillStyle = fg;
+        x.beginPath();
+        x.moveTo(ax - fw, fy);
+        x.quadraticCurveTo(ax - fw * 0.4 + wob, fy - fh * 0.55, ax + wob * 1.6, fy - fh);
+        x.quadraticCurveTo(ax + fw * 0.4 + wob, fy - fh * 0.55, ax + fw, fy);
+        x.closePath(); x.fill();
+      }
+      /* bara & percikan naik */
+      const rnd = frSeed(555);
+      for (let i = 0; i < 10; i++) {
+        const ex = ax + (rnd() - 0.5) * W * 0.24, ey0 = fy - rnd() * 40 * u, sp = 26 + rnd() * 44;
+        const ey = ((ey0 - t * sp) % (H * 0.6) + H * 0.6) % (H * 0.6) + H * 0.2;
+        const a = clamp(0.5 + 0.5 * Math.sin(t * 3 + i * 1.9), 0, 1);
+        x.fillStyle = `rgba(255,${140 + i * 6},50,${(a * 0.8).toFixed(2)})`;
+        x.beginPath(); x.arc(ex + Math.sin(t * 2 + i) * 12 * u, ey, (1.4 + (i % 3)) * u, 0, Math.PI * 2); x.fill();
+      }
+      /* asap dupa tipis */
+      x.save(); x.globalAlpha = 0.3;
+      x.strokeStyle = 'rgba(190,180,170,.5)'; x.lineWidth = 4 * u; x.lineCap = 'round';
+      for (let i = 0; i < 2; i++) {
+        const sx = ax + (i ? 60 : -60) * u;
+        x.beginPath(); x.moveTo(sx, fy - 20 * u);
+        for (let k = 1; k <= 6; k++) x.lineTo(sx + Math.sin(t * 1.6 + k + i * 2) * 10 * u * k / 3, fy - 20 * u - k * 22 * u);
+        x.stroke();
+      }
+      x.restore();
+    }
+  },
+
+  /* ---------------- GAIB 5 · KABUT MAKAM ---------------- */
+  gaibmakam: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0c1210'); g.addColorStop(0.6, '#0a0f0d'); g.addColorStop(1, '#050807');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * 0.4, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgm|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* tiga nisan tua miring + pohon mati kecil */
+        frNisan(g, W * 0.16, H * 0.97, 62 * u, 96 * u, -0.09, '#2c3230', '#151a18');
+        frNisan(g, W * 0.31, H * 0.99, 46 * u, 66 * u, 0.12, '#272d2b', '#131715');
+        frNisan(g, W * 0.78, H * 0.98, 56 * u, 84 * u, 0.07, '#2c3230', '#151a18');
+        g.strokeStyle = '#04060a'; g.lineCap = 'round'; g.lineWidth = 14 * u;
+        g.beginPath(); g.moveTo(W * 0.55, H * 0.99); g.quadraticCurveTo(W * 0.53, H * 0.7, W * 0.57, H * 0.52); g.stroke();
+        g.lineWidth = 5 * u;
+        [[0, 1], [1, -1]].forEach(([i, dir]) => {
+          g.beginPath(); g.moveTo(W * 0.56, H * (0.7 - i * 0.1));
+          g.quadraticCurveTo(W * (0.6 + i * 0.02), H * (0.62 - i * 0.1), W * (0.63 + i * 0.03) * dir, H * (0.56 - i * 0.1)); g.stroke();
+        });
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* kabut tekat 3 lapis */
+      frKabut(x, W, H, t, u, 0.34, 16, '150,200,175', 0.2, false);
+      frKabut(x, W, H, t, u, 0.62, 18, '150,200,175', 0.24, true);
+      frKabut(x, W, H, t, u, 0.86, 14, '150,200,175', 0.3, false);
+      /* cahaya samar merambat (will-o'-wisp) */
+      const wx = W * (0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35)));
+      const wy = H * (0.55 + 0.16 * Math.sin(t * 0.7));
+      const wg = x.createRadialGradient(wx, wy, 1, wx, wy, 30 * u);
+      const wa = 0.4 + 0.35 * Math.sin(t * 2.4);
+      wg.addColorStop(0, `rgba(190,255,215,${clamp(wa, 0, 1).toFixed(2)})`); wg.addColorStop(1, 'rgba(190,255,215,0)');
+      x.fillStyle = wg; x.beginPath(); x.arc(wx, wy, 30 * u, 0, Math.PI * 2); x.fill();
+      /* hantu muncul sesekali di antara nisan */
+      const ga = Math.pow(Math.max(0, Math.sin(t * 0.55 + 0.8)), 4) * 0.5;
+      frGhost(x, W * 0.68, H * 0.6, 34 * u, t * 1.7, ga);
+    }
+  },
+
+  /* ---------------- GAIB 6 · RITUAL TENGAH MALAM ---------------- */
+  gaibritual: {
+    titlePush: 0.072,
+    bg(x, W, H, t, u) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0d0818'); g.addColorStop(0.55, '#0c0a1e'); g.addColorStop(1, '#050410');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      const rnd = frSeed(1212);
+      x.fillStyle = 'rgba(215,205,255,.4)';
+      for (let i = 0; i < 30; i++) x.fillRect(rnd() * W, rnd() * H * 0.55, (0.7 + rnd()) * u, (0.7 + rnd()) * u);
+      const gl = 0.5 + 0.5 * Math.sin(t * 1.7);
+      const fg = x.createRadialGradient(W / 2, H * 0.72, 6, W / 2, H * 0.72, Math.max(W, H) * 0.42);
+      fg.addColorStop(0, `rgba(150,80,255,${(0.13 + 0.09 * gl).toFixed(2)})`); fg.addColorStop(1, 'rgba(150,80,255,0)');
+      x.fillStyle = fg; x.fillRect(0, 0, W, H);
+      const v = x.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.24, W / 2, H / 2, Math.max(W, H) * 0.72);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.5)');
+      x.fillStyle = v; x.fillRect(0, 0, W, H);
+    },
+    decor(x, W, H, t, u) {
+      const key = `frgr|${W}x${H}`;
+      const st = getLayer(key, () => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        /* lingkar ritual di lantai */
+        g.strokeStyle = 'rgba(160,110,255,.35)'; g.lineWidth = 3 * u;
+        g.beginPath(); g.ellipse(W / 2, H * 0.84, W * 0.2, H * 0.055, 0, 0, Math.PI * 2); g.stroke();
+        g.strokeStyle = 'rgba(160,110,255,.18)'; g.lineWidth = 1.4 * u;
+        g.beginPath(); g.ellipse(W / 2, H * 0.84, W * 0.155, H * 0.042, 0, 0, Math.PI * 2); g.stroke();
+        frGaibPlate(g, W, u);
+        frBottomPlate(g, W, H, u, 'horor');
+        return c;
+      });
+      x.drawImage(st, 0, 0);
+      /* enam lilin mengelilingi lingkar */
+      for (let i = 0; i < 6; i++) {
+        const ang = (i / 6) * Math.PI * 2;
+        const cx2 = W / 2 + Math.cos(ang) * W * 0.185;
+        const cy2 = H * 0.84 + Math.sin(ang) * H * 0.05;
+        frLilin(x, cx2, cy2, 10 * u, (22 + (i % 3) * 7) * u, t, i * 1.3);
+      }
+      /* mantera/glyph berputar di tengah lingkar */
+      const rcx = W / 2, rcy = H * 0.8;
+      x.save(); x.translate(rcx, rcy); x.rotate(t * 0.5);
+      x.strokeStyle = 'rgba(200,160,255,.5)'; x.lineWidth = 2 * u; x.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2, rr = 34 * u;
+        x.save(); x.translate(Math.cos(a) * rr, Math.sin(a) * rr * 0.35); x.rotate(a + t);
+        x.beginPath();
+        x.moveTo(-4 * u, -6 * u); x.lineTo(4 * u, 0); x.lineTo(-4 * u, 6 * u);
+        x.stroke();
+        x.restore();
+      }
+      x.restore();
+      /* inti cahaya ungu berdenyut */
+      const pl = 0.6 + 0.4 * Math.sin(t * 2.2);
+      const cg = x.createRadialGradient(rcx, rcy, 2, rcx, rcy, 46 * u);
+      cg.addColorStop(0, `rgba(210,160,255,${(0.5 * pl).toFixed(2)})`); cg.addColorStop(1, 'rgba(210,160,255,0)');
+      x.fillStyle = cg; x.beginPath(); x.arc(rcx, rcy, 46 * u, 0, Math.PI * 2); x.fill();
+      frKabut(x, W, H, t, u, 0.9, 10, '170,140,230', 0.14, true);
     }
   }
 };

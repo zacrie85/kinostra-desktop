@@ -1439,6 +1439,41 @@ ipcMain.handle('fs:stat', async (e, p) => {
   }
 });
 
+/* v3.0: stat gabung folder+nama — dipakai LANJUTKAN EKSPOR (lewati part
+   yang sudah ada di folder output) tanpa menebak pemisah path */
+ipcMain.handle('fs:statJoin', async (e, { dir, name }) => {
+  try {
+    const full = path.join(String(dir || ''), String(name || ''));
+    const st = await fsp.stat(full);
+    return { ok: st.isFile(), size: st.size, path: full };
+  } catch (err) {
+    return { ok: false, size: 0 };
+  }
+});
+
+/* v3.0: BATCH PRO — matikan PC otomatis setelah batch selesai.
+   Windows: shutdown /s /t 60 (bisa dibatalkan dgn shutdown /a).
+   Sistem lain: no-op aman (mode uji Linux). */
+const { execFile } = require('child_process');
+ipcMain.handle('sys:shutdown', async () => {
+  try {
+    if (process.platform === 'win32') {
+      execFile('shutdown', ['/s', '/t', '60'], err => {
+        if (err) console.error('shutdown gagal:', err.message);
+        else console.info('shutdown dijadwalkan 60 dtk');
+      });
+      return { ok: true };
+    }
+    return { ok: false, error: 'auto-shutdown hanya di Windows' };
+  } catch (err) { return { ok: false, error: err.message }; }
+});
+ipcMain.handle('sys:shutdownAbort', async () => {
+  try {
+    if (process.platform === 'win32') execFile('shutdown', ['/a'], () => { });
+    return { ok: true };
+  } catch (err) { return { ok: false, error: err.message }; }
+});
+
 ipcMain.handle('fs:readMediaFiles', async (e, paths) => {
   // Untuk batch: baca file media dari disk jadi ArrayBuffer
   const out = [];

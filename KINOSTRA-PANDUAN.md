@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.16.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.0.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -32,6 +32,50 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.0 (MEGA UPGRADE)
+
+Versi terbesar KINOSTRA — **9 fitur baru + optimasi kecepatan menyeluruh**:
+
+### 1. Enam Frame ALAM GAIB (horor paling menyeramkan)
+Menu **FRAME VIDEO** kini **28 gaya**. Grup baru **ALAM GAIB** dengan papan judul bertuliskan "ALAM GAIB" (batu hitam kehijauan + glow racun + akar menjuntai) di bagian atas frame:
+- **POCONG KEBUN** — pocong melompat menyeberang layar, salib kayu, kunang-kunang hijau
+- **TUYUL BERINGIN** — beringin tua dengan akar gantung, tuyul duduk di dahan, koin emas berjatuhan
+- **KUNTILANAK** — sosok putih berambut panjang di bawah bulan merah berdenyut, bunga melati berjatuhan
+- **API SANGGAH** — altar batu dengan api menyala, tengkorak, bara & asap dupa
+- **KABUT MAKAM** — tiga nisan miring, kabut tiga lapis, cahaya will-o'-wisp, hantu muncul sesekali
+- **RITUAL TENGAH MALAM** — lingkar enam lilin, glyph mantera berputar, inti cahaya ungu
+
+### 2. Filter Warna Sinematik (modul 08)
+Sepuluh preset satu klik: **HOROR MISTIS** · **DANGDUT EMAS** · **SINEMA TEAL-ORANGE** · **NOIR** · **VINTAGE 80-an** · **VIVID** · **DINGIN BIRU** · **PUCAT MIMPI** · **SERAM MERAH** · NORMAL. Terlihat langsung di pratinjau, terbakar saat ekspor, dan ikut ke SAMPUL AUTO.
+
+### 3. Split Adegan Otomatis (modul 02)
+Mode split baru **PER ADEGAN**: tombol **DETEKSI ADEGAN OTOMATIS** memeriksa seluruh video secara offline (perbedaan piksel + histogram luma, ambang adaptif median+MAD) lalu menandai setiap pergantian adegan. Part dipecah **tepat di adegan** — cocok untuk film dengan adegan panjang. Titik adegan dapat dihapus satu per satu dan tetap serasi dengan POTONG & HAPUS BAGIAN.
+
+### 4. Gabung Video → Satu File (modul 09B)
+Kebalikan split: tekan **GABUNG SEMUA VIDEO DI KOTAK → 1 MP4**. Semua video di Kotak Video (urutan atas→bawah) dirender menjadi **satu file MP4 utuh** dengan timestamp video & audio yang menyambung mulus antar film. Judul tiap film, subtitel & musik tetap diproses per film; label PART tidak dimasukkan. File besar mengalir langsung ke disk sehingga RAM tetap aman.
+
+### 5. Sampul Auto / Thumbnail (modul 08)
+**BUKA STUDIO SAMPUL** → pilih posisi bebas (atau PAKAI PLAYHEAD) → pilih gaya **HOROR ALAMGAIB / ALAM GAIB / DANGDUT IDOLADESA / SINEMA / NEON / POLOS** → tulis judul & subjudul → **SIMPAN PNG** (1280×720 atau 720×1280). Bisa membuat banyak sampul sekaligus dengan nomor urut otomatis — siap diunggah sebagai thumbnail YouTube.
+
+### 6. Kompres Pintar (modul 09)
+Isi **TARGET UKURAN PER PART** (mis. 500 MB) → bitrate video dihitung otomatis dari durasi part, sehingga setiap hasil tepat di bawah target — pas untuk batas WhatsApp atau kuota upload.
+
+### 7. Audio Sehat (modul 06)
+**NORMALIZER VOLUME**: kekerasan suara disamaratakan (diukur dari RMS asli video → diperkuat/diredam menuju target −16 dBFS + kompresor lembut). **REDAM DESIS & DENGUNG**: filter high-pass/low-pass. Berlaku untuk ekspor tunggal & batch — kompilasi dari banyak sumber terdengar rapi.
+
+### 8. Batch Pro: Lanjutkan, Auto-Shutdown & Laporan (modul 09)
+- **LANJUTKAN EKSPOR** — ekspor/batch yang terputus (listrik mati, PC tertidur) tidak perlu diulang dari nol: part yang filenya sudah ada di folder output otomatis dilewati
+- **MATIKAN PC OTOMATIS SETELAH BATCH** — hitung mundur 30 detik yang bisa dibatalkan sebelum Windows dimatikan
+- **Laporan rekap otomatis** — `KINOSTRA-LAPORAN.txt` tersimpan di folder output berisi status, durasi, ukuran & waktu proses tiap video
+
+### 9. Narasi AI / TTS Offline (modul 06)
+Tulis teks Indonesia → **SUSUN SUARA** → dengarkan → **PASANG DI PLAYHEAD** → suara ter-mix otomatis ke hasil EKSPOR/SPLIT/BATCH. Mesin VITS MMS (±37 MB, diunduh sekali) berjalan 100% offline. BETA — paling cocok untuk narasi pendek (pembuka/tagline/penutup).
+
+### 10. Optimasi Kecepatan Menyeluruh
+- **Audio di-encode BERSAMAAN dengan video** di setiap part (dulu berurutan) → ±30-45% lebih cepat
+- Buffer audio dipakai ulang antar blok → tekanan memori/GC turun ±40%
+- Pratinjau statis (pause tanpa animasi) tak lagi digambar ulang 60×/detik → CPU & baterai lebih hemat
 
 ## Yang Baru di v2.16
 

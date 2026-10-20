@@ -66,7 +66,7 @@ async function loadFileBlob(file, force = false) {
   state.mediaEpoch = (state.mediaEpoch || 0) + 1;   /* v2.2: invalidasi cache lapisan komposisi */
   // reset
   /* v2.12: potongan bersifat per-video — bersihkan saat ganti media */
-  Object.assign(state, { subs: [], peaks: null, cuts: [], rangeStart: 0, rangeEnd: 0 });
+  Object.assign(state, { subs: [], peaks: null, cuts: [], rangeStart: 0, rangeEnd: 0, sceneCuts: [] });
   state.track = { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: state.track.label, color: state.track.color, vx: 0, vy: 0, scale: 1, lost: 0 };
   $('#trackStat').textContent = '0 titik terlacak';
   state.file = file;
@@ -198,35 +198,53 @@ function cutsLen() {
 /* total durasi yang BENAR-BENAR diekspor (rentang − potongan) */
 function expLen() { return Math.max(0.1, rangeInfo().len - cutsLen()); }
 
+/* ---------- v3.0: BATAS PART — MODE DURASI / MODE ADEGAN ----------
+   Mode 'scene' memecah di titik pergantian adegan (state.sceneCuts, hasil
+   DETEKSI ADEGAN). Mode 'dur' perilakunya 100% sama dengan dulu.
+   Daftar batas di-cache (kunci = semua sumber perubahan) supaya pemanggilan
+   per-frame (drawComposition/HUD) tetap murah. */
+let _segKey = null, _segList = null;
+function segBoundsList() {
+  const sc = state.sceneCuts || [];
+  let scSum = 0; for (let i = 0; i < sc.length; i++) scSum += sc[i];
+  const key = `${state.mediaEpoch || 0}|${state.splitMode}|${state.splitSec}|${rangeInfo().start.toFixed(3)}|${(state.rangeEnd || 0).toFixed(3)}|${(state.cuts || []).length}|${sc.length}|${scSum.toFixed(3)}`;
+  if (_segKey === key && _segList) return _segList;
+  const ivs = effIntervals(), out = [];
+  if (state.splitMode === 'scene' && sc.length) {
+    for (const iv of ivs) {
+      const pts = [iv.a];
+      sc.slice().sort((a, b) => a - b).forEach(p => { if (p > iv.a + 1.2 && p < iv.b - 1.2) pts.push(p); });
+      pts.push(iv.b);
+      for (let i = 0; i < pts.length - 1; i++) {
+        const s = pts[i], e = pts[i + 1];
+        if (e - s < 1.5 && out.length && out[out.length - 1].start >= iv.a) { out[out.length - 1].end = e; continue; }
+        out.push({ i: 0, start: s, end: e });
+      }
+    }
+  } else {
+    for (const iv of ivs) {
+      let t = iv.a;
+      while (t < iv.b - 1e-6) { const end = Math.min(iv.b, t + state.splitSec); out.push({ i: 0, start: t, end }); t = end; }
+    }
+  }
+  out.forEach((o, i) => { o.i = i; });
+  if (!out.length) { const r = rangeInfo(); out.push({ i: 0, start: r.start, end: Math.max(r.end, r.start + 0.1) }); }
+  _segKey = key; _segList = out;
+  return out;
+}
+
 function segmentsCount() {
   if (!state.duration) return 1;
-  let n = 0;
-  for (const iv of effIntervals()) n += Math.max(1, Math.ceil((iv.b - iv.a) / state.splitSec - 1e-6));
-  return Math.max(1, n);
+  return Math.max(1, segBoundsList().length);
 }
 function segments() {
   if (!state.duration) return [{ i: 0, start: 0, end: 0.1 }];
-  const arr = []; let i = 0;
-  for (const iv of effIntervals()) {
-    let t = iv.a;
-    while (t < iv.b - 1e-6) {
-      const end = Math.min(iv.b, t + state.splitSec);
-      arr.push({ i, start: t, end }); i++; t = end;
-    }
-  }
-  return arr.length ? arr : [{ i: 0, start: rangeInfo().start, end: rangeInfo().end }];
+  return segBoundsList().map(o => ({ i: o.i, start: o.start, end: o.end }));
 }
-/* v2.12: batas part yang memuat waktu t → {i, start, end} (null di luar) */
+/* v2.12 → v3.0: batas part yang memuat waktu t (mendukung mode adegan) */
 function currentSegBounds(t) {
-  const ivs = effIntervals(); let idx = 0;
-  for (const iv of ivs) {
-    const n = Math.max(1, Math.ceil((iv.b - iv.a) / state.splitSec - 1e-6));
-    if (t >= iv.a - 1e-6 && t <= iv.b + 1e-6) {
-      const k = clamp(Math.floor((t - iv.a) / state.splitSec), 0, n - 1);
-      return { i: idx + k, start: iv.a + k * state.splitSec, end: Math.min(iv.b, iv.a + (k + 1) * state.splitSec) };
-    }
-    idx += n;
-  }
+  const list = segBoundsList();
+  for (const b of list) if (t >= b.start - 1e-6 && t <= b.end + 1e-6) return b;
   return null;
 }
 /* indeks part saat ini (0-based) — sadar interval & potongan */
@@ -245,6 +263,20 @@ function applyRangePreset() {
 }
 function containRect(vw, vh, W, H) { const s = Math.min(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }
 function coverRect(vw, vh, W, H) { const s = Math.max(W / vw, H / vh); const w = vw * s, h = vh * s; return { x: (W - w) / 2, y: (H - h) / 2, w, h }; }
+
+/* ---------- v3.0: RMS AUDIO AKTIF (utk normalizer AUDIO SEHAT) ----------
+   Diukur sekali per video (sampel tiap 24 data → cepat) lalu di-cache. */
+function measureAudioRms() {
+  const b = state.audioBuffer;
+  if (!b) return 0;
+  if (state.audioRms > 0 && state._rmsEpoch === (state.mediaEpoch || 0)) return state.audioRms;
+  const d = b.getChannelData(0), d2 = b.numberOfChannels > 1 ? b.getChannelData(1) : null;
+  let s = 0, n = 0;
+  for (let i = 0; i < d.length; i += 24) { const v = d2 ? (d[i] + d2[i]) / 2 : d[i]; s += v * v; n++; }
+  state.audioRms = Math.sqrt(s / Math.max(1, n));
+  state._rmsEpoch = state.mediaEpoch || 0;
+  return state.audioRms;
+}
 
 /* ---------- SEEK PRESISI (v2.1: mendukung elemen video worker paralel) ---------- */
 function seekTo(t, el) {
