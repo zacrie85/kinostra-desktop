@@ -106,8 +106,29 @@ function noteHwFailure(msg) {
   }
 }
 function resetAccAdaptation() { _hwFails = 0; _hwDemoted = false; _accCache = null; }
+/* v3.4: DAFTAR CODEC H.264 SESUAI RESOLUSI — string profile+level dalam
+   avc1 harus SAH untuk ukuran frame-nya: level 4.0 (0x28) hanya sah sampai
+   1080p; 2K/4K wajib level 5.1 (0x33) / 5.2 (0x34, utk 4K di atas 30fps)
+   agar isConfigSupported & encoder hardware (MF/NVENC) menerima cfg.
+   Di bawah/sama dgn 1080p → daftar lama persis seperti v2.x (nol regresi). */
+function h264CodecsFor(W, H, fps) {
+  const px = W * H;
+  if (px <= 2073600) return ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
+  const lv = (px > 3700000 && fps > 30) ? '34' : '33';
+  return [`avc1.6400${lv}`, `avc1.4D00${lv}`, `avc1.4200${lv}`];
+}
+/* v3.4: BITRATE EKSPOR — resolusi tetap (720p/1080p/2K/4K) → bitrate
+   mengikuti LUAS PIKSEL relatif 1080p (4K = 4×) supaya gambar tetap tajam;
+   mode AUTO memakai pengali skala lama (1 / 0.62 / 0.38) persis v2.x.
+   KOMPRES PINTAR (targetMB) tetap menimpa hasil ini per part. */
+function exportBitrate() {
+  const q = QUAL[state.quality], sc = parseFloat(state.scale);
+  const R = state.resOut && typeof RESOUTS !== 'undefined' ? RESOUTS[state.resOut] : null;
+  if (R) return Math.round(clamp(q.br * (R.W * R.H) / (1920 * 1080), 600000, 48e6));
+  return Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
+}
 async function pickVCodecCfg(W, H, br, fps) {
-  const base = ['avc1.640028', 'avc1.4D0028', 'avc1.42002A'];
+  const base = h264CodecsFor(W, H, fps);
   const mkHw = c => ({ codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-hardware' });
   const mkSw = c => ({ codec: c, width: W, height: H, bitrate: br, framerate: fps, hardwareAcceleration: 'prefer-software' });
   const key = `${W}x${H}:${br}:${fps}:${state.acc}`;
@@ -196,7 +217,7 @@ async function pickACodec() {
 /* v2.5: konfigurasi encoder SOFTWARE (tanpa GPU) — dipakai untuk percobaan
    ulang otomatis saat encoder GPU (Media Foundation) macet/berhenti */
 async function pickSWCfg(W, H, br, fps) {
-  for (const c of ['avc1.640028', 'avc1.4D0028', 'avc1.42002A']) {
+  for (const c of h264CodecsFor(W, H, fps)) {
     try {
       const cfg = { codec: c, width: W, height: H, bitrate: br, framerate: fps };
       const s = await VideoEncoder.isConfigSupported(cfg);
@@ -770,10 +791,11 @@ async function exportPartsToDir(dir, ui) {
   /* v2.12: kecepatan video global — durasi output = sumber ÷ spd */
   const spd = clamp(state.speed || 1, 0.25, 4);
   const dims = outDims(sc), { W, H } = dims;
-  const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
+  /* v3.4: bitrate ikut resolusi tetap bila dipilih (720p/1080p/2K/4K) */
+  const br = exportBitrate();
   /* v2.14: pilih encoder sesuai AKSELERASI (auto = uji kecepatan GPU vs CPU) */
   const vCfg = await pickVCodecCfg(W, H, br, fps);
-  if (!vCfg) throw new Error('Tidak ada codec video yang didukung engine');
+  if (!vCfg) throw new Error(`Tidak ada codec video yang didukung engine untuk ${W}×${H} — coba RESOLUSI lebih rendah (mis. 1080p) atau kualitas HEMAT`);
   const enc = _lastEnc;
   /* v2.5: cadangan encoder SOFTWARE untuk percobaan ulang otomatis */
   const swCfg = await pickSWCfg(W, H, br, fps);
@@ -1008,8 +1030,12 @@ function updateOutName() {
 function updateExportInfo() {
   if (!state.file) { $('#expSum').textContent = 'Impor media untuk melihat ringkasan.'; return; }
   const sc = parseFloat(state.scale), q = QUAL[state.quality];
-  const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
+  /* v3.4: bitrate & dimensi ikut RESOLUSI TETAP bila dipilih (720p/1080p/2K/4K) */
+  const br = exportBitrate();
   const dims = outDims(sc);
+  /* v3.4: label resolusi tetap tampil di ringkasan */
+  const R = state.resOut && typeof RESOUTS !== 'undefined' ? RESOUTS[state.resOut] : null;
+  const resLine = R ? ` · <b>RESOLUSI ${R.n}</b>` : '';
   /* v2.12: estimasi memakai durasi efektif (rentang − potongan) ÷ kecepatan */
   const outLen = expLen() / clamp(state.speed || 1, 0.25, 4);
   const est = br / 8 * outLen + 160000 / 8 * outLen;
@@ -1026,7 +1052,7 @@ function updateExportInfo() {
   const afixLine = state.audioFix.on ? ` · AUDIO SEHAT${state.audioFix.hiss ? '+REDAM DESIS' : ''}` : '';
   /* v3.1: ZOOM PEMBICARA tampil di ringkasan */
   const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }
@@ -1047,9 +1073,10 @@ async function exportMergeToDir(paths, dir, ui) {
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
   const spd = clamp(state.speed || 1, 0.25, 4);
   const dims = outDims(sc), { W, H } = dims;
-  const br = Math.round(q.br * (sc === 1 ? 1 : sc === 0.75 ? 0.62 : 0.38));
+  /* v3.4: bitrate ikut resolusi tetap bila dipilih (720p/1080p/2K/4K) */
+  const br = exportBitrate();
   const vCfg = await pickVCodecCfg(W, H, br, fps);
-  if (!vCfg) throw new Error('Tidak ada codec video yang didukung engine');
+  if (!vCfg) throw new Error(`Tidak ada codec video yang didukung engine untuk ${W}×${H} — coba RESOLUSI lebih rendah (mis. 1080p) atau kualitas HEMAT`);
   const swCfg = await pickSWCfg(W, H, br, fps);
   const aCodec = await pickACodec();
   if (!aCodec) throw new Error('Encoder audio tidak tersedia');

@@ -19,6 +19,16 @@ const QUAL = {
   compressed: { br: 2.5e6, label: 'HEMAT 2.5 Mbps' },
   ultra: { br: 1e6, label: 'ULTRA HEMAT 1 Mbps' }
 };
+/* v3.4: KATALOG RESOLUSI OUTPUT — pilihan tetap 720p / 1080p / 2K / 4K.
+   Dipakai bila state.resOut diisi (chip RESOLUSI OUTPUT modul 09).
+   Rasio 9:16 otomatis membalik W↔H (1080p vertikal = 1080×1920 dst).
+   Bitrate mengikuti luas piksel (lihat exportBitrate di exporter.js). */
+const RESOUTS = {
+  '720': { W: 1280, H: 720, n: '720p HD', d: '1280×720' },
+  '1080': { W: 1920, H: 1080, n: '1080p FULL HD', d: '1920×1080' },
+  '1440': { W: 2560, H: 1440, n: '2K QHD', d: '2560×1440' },
+  '2160': { W: 3840, H: 2160, n: '4K ULTRA HD', d: '3840×2160' }
+};
 /* v2.12: katalog gaya frame (tampil sebagai chip di modul 08) */
 const FRAMESTYLES = [
   { k: 'off', n: 'TANPA FRAME', d: 'Video polos tanpa hiasan' },
@@ -121,6 +131,11 @@ const state = {
   /* v2.14: AKSELERASI EKSPOR — auto (uji kecepatan GPU vs CPU, pilih
      terkencang) | gpu (paksa encoder hardware) | cpu (paksa software) */
   acc: 'auto',
+  /* v3.4: RESOLUSI OUTPUT TETAP — '720' | '1080' | '1440' | '2160' (kunci
+     RESOUTS) | '' = AUTO (mengikuti SKALA RESOLUSI 100/75/50%, perilaku lama).
+     Setelan GLOBAL: berlaku untuk EKSPORT & SPLIT MP4, BATCH EKSPOR (semua
+     video di kotak) & GABUNG VIDEO — dipakai ulang tiap video berikutnya. */
+  resOut: '',
   /* UPGRADE: efek visual & watermark */
   vfx: { bright: 1, contrast: 1, saturate: 1, vignette: false, grain: false },
   wm: { mode: 'off', text: '@KINOSTRA', img: null, imgName: '', pos: 'br', opacity: 0.6, scale: 1 },

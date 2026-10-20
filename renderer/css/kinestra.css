@@ -123,6 +123,8 @@ select.in{appearance:none;background-image:linear-gradient(45deg,transparent 50%
 textarea.in{resize:vertical;min-height:64px;line-height:1.5}
 .seg{display:flex;border:1px solid var(--line2)}
 .seg.wrap{flex-wrap:wrap}
+/* v3.4: skala 100/75/50% tampil redup saat RESOLUSI OUTPUT tetap dipilih */
+.seg.res-dim{opacity:.4}
 .seg button{flex:1;background:var(--panel2);border:none;border-right:1px solid var(--line2);color:var(--tx2);
   font-size:11px;font-weight:600;letter-spacing:.06em;padding:9px 6px;transition:.15s;white-space:nowrap}
 .seg button:last-child{border-right:none}

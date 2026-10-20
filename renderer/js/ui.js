@@ -650,6 +650,10 @@ function setSegOn(id, val) { $$('#' + id + ' button').forEach(b => b.classList.t
     b.innerHTML = `<span>${p.n}</span><em>${p.d}</em>`;
     b.onclick = () => {
       state.ratio = p.ratio; state.scale = p.scale; state.fps = p.fps; state.quality = p.quality;
+      /* v3.4: preset mengatur resolusi versinya sendiri (skala 100%) →
+         resolusi tetap 720p/1080p/2K/4K dimatikan agar tak bertentangan */
+      state.resOut = ''; setSegOn('segRes', '');
+      const sg = $('#segScale'); if (sg) sg.classList.remove('res-dim');
       $('#hudRatio').textContent = p.ratio; $('#bgRow').style.display = p.ratio === '9:16' ? '' : 'none';
       setSegOn('segRatio', p.ratio); setSegOn('segScale', p.scale);
       setSegOn('segFps', p.fps); setSegOn('segQual', p.quality);
@@ -662,7 +666,32 @@ function setSegOn(id, val) { $$('#' + id + ' button').forEach(b => b.classList.t
 
 /* ---------- 09 EKSPOR ---------- */
 bindSeg('segQual', v => { state.quality = v; updateAll(); });
-bindSeg('segScale', v => { state.scale = v; updateAll(); });
+/* v3.4: skala dipakai saat resolusi tetap aktif → kembali AUTO (eksklusif
+   dua arah, pola yang sama dgn JUMLAH PART v3.2) */
+bindSeg('segScale', v => {
+  state.scale = v;
+  if (state.resOut) {
+    state.resOut = '';
+    setSegOn('segRes', '');
+    $('#segScale').classList.remove('res-dim');
+    toast('Resolusi: AUTO — mengikuti skala ' + Math.round(parseFloat(v) * 100) + '%', 'info');
+  }
+  updateAll();
+});
+/* v3.4: RESOLUSI OUTPUT — kunci hasil ekspor/split/batch/gabung ke 720p /
+   1080p / 2K / 4K UHD untuk SEMUA video; bitrate ikut menyesuaikan */
+bindSeg('segRes', v => {
+  state.resOut = v;
+  const sg = $('#segScale');
+  if (sg) sg.classList.toggle('res-dim', v !== '');
+  updateAll();
+  if (v) {
+    const R = RESOUTS[v], dims = outDims();
+    toast(`Resolusi output: ${R.n} (${dims.W}×${dims.H}) — berlaku semua video: ekspor & split, batch & gabung`, 'ok');
+  } else {
+    toast('Resolusi: AUTO — mengikuti SKALA RESOLUSI (100/75/50%)', 'info');
+  }
+});
 bindSeg('segFps', v => { state.fps = parseInt(v); updateAll(); });
 bindSeg('segParallel', v => { state.parallel = parseInt(v) || 0; updateAll(); }); /* v2.1 */
 /* v2.14: AKSELERASI EKSPOR — OTOMATIS (uji kecepatan GPU vs CPU) / GPU / CPU */

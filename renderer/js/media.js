@@ -166,6 +166,12 @@ function buildPeaks() {
 /* ---------- DIMENSI & SEGMENTASI ---------- */
 function previewDims() { return state.ratio === '16:9' ? { W: 1600, H: 900 } : { W: 506, H: 900 }; }
 function outDims(sc = 1) {
+  /* v3.4: RESOLUSI TETAP — bila user memilih 720p/1080p/2K/4K di modul 09,
+     hasil ekspor DIKUNCI ke ukuran itu (skala 100/75/50% diabaikan).
+     Rasio 9:16 membalik W↔H: 4K vertikal = 2160×3840 (sisi pendek mengikuti
+     angka pilihan — konvensi TikTok/Shorts). AUTO = perilaku lama. */
+  const R = state.resOut && typeof RESOUTS !== 'undefined' ? RESOUTS[state.resOut] : null;
+  if (R) return state.ratio === '16:9' ? { W: R.W, H: R.H } : { W: R.H, H: R.W };
   let W, H; if (state.ratio === '16:9') { W = 1920; H = 1080; } else { W = 1080; H = 1920; }
   W = Math.round(W * sc / 2) * 2; H = Math.round(H * sc / 2) * 2; return { W, H };
 }

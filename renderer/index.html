@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.3.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.4.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.3.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.4.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -447,8 +447,17 @@
           <button data-v="max">MAKSIMAL</button><button data-v="balanced" class="on">SEIMBANG</button>
           <button data-v="compressed">HEMAT</button><button data-v="ultra">ULTRA HEMAT</button>
         </div>
-        <div class="lbl">SKALA RESOLUSI</div>
+        <div class="lbl">SKALA RESOLUSI <span style="color:var(--tx2);font-weight:500">(mode AUTO)</span></div>
         <div class="seg" id="segScale"><button data-v="1" class="on">100%</button><button data-v="0.75">75%</button><button data-v="0.5">50%</button></div>
+        <div class="lbl">RESOLUSI OUTPUT — 720p / 1080p / 2K / 4K <span class="beta">BARU · v3.4</span></div>
+        <div class="seg wrap" id="segRes">
+          <button data-v="" class="on">AUTO</button>
+          <button data-v="720">720p HD</button>
+          <button data-v="1080">1080p FHD</button>
+          <button data-v="1440">2K QHD</button>
+          <button data-v="2160">4K UHD</button>
+        </div>
+        <div class="note" id="resNote"><b>AUTO</b>: resolusi mengikuti SKALA RESOLUSI di atas (100/75/50%). Pilih <b>720p</b> (1280×720), <b>1080p</b> (1920×1080), <b>2K</b> (2560×1440) atau <b>4K ULTRA HD</b> (3840×2160) → hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — SEMUA VIDEO DI KOTAK</b> &amp; <b>GABUNG VIDEO</b> dikunci ke resolusi itu, untuk semua video (vertikal 9:16 otomatis dibalik, mis. 4K = 2160×3840). Bitrate naik otomatis mengikuti resolusi agar tetap tajam. Catatan: 2K/4K = file lebih besar &amp; render lebih lama — bila encoder-mu tidak sanggup, aplikasi menyarankan resolusi lebih rendah.</div>
         <div class="lbl">FRAME RATE</div>
         <div class="seg" id="segFps"><button data-v="24">24</button><button data-v="30" class="on">30</button><button data-v="60">60</button></div>
         <div class="lbl">AKSELERASI GPU — EKSPOR LEBIH CEPAT <span class="beta">BARU · v2.14</span></div>

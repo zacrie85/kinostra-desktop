@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.3.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.4.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.3.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.4.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.3.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.4.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -30,8 +30,21 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
-| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
+| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.4 — RESOLUSI OUTPUT 720p / 1080p / 2K / 4K (modul 09)
+
+Tentukan sendiri resolusi hasil eksport — bukan cuma mengikuti ukuran video sumber:
+
+- **Cara pakai**: modul 09 → **RESOLUSI OUTPUT** → pilih **720p HD** (1280×720), **1080p FULL HD** (1920×1080), **2K QHD** (2560×1440) atau **4K ULTRA HD** (3840×2160)
+- **Berlaku untuk semua video**: hasil **EKSPORT & SPLIT MP4**, **BATCH EKSPOR — SEMUA VIDEO DI KOTAK**, maupun **GABUNG VIDEO** semuanya dikunci ke resolusi yang dipilih — setelan tetap aktif untuk video berikutnya
+- **Rasio vertikal otomatis**: video 9:16 dibalik sesuai konvensi TikTok/Shorts (mis. 4K vertikal = 2160×3840)
+- **Bitrate menyesuaikan otomatis**: 4K memakai ±4× bitrate 1080p agar gambar tetap tajam (KOMPRES PINTAR target MB tetap menang bila diisi)
+- **Mode AUTO**: perilaku lama — resolusi mengikuti SKALA RESOLUSI 100/75/50%. Memilih skala saat resolusi tetap aktif otomatis kembali ke AUTO (dan sebaliknya)
+- Judul, subtitel, frame, watermark & zoom pembicara ikut membesar proporsional di 2K/4K — hasil tidak "kecil di tengah frame"
+- Codec H.264 otomatis naik ke **level 5.1/5.2** untuk 2K/4K sesuai standar (termasuk 4K 60fps) agar encoder GPU/CPU menerima ukuran frame
+- Catatan: 2K/4K menghasilkan file lebih besar & render lebih lama; bila encoder komputermu tidak sanggup, aplikasi menyarankan resolusi lebih rendah dengan pesan yang jelas
 
 ## Yang Baru di v3.3 — BACKSOUND MP3 SENDIRI (modul 06)
 
