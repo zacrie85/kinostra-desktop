@@ -112,6 +112,9 @@ const state = {
   trackMode: false,
   track: { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: 'TARGET 01', color: '#F7A600', vx: 0, vy: 0, scale: 1, lost: 0 },
   music: { buffer: null, mood: 'epic', intensity: 0.6, gain: 0.6, seed: (Math.random() * 1e9) | 0 },
+  /* v3.3: BACKSOUND MP3 SENDIRI — file audio pilihan user (loop di belakang
+     suara asli, volume manual). on = dipakai saat ekspor & pratinjau. */
+  bsound: { on: true, buffer: null, gain: 0.35, name: '' },
   audioGain: 0.9, quality: 'balanced', scale: 1, fps: 30,
   /* UPGRADE v2.1: jumlah render paralel (0 = otomatis) */
   parallel: 0,

@@ -163,3 +163,65 @@ async function composeMusic(reroll, quiet = false, force = false) {
   if (!force) state.busy = false;
   if (!quiet) hideModal();
 }
+
+/* ================================================================
+   v3.3: BACKSOUND MP3 SENDIRI — file audio pilihan user
+   Diputar BERULANG (loop) di belakang suara asli video, volume
+   manual. Ikut dirender di SEMUA jalur ekspor (part/split/gabung/
+   batch) lewat renderMix() — sama seperti skor musik prosedural.
+   ================================================================ */
+let bsSrc = null, bsGainNode = null;
+function ensureBsGain() {
+  const ac = getActx();
+  if (!bsGainNode) { bsGainNode = ac.createGain(); bsGainNode.connect(ac.destination); }
+  bsGainNode.gain.value = state.bsound.gain;
+}
+function stopBsoundPreview() { if (bsSrc) { try { bsSrc.stop(); } catch (e) { } bsSrc = null; } }
+/* pratinjau sinkron: mulai saat video diputar, offset mengikuti playhead */
+function startBsoundSync() {
+  stopBsoundPreview();
+  if (!state.bsound.on || !state.bsound.buffer || videoEl.paused) return;
+  ensureBsGain(); const ac = getActx();
+  bsSrc = ac.createBufferSource(); bsSrc.buffer = state.bsound.buffer; bsSrc.loop = true;
+  bsSrc.connect(bsGainNode); bsSrc.start(0, videoEl.currentTime % state.bsound.buffer.duration);
+}
+/* pasang buffer backsound + segarkan UI (dipakai kedua loader di bawah) */
+function setBsoundBuffer(buf, name) {
+  state.bsound.buffer = buf; state.bsound.name = name || 'backsound';
+  state.bsound.on = true;
+  try {
+    const chk = $('#bsoundOn'); if (chk) chk.checked = true;
+    const st = $('#bsoundStat');
+    if (st) st.innerHTML = `<b>${state.bsound.name}</b> · ${fmtT(buf.duration)} · SIAP — diputar berulang di belakang suara asli`;
+    $('#inBS').value = state.bsound.gain; $('#bsGainV').textContent = Math.round(state.bsound.gain * 100) + '%';
+  } catch (e) { }
+}
+/* jalur UI: objek File dari <input type=file> (dialog native Electron) */
+async function loadBsoundFile(file) {
+  if (!file) return;
+  try {
+    const ab = await file.arrayBuffer();
+    const buf = await getActx().decodeAudioData(ab);
+    setBsoundBuffer(buf, file.name || 'backsound');
+    if (!videoEl.paused) startBsoundSync();
+    toast('Backsound dimuat: ' + state.bsound.name, 'ok');
+  } catch (e) {
+    console.error(e);
+    toast('Gagal memuat backsound (pastikan MP3/WAV/M4A): ' + (e.message || e), 'err');
+  }
+}
+/* jalur path (dipakai uji otomatis & potensi batch): baca via kfile:// */
+async function loadBsoundFromPath(p) {
+  try {
+    const name = (p.split(/[\\/]/).pop() || 'backsound.mp3');
+    const ab = await (await fetch(kfileURL(p))).arrayBuffer();
+    const buf = await getActx().decodeAudioData(ab);
+    setBsoundBuffer(buf, name);
+    if (!videoEl.paused) startBsoundSync();
+    return { ok: true, dur: buf.duration };
+  } catch (e) {
+    console.error(e);
+    toast('Gagal memuat backsound: ' + (e.message || e), 'err');
+    return { ok: false, err: String(e.message || e) };
+  }
+}

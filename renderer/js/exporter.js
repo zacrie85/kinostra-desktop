@@ -263,6 +263,18 @@ async function renderMix(start, durOut, spd = 1) {
     s.loop = true;   /* buffer lebih pendek dari part → mengulang, bukan crash */
     s.start(0, start % state.music.buffer.duration, durOut);
   }
+  /* v3.3: BACKSOUND MP3 SENDIRI — file audio pilihan user, loop, volume
+     manual (state.bsound.gain). Offset mengikuti waktu media sehingga
+     posisi lagu KONTINU antar part/blok (sama dgn perilaku skor musik). */
+  const BS = state.bsound;
+  if (BS && BS.on && BS.buffer && BS.buffer.duration > 0.01) {
+    const s = oc.createBufferSource(); s.buffer = BS.buffer;
+    s.playbackRate.value = spd;
+    const g = oc.createGain(); g.gain.value = clamp(BS.gain, 0, 1.6);
+    s.connect(g); connectSrc(g);
+    s.loop = true;
+    s.start(0, start % BS.buffer.duration, durOut);
+  }
   /* v3.0: TTS NARASI — suara AI offline diletakkan di waktu media
      state.tts.at; ikut kecepatan video (spd). Potongan di luar part
      dilewati; bagian yang terpotong di awal part disesuaikan. */
@@ -765,7 +777,10 @@ async function exportPartsToDir(dir, ui) {
   const enc = _lastEnc;
   /* v2.5: cadangan encoder SOFTWARE untuk percobaan ulang otomatis */
   const swCfg = await pickSWCfg(W, H, br, fps);
-  const wantAudio = !!(state.audioBuffer || state.music.buffer);
+  /* v3.3: backsound MP3 user ikut membuat jalur audio aktif (video tanpa
+     suara asli + backsound tetap diekspor DENGAN audio) */
+  const wantAudio = !!(state.audioBuffer || state.music.buffer
+    || (state.bsound && state.bsound.on && state.bsound.buffer));
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();

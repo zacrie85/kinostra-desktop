@@ -303,6 +303,26 @@ $('#inAG').oninput = e => { state.audioGain = parseFloat(e.target.value); $('#ag
 $('#btnCompose').onclick = () => composeMusic(false);
 $('#btnReroll').onclick = () => composeMusic(true);
 
+/* ---------- v3.3 BACKSOUND MP3 SENDIRI ---------- */
+$('#btnBsound').onclick = () => $('#bsoundInput').click();
+$('#bsoundInput').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) loadBsoundFile(f); e.target.value = ''; };
+$('#bsoundOn').onchange = e => {
+  state.bsound.on = e.target.checked;
+  if (!state.bsound.on) stopBsoundPreview();
+  else if (!videoEl.paused) startBsoundSync();
+};
+$('#inBS').oninput = e => {
+  state.bsound.gain = parseFloat(e.target.value) || 0;
+  $('#bsGainV').textContent = Math.round(state.bsound.gain * 100) + '%';
+  if (bsGainNode) bsGainNode.gain.value = state.bsound.gain;
+};
+$('#btnBsoundClear').onclick = () => {
+  state.bsound.buffer = null; state.bsound.name = '';
+  stopBsoundPreview();
+  $('#bsoundStat').textContent = 'Belum ada backsound — video pakai suara asli saja';
+  toast('Backsound dihapus', 'ok');
+};
+
 /* ---------- 07 TIPOGRAFI ---------- */
 function renderFontGrid() {
   const g = $('#fontGrid'); g.innerHTML = '';
@@ -794,9 +814,9 @@ $('#btnPrev').onclick = () => { if (state.duration) { const r = rangeInfo();
 $('#btnNext').onclick = () => { if (state.duration) { const r = rangeInfo();
   const c = Math.floor((videoEl.currentTime - r.start) / state.splitSec);
   videoEl.currentTime = r.start + clamp(c + 1, 0, segmentsCount() - 1) * state.splitSec + 0.01; } };
-videoEl.addEventListener('play', () => { getActx().resume(); startMusicSync(); setPlayIcon(); });
-videoEl.addEventListener('pause', () => { stopMusicPreview(); setPlayIcon(); });
-videoEl.addEventListener('seeked', () => { if (!videoEl.paused) startMusicSync(); });
+videoEl.addEventListener('play', () => { getActx().resume(); startMusicSync(); startBsoundSync(); setPlayIcon(); });
+videoEl.addEventListener('pause', () => { stopMusicPreview(); stopBsoundPreview(); setPlayIcon(); });
+videoEl.addEventListener('seeked', () => { if (!videoEl.paused) { startMusicSync(); startBsoundSync(); } });
 
 /* v2.8.1: auto-scroll horizontal timeline mengikuti playhead (hanya saat play,
    hanya jika konten lebih lebar dari layar, dan hanya saat playhead keluar view) */

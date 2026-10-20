@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.2.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.3.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.2.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.3.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.2.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.3.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -27,11 +27,24 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
 | 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
-| 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION |
+| 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.3 — BACKSOUND MP3 SENDIRI (modul 06)
+
+Pakai **musik pilihanmu sendiri** sebagai backsound video — bukan cuma skor AI:
+
+- **Cara pakai**: modul 06 → **PILIH FILE MP3** → pilih MP3/WAV/M4A dari disk
+- **Volume manual**: slider **VOLUME BACKSOUND** 0–150% — atur sekecil/besarkah sesukamu
+- Diputar **berulang (loop)** otomatis bila lagu lebih pendek dari video, posisi lagu **kontinu antar part** (tidak mulai dari awal di tiap part)
+- Ikut **EKSPOR & SPLIT, GABUNG VIDEO, dan BATCH EKSPOR** — semua part dapat backsound
+- **Terdengar di pratinjau** saat video diputar (bukan cuma hasil eksport)
+- Cheklis **PAKAI BACKSOUND** untuk aktif/nonaktif cepat tanpa hapus file; tombol hapus untuk lepas total
+- Video tanpa suara asli pun tetap diekspor **dengan audio** bila backsound aktif
+- Tip: kecilkan **MIX AUDIO ASLI** (di atasnya) bila ingin backsound lebih dominan, atau pakai **AUDIO SEHAT** agar suara bicara tetap jelas
 
 ## Yang Baru di v3.2 — JUMLAH PART OTOMATIS (modul 02)
 

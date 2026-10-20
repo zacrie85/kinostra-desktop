@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.2.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.3.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.2.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.3.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -309,6 +309,17 @@
         <input type="range" id="inMG" min="0" max="1" step="0.05" value="0.6">
         <div class="lbl">MIX AUDIO ASLI <b id="agV">90%</b></div>
         <input type="range" id="inAG" min="0" max="1" step="0.05" value="0.9">
+        <div class="lbl" style="margin-top:8px">BACKSOUND MP3 SENDIRI <span class="beta">BARU · v3.3</span></div>
+        <div class="row">
+          <button class="btn" id="btnBsound"><i data-lucide="music-4"></i> PILIH FILE MP3</button>
+          <button class="btn sm" id="btnBsoundClear" style="flex:0 0 auto" title="Hapus backsound"><i data-lucide="trash-2"></i></button>
+        </div>
+        <input type="file" id="bsoundInput" hidden accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,audio/*">
+        <div class="substat" id="bsoundStat">Belum ada backsound — video pakai suara asli saja</div>
+        <label class="chk"><input type="checkbox" id="bsoundOn" checked><span>PAKAI BACKSOUND SAAT EKSPOR &amp; SPLIT</span></label>
+        <div class="lbl">VOLUME BACKSOUND <b id="bsGainV">35%</b></div>
+        <input type="range" id="inBS" min="0" max="1.5" step="0.05" value="0.35">
+        <div class="note">MP3/WAV pilihanmu diputar <b>berulang (loop)</b> di belakang suara asli sepanjang video — ikut semua part saat <b>EKSPOR, SPLIT &amp; GABUNG</b>, plus terdengar di pratinjau. Kecilkan <b>MIX AUDIO ASLI</b> di atas bila ingin backsound lebih dominan.</div>
         <div class="lbl" style="margin-top:8px">AUDIO SEHAT — SATU KLIK <span class="beta">BARU · v3.0</span></div>
         <label class="chk"><input type="checkbox" id="audioFixOn"><span>NORMALIZER VOLUME — SUARA TERLALU PELAN DIPERKUAT, TERLALU KERAS DIREDAM (SAMARATA ANTAR VIDEO)</span></label>
         <label class="chk"><input type="checkbox" id="audioFixHiss"><span>REDAM DESIS &amp; DENGUNG RENDAH (FILTER SUARA BERSIH)</span></label>
