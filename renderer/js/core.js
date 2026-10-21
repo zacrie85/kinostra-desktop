@@ -139,8 +139,11 @@ const state = {
   /* v3.6.1: part = label nomor part di sampul, di bawah judul —
      '' = TANPA | 'PART' | 'EPISODE' | 'EPS' | 'BAGIAN' | '#' */
   /* v3.7: auto = sumber OTOMATIS DARI VIDEO (pindai adegan per part);
-     style = gaya bingkai sampul otomatis; title = judul khusus sampul */
-  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, style: 'KLASIK', title: '' },
+     style = gaya bingkai sampul otomatis; title = judul khusus sampul
+     v3.8: scope = 'part' (tiap part adegan sendiri, cover beda-beda) |
+     'single' (SATU sampul dipindai sekali per film — window menit 5–7 —
+     lalu dipakai SEMUA part film itu; nomor part tetap otomatis) */
+  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, scope: 'part', style: 'KLASIK', title: '' },
   /* v3.4: RESOLUSI OUTPUT TETAP — '720' | '1080' | '1440' | '2160' (kunci
      RESOUTS) | '' = AUTO (mengikuti SKALA RESOLUSI 100/75/50%, perilaku lama).
      Setelan GLOBAL: berlaku untuk EKSPORT & SPLIT MP4, BATCH EKSPOR (semua

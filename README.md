@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.7.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.8.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -64,7 +64,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 43 | **Narasi AI (TTS Offline)** ⭐v3.0 | Suara AI bahasa Indonesia 100% offline (VITS MMS ±37 MB, unduh sekali): teks → suara → pasang di playhead → ter-mix ke hasil ekspor/split/batch |
 | 44 | **Optimasi Kecepatan 100%** ⭐v3.0 | Audio di-encode **bersamaan** dengan video (±30-45% lebih cepat per part), buffer audio dipakai ulang (GC −40%), pratinjau statis tak digambar ulang 60×/dtk (hemat CPU & baterai) |
 | 45 | **Zoom Pembicara Otomatis (AI)** ⭐v3.1 | Seperti aplikasi AI potong podcast: kamera **otomatis meng-zoom orang yang sedang bicara** dan pindah halus saat gantian — deteksi orang (YOLOS ONNX offline, ±10 MB unduh sekali) + **gerakan mulut** + **kapan ada suara**. Rasio **9:16** = hasil vertikal siap Reels/TikTok/Shorts. Kecepatan pindah fokus bisa diatur (cepat/normal/lambat), saat senyap tetap di pembicara atau tampilkan semua. **Berlaku global semua video** — Batch Ekspor & Gabung Video otomatis menganalisis tiap video |
-| 46 | **Cover Video Pembuka + Mode Otomatis** ⭐v3.7 | **Satu cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik). **v3.7: OTOMATIS DARI VIDEO** — tiap part memindai adegannya sendiri, sampul disusun otomatis: adegan terbaik + **bingkai menarik (KLASIK/GARIS/SINEMA)** + judul + tulisan **PART/EPISODE/EPS/BAGIAN/#** di bawah judul — 50 part pun beres tanpa kerja manual. v3.6.1: tulisan part juga untuk cover manual; gabungan tetap polos |
+| 46 | **Cover Video Pembuka + Mode Otomatis** ⭐v3.8 | **Satu cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik). **v3.8: 1 SAMPUL SEMUA PART** — cukup pindai SEKALI per film (sekitar menit 5–7), sampul yang sama dipakai semua part-nya (film 60 mnt → 10 part = 1 cover); nomor part tetap otomatis di bawah judul. v3.7: OTOMATIS TIAP PART (cover tiap part beda dari adegannya) + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis. MANUAL (impor/Studio) tetap ada |
 
 ⭐ = fitur baru/upgrade terbaru
 

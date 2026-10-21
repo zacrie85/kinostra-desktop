@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.7.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.8.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.7.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.8.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.7.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.8.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -30,9 +30,23 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
-| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.7: OTOMATIS DARI VIDEO** — tiap part memindai adegan di rentangnya sendiri, memilih frame terbaik, lalu menyusun sampul lengkap otomatis: gambar video + peredup sinematik + **bingkai menarik (KLASIK/GARIS/SINEMA)** + **judul** + **tulisan part di bawah judul** — 50 part pun beres tanpa kerja manual, cover tiap part berbeda-beda. **v3.6.1: TULISAN PART DI SAMPUL** untuk cover manual (PART/EPISODE/EPS/BAGIAN/#). **v3.6: cover tampil di awal SETIAP file hasil ekspor** (default 2 detik, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, semua video BATCH EKSPOR & pembuka GABUNG VIDEO; sumber manual: impor PNG/JPG/WebP atau STUDIO SAMPUL |
+| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.8: 1 SAMPUL SEMUA PART** — cukup SATU cover per film: adegan terbaik dipindai SEKALI di sekitar **menit 5–7** film (video pendek proporsional), sampul yang sama dipakai SEMUA part film itu — film 60 mnt → 10 part = 1 cover; **nomor part tetap tercetak otomatis** di bawah judul. **v3.7: OTOMATIS TIAP PART** — cover tiap part beda dari adegannya sendiri + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis + PRATINJAU. **v3.6: cover tampil di awal SETIAP file** (default 2 dtk, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, BATCH EKSPOR & pembuka GABUNG; MANUAL: impor PNG/JPG/WebP / STUDIO SAMPUL |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.8 — 1 SAMPUL SEMUA PART (modul 08B)
+
+Sesuai permintaan: **cukup SATU cover per film** — tidak perlu memindai tiap part:
+
+- **Cara pakai**: modul **08B COVER VIDEO PEMBUKA** → **SUMBER COVER** → pilih **1 SAMPUL SEMUA PART** → **AKTIF**. Selesai
+- **Pindai SEKALI per film**: adegan terbaik dicari di sekitar **menit 5–7** film (tempat adegan cerita — aman dari intro/kredit); video pendek otomatis proporsional; hasil pindaian DETERMINISTIK → semua part film itu mendapat **sampul yang sama persis**
+- **Contoh**: film 60 menit → 10 part, cukup 1 cover dari menit 5–7 → dipakai 10 part; film berikutnya 15 menit → 5 part, cukup 1 cover dari film itu sendiri (BATCH EKSPOR: tiap film pindai window-nya masing-masing)
+- **Nomor part tetap otomatis**: sampulnya sama, tapi **PART 1 / PART 2 / …** tetap tercetak di bawah judul sesuai part tiap file (PART/EPISODE/EPS/BAGIAN/#)
+- **Sampul lengkap tetap sama**: gambar video + peredup sinematik + bingkai **KLASIK/GARIS/SINEMA/TANPA** + judul (nama file atau ketikan sendiri)
+- **OTOMATIS TIAP PART (v3.7) tetap tersedia** — pilih kalau ingin cover tiap part berbeda-beda; **PRATINJAU** kini menyesuaikan mode: mode single menampilkan sampul yang akan dipakai SEMUA part
+- **GABUNG VIDEO**: cover pembuka gabungan tetap otomatis & polos tanpa nomor; **MANUAL** (impor/Studio) tetap utuh
+- Tetap **satu pass encoding** — pindaian tetap hanya ±4–6 seek ringan per part
+- Diuji otomatis **30/30 lulus** (baru) — termasuk ekspor nyata: split 3 part mode single → ketiga sampul nyaris identik (<4% piksel beda, hanya digit label), tak menyentuh adegan di luar window; mode tiap-part kontras → merah/hijau/biru >25% beda; regresi v3.6–v3.7 bersih
 
 ## Yang Baru di v3.7 — COVER OTOMATIS DARI ADEGAN VIDEO (modul 08B)
 

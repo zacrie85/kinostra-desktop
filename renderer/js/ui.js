@@ -388,13 +388,17 @@ function syncCoverUI() {
   if (boxA) boxA.style.display = state.cover.auto ? '' : 'none';
   if (btnP) btnP.style.display = state.cover.auto ? '' : 'none';
   if (state.cover.auto) {
+    const scopeTxt = state.cover.scope === 'single' ? '1 SAMPUL SEMUA PART' : 'OTOMATIS TIAP PART';
+    const scopeInfo = state.cover.scope === 'single'
+      ? 'satu sampul untuk SEMUA part film ini (dipindai sekali · nomor part tetap otomatis)'
+      : 'tiap part dapat adegan &amp; cover berbeda';
     el.innerHTML = state.cover.on
-      ? `<b style="color:var(--acc)">AKTIF · OTOMATIS DARI VIDEO</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b> · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine} — tiap part dapat adegan &amp; cover berbeda`
-      : `Mode <b>OTOMATIS DARI VIDEO</b> siap — nyalakan <b>AKTIF</b> agar tiap part mendapat sampul dari adegannya sendiri (bingkai ${state.cover.style || 'KLASIK'}${partLine})`;
+      ? `<b style="color:var(--acc)">AKTIF · ${scopeTxt}</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b> · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine} — ${scopeInfo}`
+      : `Mode <b>${scopeTxt}</b> siap — nyalakan <b>AKTIF</b> agar tiap file mendapat sampul otomatis (bingkai ${state.cover.style || 'KLASIK'}${partLine})`;
   } else {
     el.innerHTML = state.cover.img
       ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
-      : 'Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS DARI VIDEO';
+      : 'Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS (TIAP PART / 1 SAMPUL)';
   }
 }
 /* pasang gambar cover dari dataUrl (dipakai impor manual & Studio Sampul) */
@@ -430,7 +434,7 @@ bindSeg('segCover', v => {
   state.cover.on = v === 'on';
   syncCoverUI();
   toast(state.cover.on
-    ? `COVER VIDEO: AKTIF — tampil ${state.cover.dur} dtk di awal SETIAP file hasil ekspor & split${state.cover.auto ? ' · sampul disusun otomatis dari adegan tiap part (v3.7)' : ''}`
+    ? `COVER VIDEO: AKTIF — tampil ${state.cover.dur} dtk di awal SETIAP file hasil ekspor & split${state.cover.auto ? (state.cover.scope === 'single' ? ' · 1 sampul untuk SEMUA part film (v3.8)' : ' · sampul otomatis dari adegan tiap part (v3.7)') : ''}`
     : 'Cover video: mati — file ekspor langsung mulai dari awal video', state.cover.on ? 'ok' : 'info');
 });
 bindSeg('segCoverDur', v => {
@@ -447,19 +451,27 @@ bindSeg('segCoverPart', v => {
     : 'Tulisan part di sampul: TANPA — semua cover polos tanpa nomor part', 'ok');
 });
 /* ================================================================
-   v3.7 — SUMBER COVER OTOMATIS DARI VIDEO (modul 08B)
-   Setiap part memindai adegan di rentangnya sendiri, memilih frame
-   terbaik, lalu menyusun sampul: bingkai menarik + judul + label part.
+   v3.7/v3.8 — SUMBER COVER OTOMATIS DARI VIDEO (modul 08B)
+   v3.7 'auto'  : tiap part memindai adegan rentangnya → cover beda-beda
+   v3.8 'single': SATU sampul per film (window menit 5–7) dipakai SEMUA
+                  part film itu — nomor part tetap otomatis per part
    ================================================================ */
 bindSeg('segCoverSrc', v => {
-  state.cover.auto = v === 'auto';
-  if (!state.cover.auto && !state.cover.img && state.cover.on) {
-    state.cover.on = false; setSegOn('segCover', 'off');   /* manual tanpa gambar → cover mati */
+  if (v === 'manual') {
+    state.cover.auto = false; state.cover.scope = 'part';
+    if (!state.cover.img && state.cover.on) {
+      state.cover.on = false; setSegOn('segCover', 'off');   /* manual tanpa gambar → cover mati */
+    }
+    syncCoverUI();
+    toast('Sumber cover: MANUAL — impor gambar atau buat di Studio Sampul', 'ok');
+  } else {
+    state.cover.auto = true;
+    state.cover.scope = (v === 'single') ? 'single' : 'part';
+    syncCoverUI();
+    toast(state.cover.scope === 'single'
+      ? 'Sumber cover: 1 SAMPUL SEMUA PART — adegan terbaik dipindai SEKALI per film (sekitar menit 5–7) dan dipakai semua part film itu; nomor part tetap otomatis'
+      : 'Sumber cover: OTOMATIS TIAP PART — tiap part memindai adegannya sendiri, cover tiap part berbeda-beda', 'ok');
   }
-  syncCoverUI();
-  toast(state.cover.auto
-    ? 'Sumber cover: OTOMATIS DARI VIDEO — tiap part memindai adegannya sendiri, sampul (bingkai + judul + part) disusun otomatis, tanpa perlu gambar'
-    : 'Sumber cover: MANUAL — impor gambar atau buat di Studio Sampul', 'ok');
 });
 bindSeg('segCoverStyle', v => {
   state.cover.style = v || 'KLASIK';
@@ -481,7 +493,10 @@ if ($('#btnCoverPrev')) $('#btnCoverPrev').onclick = async () => {
     const segEnd = Math.max(0.5, state.duration || videoEl.duration || 5);
     const cvp = await buildAutoCover(videoEl, { start: 0, end: segEnd }, dims.W, dims.H);
     await seekTo(t0, videoEl);   /* kembalikan playhead seperti semula */
-    showModal({ title: 'PRATINJAU COVER OTOMATIS', sub: 'Contoh dari video yang dimuat — saat ekspor, TIAP PART mengambil adegan dari rentangnya sendiri', cancel: false, body: '<canvas id="autoPrevCv" style="width:100%;border-radius:10px;background:#000"></canvas>' });
+    const subPrev = state.cover.scope === 'single'
+      ? 'Contoh dari video yang dimuat — sampul INI akan dipakai SEMUA part film ini (nomor part tetap otomatis)'
+      : 'Contoh dari video yang dimuat — saat ekspor, TIAP PART mengambil adegan dari rentangnya sendiri';
+    showModal({ title: 'PRATINJAU COVER OTOMATIS', sub: subPrev, cancel: false, body: '<canvas id="autoPrevCv" style="width:100%;border-radius:10px;background:#000"></canvas>' });
     const pcv = $('#autoPrevCv');
     pcv.width = dims.W; pcv.height = dims.H;
     pcv.getContext('2d').drawImage(cvp, 0, 0);

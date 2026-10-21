@@ -574,9 +574,24 @@ function drawAutoCoverDesign(x, W, H, frameCv) {
 /* ---------- pemindai adegan → kanvas sampul siap pakai ----------
    v: elemen video sumber part ini (worker punya elemen sendiri → AMAN
    paralel); seg: {start,end} rentang part dalam detik sumber.
+   v3.8 scope 'single': semua part memakai window pindai yang sama
+   (menit 5–7 film) → sampul sama persis untuk semua part film itu.
    Mengembalikan kanvas W×H berisi sampul final (bingkai + judul). */
 async function buildAutoCover(v, seg, W, H) {
-  const dur = Math.max(0.1, seg.end - seg.start);
+  /* v3.8: scope 'single' — SATU sampul untuk SEMUA part film: window
+     pindai MENIT 5–7 dari awal video (saran pengguna — adegan cerita,
+     aman dari intro/kredit), video pendek proporsional. Semua worker
+     part memindai window yang sama dari video yang sama secara
+     deterministik → sampul IDENTIK di semua part, nomor part tetap
+     dicetak per part. scope 'part' (v3.7) = rentang waktunya part. */
+  let w0, w1;
+  if (state.cover.auto && state.cover.scope === 'single') {
+    const vd = Math.max(0.5, v.duration || seg.end || 1);
+    w0 = Math.min(300, vd * 0.35); w1 = Math.min(420, vd * 0.85);
+    if (w1 - w0 < 1.5) { w0 = vd * 0.2; w1 = vd * 0.8; }   /* video pendek */
+    if (w1 - w0 < 0.2) { w0 = 0; w1 = vd; }                 /* super pendek */
+  } else { w0 = seg.start; w1 = seg.end; }
+  const dur = Math.max(0.1, w1 - w0);
   const fr = dur < 2.5 ? [0.35, 0.75] : dur < 8 ? [0.2, 0.42, 0.64, 0.86] : [0.1, 0.26, 0.42, 0.58, 0.74, 0.9];
   const sw = 160, sh = Math.max(2, Math.round(160 * H / W));
   const scv = document.createElement('canvas'); scv.width = sw; scv.height = sh;
@@ -587,7 +602,7 @@ async function buildAutoCover(v, seg, W, H) {
   for (const f of fr) {
     if (state.abort) throw new Error('Dibatalkan');
     if (state.exportFatal) throw state.exportFatal;
-    const t = clamp(seg.start + dur * f, 0, Math.max(0, (v.duration || seg.end) - 0.02));
+    const t = clamp(w0 + dur * f, 0, Math.max(0, (v.duration || seg.end) - 0.02));
     try { await seekTo(t, v); } catch (e) { }
     setCompSrc(v);
     drawComposition(scx, sw, sh, t);
@@ -606,7 +621,7 @@ async function buildAutoCover(v, seg, W, H) {
   await seekTo(seg.start, v);   /* kembali ke awal part untuk render konten */
   const out = document.createElement('canvas'); out.width = W; out.height = H;
   drawAutoCoverDesign(out.getContext('2d', { alpha: false }), W, H, keep);
-  console.info(`cover otomatis (v3.7): adegan @ ${fmtT(bestT)} dipilih (skor ${best === -Infinity ? 'n/a' : best.toFixed(2)}, dari ${fr.length} kandidat) · rentang ${fmtT(seg.start)}–${fmtT(seg.end)}`);
+  console.info(`cover otomatis (v3.8): adegan @ ${fmtT(bestT)} dipilih (skor ${best === -Infinity ? 'n/a' : best.toFixed(2)}, dari ${fr.length} kandidat) · rentang ${fmtT(w0)}–${fmtT(w1)}${(state.cover.auto && state.cover.scope === 'single') ? ' · SATU sampul utk SEMUA part film ini' : ' · per part'}`);
   return out;
 }
 
@@ -1342,7 +1357,7 @@ function updateExportInfo() {
   const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
   /* v3.6: COVER PEMBUKA tampil di ringkasan — v3.7: + sumber otomatis */
   const covOn = state.cover && state.cover.on && (state.cover.auto || state.cover.img);
-  const cvLine = covOn ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.auto ? ' (OTOMATIS DARI ADEGAN)' : ''}${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}</b>` : '';
+  const cvLine = covOn ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.auto ? ` (OTOMATIS DARI ADEGAN${state.cover.scope === 'single' ? ' · 1 SAMPUL' : ''})` : ''}${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}</b>` : '';
   $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }

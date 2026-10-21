@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.7.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.8.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.7.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.8.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -433,15 +433,15 @@
     </div>
 
     <div class="mod" id="m8b">
-      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.7.0</span></span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.8.0</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Sumber bisa <b>OTOMATIS DARI VIDEO</b> (baru v3.7 — aplikasi memindai adegan tiap part lalu menyusun sampulnya sendiri) atau <b>manual</b>: impor PNG/JPG/WebP / dibuat lewat STUDIO SAMPUL.</div>
+        <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Tiga sumber: <b>MANUAL</b> (impor PNG/JPG/WebP / STUDIO SAMPUL), <b>OTOMATIS TIAP PART</b> (v3.7 — cover tiap part beda dari adegannya), atau <b>1 SAMPUL SEMUA PART</b> (v3.8 — pindai sekali per film, dipakai semua part-nya).</div>
         <div class="seg" id="segCover">
           <button data-v="off" class="on">MATI</button><button data-v="on">AKTIF</button>
         </div>
         <div class="lbl">SUMBER COVER</div>
         <div class="seg" id="segCoverSrc">
-          <button data-v="manual" class="on">MANUAL</button><button data-v="auto">OTOMATIS DARI VIDEO</button>
+          <button data-v="manual" class="on">MANUAL</button><button data-v="auto">OTOMATIS TIAP PART</button><button data-v="single">1 SAMPUL SEMUA PART</button>
         </div>
         <div class="row" id="coverManualRow">
           <button class="btn" id="btnCoverImport"><i data-lucide="image-up"></i> IMPOR COVER…</button>
@@ -464,7 +464,7 @@
         <div class="seg" id="segCoverPart">
           <button data-v="">TANPA</button><button data-v="PART" class="on">PART</button><button data-v="EPISODE">EPISODE</button><button data-v="EPS">EPS</button><button data-v="BAGIAN">BAGIAN</button><button data-v="#">#</button>
         </div>
-        <div class="note" id="coverNote"><b>MODE OTOMATIS (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri, memilih frame terbaik (paling jernih &amp; berwarna), lalu menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + <b>judul</b> + <b>tulisan part di bawah judul</b> — tiap part cover-nya berbeda, tanpa kerja manual walau 50 part sekaligus. <b>MODE MANUAL:</b> gambar cover mengisi penuh layar (crop pas). Cover tampil <b>diam-diam</b> (tanpa suara), lalu video &amp; suara asli berjalan normal. GABUNG VIDEO dapat cover sekali di pembuka gabungan, polos tanpa nomor. Video <b>9:16</b> → sampul vertikal paling pas; <b>16:9</b> → landscape.</div>
+        <div class="note" id="coverNote"><b>OTOMATIS TIAP PART (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri → <b>cover tiap part berbeda-beda</b>. <b>1 SAMPUL SEMUA PART (v3.8):</b> cukup <b>SATU cover per film</b> — adegan terbaik dipindai SEKALI di sekitar <b>menit 5–7</b> film (video pendek: proporsional), lalu sampul yang sama dipakai <b>SEMUA part</b> film itu — film 60 menit → 10 part pakai 1 cover, film 15 menit → 5 part pakai 1 cover-nya sendiri; <b>nomor part tetap tercetak otomatis</b> (PART 1, PART 2, …) di bawah judul. Keduanya menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + judul. <b>MANUAL:</b> impor gambar / Studio Sampul. Cover tampil <b>diam-diam</b>; GABUNG VIDEO dapat cover sekali di pembuka, polos tanpa nomor.</div>
       </div></div></div>
     </div>
 
