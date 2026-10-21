@@ -296,3 +296,24 @@ Stage Summary:
 - Fitur: SUMBER COVER OTOMATIS DARI VIDEO — tiap part EKSPORT/SPLIT/BATCH memindai adegan rentangnya sendiri, sampul lengkap (adegan terbaik + scrim + bingkai KLASIK/GARIS/SINEMA + judul + label part) disusun otomatis; PRATINJAU CONTOH COVER; GABUNG polos; MANUAL utuh; satu pass tanpa re-encode
 - Desain penting: buildAutoCover mengembalikan kanvas PER WORKER (bukan variabel modul) → bebas race saat paralel ≤6×; sampling seek ±0.2–0.5 dtk/part saja
 - Uji baru 43/43 + regresi v3.0–v3.6.1 bersih (3 asersi versi lama = expected)
+
+---
+Task ID: 14
+Agent: main (GLM)
+Task: v3.8.0 1 SAMPUL SEMUA PART — scope single cover otomatis + rilis
+
+Work Log:
+- Permintaan user: mode otomatis kini pindai TIAP part — minta opsi cukup 1 cover per film dipakai SEMUA part (film 60 mnt → 10 part = 1 cover; film 15 mnt → 5 part = 1 cover sendiri); sarankan pindai menit 5–7
+- Implementasi: state.cover.scope ('part' default | 'single'); buildAutoCover scope single → window w0=min(300, vd*0.35), w1=min(420, vd*0.85), fallback proporsional bila window <1.5 dtk (<0.2 → penuh) — SEMUA worker part memindai window yang sama dari video yang sama secara deterministik → sampul identik tanpa koordinasi antar-worker (arsitektur v3.7 tetap, AMAN paralel); console.info + "SATU sampul utk SEMUA part"
+- UI: segCoverSrc 3 chip (manual / auto=OTOMATIS TIAP PART / single=1 SAMPUL SEMUA PART); syncCoverUI scope-aware ("AKTIF · 1 SAMPUL SEMUA PART"); segCover bind AKTIF toast scope-aware; PRATINJAU sub dinamis (single: "sampul INI dipakai SEMUA part"); cvLine + "· 1 SAMPUL"; core.js field scope; index.html note 3 sumber + beta v3.8.0
+- UJI scripts/kinostra-v38-test.mjs (30 kasus, media baru testmedia/v38-3scn12.mp4 12 dtk: merah 0–4 / hijau 4–8 / biru 8–12): smoke 3 chip + scope default; mode switch 6; EKSPOR NYATA SINGLE split 3 part — window clamp 12 dtk = [4.2,10.2] (hijau+biru saja) → ketiga cover BUKAN merah + SALING MIRIP (centerColor |Δ|<35) + NYARIS IDENTIK (<4% piksel beda, hanya digit label) + amber + label PART 1/2/3 + judul; KONTRAS PER PART → merah/hijau/biru >25% beda; GABUNG single polos; regresi MANUAL 3 → 30/30 LULUS run pertama
+- Regresi: v37 41/43 (2 expected: daftar chip 2→3 + teks versi), v361 21/22 (1 versi), v36 29/29 — NOL regresi fungsi; v30–v35 dilewati (jalur tak tersentuh — preseden Task 12)
+- Bump 3.8.0: package.json (versi+deskripsi), installer.nsi (5 titik), afterpack.js, README (badge + baris 46), PANDUAN (judul, Setup/Portable, baris 08B, bagian "Yang Baru di v3.8" 9 butir, rujukan chip v3.7 diperbarui), index.html (boot+header)
+- Commit 1a71bd2 (11 file, +388/−42; +kinostra-v38-test.mjs + v38-3scn12.mp4) → push 3a1807e..1a71bd2
+- Build: dist:full → Portable 3.8.0 132.1MB (NSIS step warning protokol seperti biasa); makensis manual → Setup 3.8.0.exe 95.8MB; UTF-16: KINOSTRA.exe 3.8.0/3.8.0.0 ✓, Setup 3.8.0.0 ✓ (pos 53980), zip 208 entri ✓
+- Rilis: token divalidasi GET /user; release-v380.sh → release ID 420164409; 3 aset 201 (Setup 91.3MB, Portable 126.0MB, PANDUAN); API final: draft False, prerelease False, semua uploaded
+
+Stage Summary:
+- RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.8.0 (2026-10-22)
+- Fitur: SUMBER COVER kini 3 mode — MANUAL (impor/Studio) · OTOMATIS TIAP PART (v3.7, cover beda-beda) · 1 SAMPUL SEMUA PART (v3.8, pindai sekali per film di menit 5–7, dipakai semua part, nomor part tetap otomatis)
+- Keputusan desain: scope single pakai window menit 5–7 (saran user) dengan clamp proporsional; determinisme antar-worker dijamin karena semua worker menghitung window dari v.duration yang sama + kandidat & skor identik → tanpa berbagi state = bebas race paralel
