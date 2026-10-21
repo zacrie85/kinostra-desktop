@@ -406,13 +406,46 @@ function coverDurFor(mergeCtx) {
   if (mergeCtx && mergeCtx.off >= 0.001) return 0;   /* bukan bagian pertama gabungan */
   return clamp(C.dur || 2, 0.5, 10);
 }
-/* gambar 1 frame cover penuh layar (crop pas, latar hitam) */
-function drawCoverFrame(x, W, H) {
+/* gambar 1 frame cover penuh layar (crop pas, latar hitam)
+   v3.6.1: partNum > 0 → cetak label nomor part di bawah judul */
+function drawCoverFrame(x, W, H, partNum = 0) {
   const im = state.cover.img;
   x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
   const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
   const r = coverRect(iw, ih, W, H);
   x.drawImage(im, r.x, r.y, r.w, r.h);
+  if (partNum > 0) drawCoverPartLabel(x, W, H, partNum);
+}
+/* v3.6.1: teks label part — "PART 3" / "EPISODE 3" / "#3" dst. ('' = mati) */
+function coverPartText(n) {
+  const P = state.cover && state.cover.part;
+  if (!P || !(n > 0)) return '';
+  return P === '#' ? `#${n}` : `${P} ${n}`;
+}
+/* v3.6.1: cetak tulisan part DI BAWAH JUDUL (tepi bawah, tengah) —
+   gaya serasi Studio Sampul: krem + garis hitam + glow merah lembut,
+   huruf renggang, auto-kecil bila label panjang → terbaca di cover apa pun */
+function drawCoverPartLabel(x, W, H, n) {
+  const label = coverPartText(n);
+  if (!label) return;
+  const u = H / 1080;
+  let fs = Math.round(46 * u);
+  const fontOf = s => `800 ${s}px "Chakra Petch", "Segoe UI", sans-serif`;
+  x.save();
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
+  const setFont = s => { x.font = fontOf(s); try { x.letterSpacing = Math.round(s * 0.18) + 'px'; } catch (e) { } };
+  setFont(fs);
+  const maxW = W * 0.82;
+  while (x.measureText(label).width > maxW && fs > 20 * u) { fs = Math.round(fs * 0.92); setFont(fs); }
+  /* letterSpacing menambah ruang sesudah huruf terakhir → geser kanan sedikit
+     agar tetap tampak tengah sempurna */
+  const cx = W / 2 + fs * 0.09, cy = H * 0.945;
+  x.strokeStyle = 'rgba(0,0,0,.85)'; x.lineWidth = Math.max(4, 9 * u);
+  x.strokeText(label, cx, cy);
+  x.shadowColor = 'rgba(215,55,45,.55)'; x.shadowBlur = 20 * u;
+  x.fillStyle = '#F2E8D5';
+  x.fillText(label, cx, cy);
+  x.restore();
 }
 
 function partFileName(title, prefix, idx) {
@@ -585,10 +618,13 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
        Frame pertama cover = keyframe agar pemutaran & seek mulus. */
     if (coverD > 0) {
       const nC = Math.max(1, Math.round(coverD * fps));
+      /* v3.6.1: nomor part utk label sampul — GABUNG polos tanpa nomor */
+      const pNo = mergeCtx ? 0 : seg.i + 1;
+      const pLbl = coverPartText(pNo);
       for (let i = 0; i < nC; i++) {
         if (state.abort) throw new Error('Dibatalkan');
         if (state.exportFatal) throw state.exportFatal;
-        drawCoverFrame(ec, W, H);
+        drawCoverFrame(ec, W, H, pNo);
         const vf = new VideoFrame(ecv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
         venc.encode(vf, { keyFrame: i === 0 }); vf.close();
         n++; slot.fr = n;
@@ -598,7 +634,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           if (state.exportFatal) throw state.exportFatal;
         }
       }
-      console.info(`part ${seg.i + 1}: cover pembuka ${coverD.toFixed(1)} dtk (${nC} frame) dimasukkan di awal (v3.6)`);
+      console.info(`part ${seg.i + 1}: cover pembuka ${coverD.toFixed(1)} dtk (${nC} frame)${pLbl ? ` · label sampul "${pLbl}" (v3.6.1)` : ''} dimasukkan di awal (v3.6)`);
     }
 
     /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata
@@ -1135,7 +1171,7 @@ function updateExportInfo() {
   /* v3.1: ZOOM PEMBICARA tampil di ringkasan */
   const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
   /* v3.6: COVER PEMBUKA tampil di ringkasan */
-  const cvLine = (state.cover && state.cover.on && state.cover.img) ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL</b>` : '';
+  const cvLine = (state.cover && state.cover.on && state.cover.img) ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}</b>` : '';
   $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }

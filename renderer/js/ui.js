@@ -380,8 +380,10 @@ function mimeCover(nm) {
 function syncCoverUI() {
   const el = $('#coverStat');
   if (!el) return;
+  /* v3.6.1: info label part aktif ikut tampil di status */
+  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b> di bawah judul` : '';
   el.innerHTML = state.cover.img
-    ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor`
+    ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
     : 'Belum ada cover — impor gambar atau buat di Studio Sampul';
 }
 /* pasang gambar cover dari dataUrl (dipakai impor manual & Studio Sampul) */
@@ -421,6 +423,14 @@ bindSeg('segCoverDur', v => {
   state.cover.dur = clamp(parseInt(v) || 2, 1, 10);
   syncCoverUI();
   toast(`Durasi cover: ${state.cover.dur} detik di awal tiap file`, 'ok');
+});
+/* v3.6.1: TULISAN PART DI SAMPUL — nomor otomatis per file, di bawah judul */
+bindSeg('segCoverPart', v => {
+  state.cover.part = v || '';
+  syncCoverUI();
+  toast(state.cover.part
+    ? `Tulisan part di sampul: ${state.cover.part === '#' ? '#1, #2, #3, …' : state.cover.part + ' 1, ' + state.cover.part + ' 2, …'} — tercetak di bawah judul tiap cover, nomor sesuai part tiap file`
+    : 'Tulisan part di sampul: TANPA — semua cover polos tanpa nomor part', 'ok');
 });
 syncCoverUI();
 

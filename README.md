@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.6.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.6.1-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -64,6 +64,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 43 | **Narasi AI (TTS Offline)** ⭐v3.0 | Suara AI bahasa Indonesia 100% offline (VITS MMS ±37 MB, unduh sekali): teks → suara → pasang di playhead → ter-mix ke hasil ekspor/split/batch |
 | 44 | **Optimasi Kecepatan 100%** ⭐v3.0 | Audio di-encode **bersamaan** dengan video (±30-45% lebih cepat per part), buffer audio dipakai ulang (GC −40%), pratinjau statis tak digambar ulang 60×/dtk (hemat CPU & baterai) |
 | 45 | **Zoom Pembicara Otomatis (AI)** ⭐v3.1 | Seperti aplikasi AI potong podcast: kamera **otomatis meng-zoom orang yang sedang bicara** dan pindah halus saat gantian — deteksi orang (YOLOS ONNX offline, ±10 MB unduh sekali) + **gerakan mulut** + **kapan ada suara**. Rasio **9:16** = hasil vertikal siap Reels/TikTok/Shorts. Kecepatan pindah fokus bisa diatur (cepat/normal/lambat), saat senyap tetap di pembicara atau tampilkan semua. **Berlaku global semua video** — Batch Ekspor & Gabung Video otomatis menganalisis tiap video |
+| 46 | **Cover Video Pembuka + Tulisan Part** ⭐v3.6.1 | **Satu gambar cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik) — impor manual atau dibuat langsung di Studio Sampul. **v3.6.1: TULISAN PART DI SAMPUL** — nomor **PART/EPISODE/EPS/BAGIAN/#** otomatis tercetak di bawah judul sesuai part tiap file (PART 1, PART 2, …), gaya serasi papan judul; gabungan tetap polos |
 
 ⭐ = fitur baru/upgrade terbaru
 
