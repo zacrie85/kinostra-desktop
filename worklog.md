@@ -203,3 +203,32 @@ Stage Summary:
 - Uji baru: scripts/kinostra-v35-test.mjs (27/27) + testmedia/v35-2tone.mp4
 - Keputusan: FADE = crossfade DUA BINGKAI STATIS (bukan interpolasi posisi) — persis permintaan "tanpa terlihat pergeseran kamera"; LANGSUNG = skip interpolasi; kecepatan pindah fokus TIDAK didim (masih relevan: mengatur histeresis keputusan gantian di semua mode); fadeFrom dievaluasi di seg.t0 (statis) sedangkan main rect tetap hidup mengikuti kotak pembicara
 - PELAJARAN regresi: guard null (spk && spk.fadeFrom) — kode baru di jalur bersama wajib aman saat fitur MATI; regresi suite v30-v34 menangkapnya sebelum rilis
+
+---
+Task ID: 11
+Agent: main (Super Z)
+Task: KINOSTRA v3.6.0 — COVER VIDEO PEMBUKA (modul 08B): cover tampil 2 dtk di awal SETIAP file hasil EKSPORT & SPLIT, BATCH & GABUNG; impor manual atau dibuat langsung di STUDIO SAMPUL; uji otomatis, build & (pending) rilis GitHub
+
+Work Log:
+- Permintaan user: "memasukan cover untuk semua hasil eksport & split … cover nya akan muncul 2 detik di setiap awal video … bisa di import secara manual bisa juga di buat langsung oleh aplikasi"
+- Audit dulu: pipeline ekspor = WebCodecs murni (bukan ffmpeg) → cover diimplement DI DALAM pipeline: encodeAudioStream() + preSil (audio bungkam, ts kontinu), renderPartWorker() encode frame cover lebih dulu (PTS 0) lalu outTs konten digeser +coverD — SATU PASS, tanpa concat/re-encode; semua jalur (ekspor/split/batch/gabung) otomatis dapat fitur
+- core.js: state.cover = { on, dataUrl, name, img, dur:2 } (setelan GLOBAL semua video)
+- main.js+preload.js: IPC dialog:openCover / pickCover (dialog pilih PNG/JPG/WebP)
+- index.html: modul 08B COVER VIDEO PEMBUKA (antara 08 & 09): segCover MATI/AKTIF, tombol IMPOR COVER… & BUAT DI STUDIO SAMPUL, coverStat, segCoverDur 1/2/3/5 DETIK (default 2), note (mengisi penuh layar, crop pas, tampil diam-diam)
+- ui.js: bindSeg segCover (AKTIF ditolak bila belum ada cover → toast peringatan, pola v3.2), segCoverDur, setCoverFromDataUrl() (dipakai impor manual & Studio Sampul; auto-AKTIF + syncCoverUI), mimeCover utk jpg/webp/svg
+- sampul.js: openSampul(asCover) — mode cover menampilkan tombol "PAKAI SEBAGAI COVER VIDEO" di atas kanvas → toDataURL → setCoverFromDataUrl('STUDIO SAMPUL') → modal tutup; judul modal berubah
+- exporter.js: coverActive()/coverDurFor()/drawCoverFrame() (coverRect = crop pas, latar hitam); renderPartWorker: coverD (GABUNG hanya bagian pertama — mergeCtx.off<0.001), encode nC frame cover (keyframe pertama, backpressure CAP), outTs += coverD, audio preSil; nMain counter baru agar fallback-seek tak tertipu frame cover (renderFramesBySeek menimpa slot.fr → nCov dijaga); exportPartsToDir/exportMergeToDir: total slot += frame cover; merge driver: mergeCtx.off += coverD setelah bagian pertama; updateExportInfo: "COVER N DTK DI AWAL"
+- UJI scripts/kinostra-v36-test.mjs (CDP 9456): 29/29 LULUS — smoke modul 08B (2+4 chip, default MATI 2 dtk), setCoverFromDataUrl auto-AKTIF + status, toggle MATI/AKTIF, chip durasi 3→2, pixel drawCoverFrame = hijau 0x00B140, STUDIO SAMPUL mode cover (tombol memasang kanvas + modal tutup), EKSPOR NYATA 1 part (dur 8→10 dtk persis, frame @0.1/@1.9 hijau penuh, @2.5/@7.5 konten kiri-merah-kanan-biru, audio 2 dtk bungkam −91 dB lalu sine −22 dB), EKSPOR NYATA SPLIT 2 part (keduanya 6 dtk, keduanya dibuka cover), GABUNG 2 video (8 dtk, cover sekali di awal, tidak diulang antar film)
+- Bug skrip uji (bukan aplikasi): asersi dim mengira output 640×360 — ternyata outDims 16:9 skala 100% = 1920×1080 (perilaku lama); frameAvg diganti frameAt per-wilayah (kiri/mid/kanan) + frameDims dari ffprobe
+- Regresi: v30 39/39; v31 29/30 (1 asersi teks "3.1.0"); v32 20/21 (1 teks "3.2.0"); v33 14/14; v34 34/34; v35 27/27 — NOL regresi fungsi
+- Versi 3.6.0: package.json (version+deskripsi), installer.nsi (APPVERSION/OutFile/VIProductVersion/2×VIAddVersionKey), afterpack.js (3.6.0.0), README badge, PANDUAN (baris modul 08B + bagian "Yang Baru di v3.6" 6 butir + Setup/Portable 3.6.0), index.html boot+header
+- Commit 6362190 (amend: buang artefak tool-results/ dari repo — gitignore baru; 12 file kode + 3 file baru) — BELUM DI-PUSH
+- Build: dist:full → Portable 132.1MB (3.6.0 UTF-16 ✓ pos 187765056) + win-unpacked; makensis manual → Setup 95.8MB (3.6.0.0 UTF-16 ✓ pos 53980)
+- GH_TOKEN sesi sebelumnya sudah INVALID (curl /user = "Bad credentials") → push & rilis PENDING token baru dari user; scripts/release-v360.sh SUDAH SIAP (env GH_TOKEN, retry 3×/aset, body release lengkap)
+
+Stage Summary:
+- Fungsi baru: state.cover + modul 08B; IPC pickCover; setCoverFromDataUrl/syncCoverUI (ui.js); openSampul(asCover) (sampul.js); coverActive/coverDurFor/drawCoverFrame + preSil + outTs cover + nMain (exporter.js)
+- Uji baru: scripts/kinostra-v36-test.mjs (29/29) — tanpa media baru (pakai v35-2tone.mp4 + kanvas hijau 0x00B140 in-page)
+- Keputusan desain: cover DI DALAM pipeline WebCodecs (bukan ffmpeg concat) = nol re-encode, PTS konsisten, LANJUTKAN EKSPOR/KOMPRES PINTAR/RESOLUSI tetap serasi; GABUNG dapat cover SEKALI di pembuka gabungan (bukan tiap film); audio bungkam selama cover; isAudio dikecualikan
+- PENDING: push main (commit 6362190 + worklog ini) + GitHub Release v3.6.0 (3 aset) menunggu GH_TOKEN baru — begitu user memberi token: export GH_TOKEN=… → git push https://x-access-token:$GH_TOKEN@github.com/zacrie85/kinostra-desktop main → bash scripts/release-v360.sh
+- PELAJARAN operasional: setsid+nohup background runner tetap bisa mati saat panggilan tool dibatalkan (context canceled) — suite regresi panjang lebih aman foreground satu-per-satu (maks 585 dtk/suite); token GitHub hanya hidup selama dibagikan — selalu validasi dulu (GET /user) sebelum push/rilis
