@@ -232,3 +232,21 @@ Stage Summary:
 - Keputusan desain: cover DI DALAM pipeline WebCodecs (bukan ffmpeg concat) = nol re-encode, PTS konsisten, LANJUTKAN EKSPOR/KOMPRES PINTAR/RESOLUSI tetap serasi; GABUNG dapat cover SEKALI di pembuka gabungan (bukan tiap film); audio bungkam selama cover; isAudio dikecualikan
 - PENDING: push main (commit 6362190 + worklog ini) + GitHub Release v3.6.0 (3 aset) menunggu GH_TOKEN baru — begitu user memberi token: export GH_TOKEN=… → git push https://x-access-token:$GH_TOKEN@github.com/zacrie85/kinostra-desktop main → bash scripts/release-v360.sh
 - PELAJARAN operasional: setsid+nohup background runner tetap bisa mati saat panggilan tool dibatalkan (context canceled) — suite regresi panjang lebih aman foreground satu-per-satu (maks 585 dtk/suite); token GitHub hanya hidup selama dibagikan — selalu validasi dulu (GET /user) sebelum push/rilis
+
+---
+Task ID: 11-finish
+Agent: main (GLM)
+Task: Rilis v3.6.0 — push + GitHub Release (GH_TOKEN baru dari user)
+
+Work Log:
+- GH_TOKEN baru tiba; langsung dipakai via env (tidak pernah ditulis ke repo)
+- Hasil regresi v31–v35 dikonfirmasi dari log: v31 29/30 + v32 20/21 = 2 "GAGAL" murni asersi string versi lama (innerHTML.includes('3.1.0') / ('3.2.0')) — UI kini v3.6.0; NOL regresi fungsi
+- Verifikasi artefak build ulang: KINOSTRA.exe berisi 3.6.0 ✓; Setup exe berisi 3.6.0.0 UTF-16 ✓
+- git push main: 68319ee..4467e58 (commit v3.6.0 8335fb5 + worklog 4467e58) → terverifikasi ls-remote
+- bash scripts/release-v360.sh: release ID 419331478; 3 aset OK (201): Setup 91.3MB, Portable 126.0MB, PANDUAN.md
+- Verifikasi API akhir: tag v3.6.0 | draft:False | prerelease:False | semua state:uploaded
+
+Stage Summary:
+- RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.6.0 (2026-10-21T08:43:47Z)
+- v3.6.0 COVER VIDEO PEMBUKA (modul 08B) resmi terbit: impor manual atau Studio Sampul; tampil di awal setiap hasil EKSPORT & SPLIT/BATCH + pembuka GABUNG; durasi 1/2/3/5 dtk (default 2)
+- Uji v3.6 29/29 LULUS; regresi fungsi v3.0–v3.5 bersih
