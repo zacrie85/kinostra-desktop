@@ -272,3 +272,27 @@ Stage Summary:
 - Fitur: TULISAN PART DI SAMPUL — nomor otomatis di bawah judul tiap sampul hasil EKSPORT & SPLIT + BATCH; 6 format (TANPA/PART/EPISODE/EPS/BAGIAN/#); GABUNG tetap polos; satu pass tanpa re-encode
 - Desain label: baseline H*0.945 (di bawah judul 0.72–0.86 & subjudul 0.88 Studio Sampul), skala u=H/1080 konsisten dgn sampul
 - PELAJARAN: (1) Xvfb wajib dihidupkan dalam sesi shell yang sama dgn test (run-test-xvfb.sh); (2) commit duplikat saat sesi terputus → cek dulu git fetch + bandingkan sebelum push, rebase --onto utk buang duplikat; (3) file merge 0 byte sesekali terjadi di Xvfb → re-run dulu sebelum menyimpulkan regresi
+
+---
+Task ID: 13
+Agent: main (GLM)
+Task: v3.7.0 COVER OTOMATIS DARI ADEGAN VIDEO — upgrade modul 08B + rilis
+
+Work Log:
+- Permintaan user: cover masih manual satu per satu via Studio Sampul — sulit bila split 50 video; minta menu OTOMATIS: tiap part mengambil adegan dari videonya sendiri sebagai cover, tulisan part di bawah judul, + bingkai menarik
+- Implementasi exporter.js: scoreAutoFrame (0..1 = 0.34·std luma + 0.22·saturasi + 0.26·eksposur gauss + 0.18·energi tepi; mean<26 dihukum 0.25 = fade hitam, >236 dihukum 0.45), coverTitleText (judul custom atau state.title; [_-.]→spasi; kapital saat digambar), drawAutoFrameStyle (KLASIK bingkai ganda emas #D9A441 + aksen sudut L; GARIS garis krem halus; SINEMA bar letterbox 0.062H/0.84H + garis emas), drawAutoTitle (Chakra Petch 800, krem #F2E8D5 + stroke hitam + glow merah, wrapLines maks 2 baris, auto-kecil), drawAutoCoverDesign (frame + scrim gradient atas 0.6/bawah 0.72 serasi Studio + bingkai + judul), buildAutoCover(v,seg,W,H) — 4–6 kandidat seek dalam [seg.start,seg.end] (fraksi dur<2.5:[.35,.75], <8:[.2,.42,.64,.86], else 6 titik), skor via kanvas 160px willReadFrequently, kandidat terbaik disimpan resolusi penuh, kembali ke seg.start, return kanvas per worker (AMAN PARALEL — bukan shared state)
+- renderPartWorker: sebelum loop encode cover — if state.cover.auto → covCv = await buildAutoCover(v,seg,W,H); drawCoverFrame(x,W,H,pNo,covCv) branch auto; coverActive() menerima auto tanpa img; cvLine + "(OTOMATIS DARI ADEGAN)"
+- ui.js: bindSeg segCoverSrc (MANUAL default / OTOMATIS; manual tanpa gambar → cover otomatis mati), segCoverStyle, inCoverTitle, btnCoverPrev → pratinjau buildAutoCover(videoEl,{0,dur}) + modal + playhead dikembalikan; setCoverFromDataUrl memindahkan sumber ke MANUAL; syncCoverUI tukar panel rowM/boxA/prev
+- index.html 08B: lbl SUMBER COVER + segCoverSrc, coverManualRow, btnCoverPrev (eye), coverAutoBox (segCoverStyle 4 chip + inCoverTitle), coverNote mode OTOMATIS/MANUAL; header beta v3.7.0
+- UJI scripts/kinostra-v37-test.mjs (43 kasus, media baru testmedia/v37-3scn.mp4 = ffmpeg concat merah 0xD8402F/hijau 0x2FBF59/biru 0x2F6FD8 @3 dtk): smoke UI 5, mode switch 6, unit pixel 10 (bingkai amber tepi, tengah tetap warna adegan, judul krem, SINEMA bar+garis, TANPA polos, label strip, scoreAutoFrame hitam<abu<warna, coverTitleText, coverActive), EKSPOR NYATA SPLIT 3 PART — part1 cover MERAH part2 HIJAU part3 BIRU terbukti via centerColor + bingkai amber + label PART 1/2/3 + coverDiff >25% antar part, EKSPOR TUNGGAL 11 dtk (PART 1 tercetak, hijau menang = skor eksposur), GABUNG 8 dtk (sampul otomatis, polos tanpa nomor), regresi MANUAL 4 → 43/43 LULUS (3 perbaikan skrip: updateExportInfo butuh media, state.title di-set dulu, toleransi warna biru)
+- Regresi: v30 39/39; v31 29/30 (1 asersi "Versi 3.1.0"); v32 20/21 (1 "versi 3.2.0"); v33 14/14; v34 34/34; v35 27/27; v36 29/29; v361 21/22 (1 "DIPERBARUI v3.6.1") — NOL regresi fungsi, 3 gagal = asersi string versi lama (pola dikenal sejak bump v3.6.0)
+- Bump 3.7.0: package.json (versi+deskripsi), installer.nsi (5 titik), afterpack.js, README (badge + baris 46), PANDUAN (judul, Setup/Portable, baris 08B, bagian "Yang Baru di v3.7" 10 butir), index.html (boot+header)
+- Commit c761289 (15 file, +682/−40; termasuk kinostra-v37-test.mjs + v37-3scn.mp4 20KB; 4 file mode 755) → push 7607558..c761289
+- Build: dist:full → Portable 3.7.0 132.1MB + win-unpacked ("VIProductVersion already defined" = warning protokol, NSIS step gagal seperti biasa); makensis manual → Setup 3.7.0.exe 95.8MB; verifikasi UTF-16: KINOSTRA.exe 3.7.0 + 3.7.0.0 ✓, Setup 3.7.0.0 ✓ (pos 53980), zip 208 entri berisi KINOSTRA.exe ✓
+- Rilis: token divalidasi GET /user (zacrie85) dulu; scripts/release-v370.sh → release ID 420155990; 3 aset 201: Setup 91.4MB, Portable 126.0MB, PANDUAN.md; API final: draft False, prerelease False, semua uploaded
+
+Stage Summary:
+- RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.7.0 (2026-10-21T23:34:26Z)
+- Fitur: SUMBER COVER OTOMATIS DARI VIDEO — tiap part EKSPORT/SPLIT/BATCH memindai adegan rentangnya sendiri, sampul lengkap (adegan terbaik + scrim + bingkai KLASIK/GARIS/SINEMA + judul + label part) disusun otomatis; PRATINJAU CONTOH COVER; GABUNG polos; MANUAL utuh; satu pass tanpa re-encode
+- Desain penting: buildAutoCover mengembalikan kanvas PER WORKER (bukan variabel modul) → bebas race saat paralel ≤6×; sampling seek ±0.2–0.5 dtk/part saja
+- Uji baru 43/43 + regresi v3.0–v3.6.1 bersih (3 asersi versi lama = expected)
