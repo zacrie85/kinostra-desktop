@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.6.1
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.7.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.6.1.exe`
+1. Jalankan `KINOSTRA-Setup-3.7.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.6.1-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.7.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -30,9 +30,24 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
-| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.6.1: TULISAN PART DI SAMPUL** — nomor PART/EPISODE/EPS/BAGIAN/# otomatis tercetak di bawah judul, sesuai part tiap file. **v3.6: satu gambar cover tampil di awal SETIAP file hasil ekspor** (default 2 detik, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, semua video BATCH EKSPOR & pembuka GABUNG VIDEO. Sumber: impor manual PNG/JPG/WebP atau dibuat langsung di STUDIO SAMPUL (tombol PAKAI SEBAGAI COVER VIDEO) |
+| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.7: OTOMATIS DARI VIDEO** — tiap part memindai adegan di rentangnya sendiri, memilih frame terbaik, lalu menyusun sampul lengkap otomatis: gambar video + peredup sinematik + **bingkai menarik (KLASIK/GARIS/SINEMA)** + **judul** + **tulisan part di bawah judul** — 50 part pun beres tanpa kerja manual, cover tiap part berbeda-beda. **v3.6.1: TULISAN PART DI SAMPUL** untuk cover manual (PART/EPISODE/EPS/BAGIAN/#). **v3.6: cover tampil di awal SETIAP file hasil ekspor** (default 2 detik, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, semua video BATCH EKSPOR & pembuka GABUNG VIDEO; sumber manual: impor PNG/JPG/WebP atau STUDIO SAMPUL |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.7 — COVER OTOMATIS DARI ADEGAN VIDEO (modul 08B)
+
+Tidak perlu lagi membuat cover satu per satu — **tiap part kini menyusun sampulnya sendiri** dari adegan di dalam video:
+
+- **Cara pakai**: modul **08B COVER VIDEO PEMBUKA** → **SUMBER COVER** → pilih **OTOMATIS DARI VIDEO** → chip **AKTIF**. Selesai — tidak butuh gambar apa pun
+- **Pemindaian adegan per part**: setiap part memeriksa beberapa titik di rentang waktunya sendiri, lalu memilih frame **terbaik** (paling jernih, berwarna, dan eksposurnya seimbang) — frame hampir hitam (fade) otomatis dihindari → **cover tiap part berbeda-beda** karena diambil dari adegan masing-masing
+- **Sampul disusun lengkap otomatis**: gambar video + peredup sinematik atas & bawah (teks selalu terbaca) + **bingkai menarik** — pilih gaya: **KLASIK** (bingkai ganda emas + aksen sudut), **GARIS** (garis halus minimalis), **SINEMA** (bar letterbox + garis emas gaya poster bioskop), atau **TANPA**
+- **Judul otomatis dari nama file** (garis bawah/titik diubah spasi) atau ketik sendiri di kolom **judul di sampul**; huruf besar krem + garis hitam + glow merah — serasi papan judul Studio Sampul
+- **Tulisan part di bawah judul tetap jalan** (PART/EPISODE/EPS/BAGIAN/# sesuai setelan) — part 1 **PART 1**, part 2 **PART 2**, dst.
+- **Tombol PRATINJAU CONTOH COVER OTOMATIS** — lihat dulu jadi seperti apa sampulnya sebelum mengekspor (diambil dari video yang sedang dimuat)
+- Berlaku juga untuk **BATCH EKSPOR** (tiap video memindai adegannya sendiri) dan **GABUNG VIDEO** (cover pembuka gabungan bersampul otomatis, tetap polos tanpa nomor); **EKSPORT tunggal** diberi nomor **PART 1**
+- Mode **MANUAL** (impor gambar / Studio Sampul) tetap utuh — memasang gambar manual otomatis memindahkan sumber ke MANUAL
+- Tetap **satu pass encoding** — pemindaian hanya ±4–6 seek ringan per part, frame cover tetap di-encode lebih dulu, tanpa re-encode
+- Diuji otomatis **43/43 lulus** (baru) + regresi v3.0–v3.6.1 bersih — termasuk ekspor nyata split 3 adegan warna: part 1 terbukti bercover merah, part 2 hijau, part 3 biru (adegan masing-masing), bingkai amber + judul + label tercetak di ketiganya
 
 ## Yang Baru di v3.6.1 — TULISAN PART DI SAMPUL (modul 08B)
 

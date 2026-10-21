@@ -1,8 +1,8 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "3.6.1",
-  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.6.1: TULISAN PART DI SAMPUL (modul 08B) — nomor PART/EPISODE/EPS/BAGIAN/# otomatis di bawah judul tiap cover · PERPINDAHAN FOKUS FADE & CUT · RESOLUSI 720p-4K · BACKSOUND MP3 SENDIRI · JUMLAH PART OTOMATIS · ZOOM PEMBICARA AI · ALAM GAIB · GABUNG VIDEO · TTS NARASI",
+  "version": "3.7.0",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.7: COVER OTOMATIS DARI ADEGAN VIDEO — tiap part dapat sampul sendiri dari adegan terbaik + bingkai KLASIK/GARIS/SINEMA + judul + tulisan part · TULISAN PART DI SAMPUL · PERPINDAHAN FOKUS FADE & CUT · RESOLUSI 720p-4K · BACKSOUND MP3 SENDIRI · ZOOM PEMBICARA AI · GABUNG VIDEO · TTS NARASI",
   "main": "main/main.js",
   "author": "KINOSTRA",
   "license": "MIT",

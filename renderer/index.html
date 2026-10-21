@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.6.1 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.7.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.6.1</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.7.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -433,17 +433,29 @@
     </div>
 
     <div class="mod" id="m8b">
-      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.6.1</span></span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.7.0</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: gambar ini tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Sumber bisa <b>impor manual</b> (PNG/JPG/WebP) atau <b>dibuat langsung oleh aplikasi</b> lewat STUDIO SAMPUL.</div>
+        <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Sumber bisa <b>OTOMATIS DARI VIDEO</b> (baru v3.7 — aplikasi memindai adegan tiap part lalu menyusun sampulnya sendiri) atau <b>manual</b>: impor PNG/JPG/WebP / dibuat lewat STUDIO SAMPUL.</div>
         <div class="seg" id="segCover">
           <button data-v="off" class="on">MATI</button><button data-v="on">AKTIF</button>
         </div>
-        <div class="row">
+        <div class="lbl">SUMBER COVER</div>
+        <div class="seg" id="segCoverSrc">
+          <button data-v="manual" class="on">MANUAL</button><button data-v="auto">OTOMATIS DARI VIDEO</button>
+        </div>
+        <div class="row" id="coverManualRow">
           <button class="btn" id="btnCoverImport"><i data-lucide="image-up"></i> IMPOR COVER…</button>
           <button class="btn" id="btnCoverStudio"><i data-lucide="wand-2"></i> BUAT DI STUDIO SAMPUL</button>
         </div>
-        <div class="substat" id="coverStat">Belum ada cover — impor gambar atau buat di Studio Sampul</div>
+        <button class="btn wide" id="btnCoverPrev" style="display:none"><i data-lucide="eye"></i> PRATINJAU CONTOH COVER OTOMATIS</button>
+        <div id="coverAutoBox" style="display:none">
+          <div class="lbl">GAYA BINGKAI SAMPUL OTOMATIS</div>
+          <div class="seg" id="segCoverStyle">
+            <button data-v="KLASIK" class="on">KLASIK</button><button data-v="GARIS">GARIS</button><button data-v="SINEMA">SINEMA</button><button data-v="TANPA">TANPA</button>
+          </div>
+          <input class="in" id="inCoverTitle" placeholder="Judul di sampul otomatis — kosongkan = judul video" maxlength="80">
+        </div>
+        <div class="substat" id="coverStat">Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS DARI VIDEO</div>
         <div class="lbl">DURASI COVER TAMPIL</div>
         <div class="seg" id="segCoverDur">
           <button data-v="1">1 DETIK</button><button data-v="2" class="on">2 DETIK</button><button data-v="3">3 DETIK</button><button data-v="5">5 DETIK</button>
@@ -452,7 +464,7 @@
         <div class="seg" id="segCoverPart">
           <button data-v="">TANPA</button><button data-v="PART" class="on">PART</button><button data-v="EPISODE">EPISODE</button><button data-v="EPS">EPS</button><button data-v="BAGIAN">BAGIAN</button><button data-v="#">#</button>
         </div>
-        <div class="note" id="coverNote"><b>Cover mengisi penuh layar</b> (crop otomatis pas) lalu video &amp; suara asli berjalan normal — cover tampil <b>diam-diam</b> (tanpa suara). <b>Tulisan part</b> (PART 1, PART 2, …) dicetak otomatis <b>di bawah judul</b> sesuai part tiap file hasil ekspor &amp; split; GABUNG VIDEO polos tanpa nomor. Video <b>9:16</b> → gambar vertikal paling pas; <b>16:9</b> → gambar landscape. Cocok untuk ident channel, judul serial, atau pembuka episode tiap part.</div>
+        <div class="note" id="coverNote"><b>MODE OTOMATIS (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri, memilih frame terbaik (paling jernih &amp; berwarna), lalu menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + <b>judul</b> + <b>tulisan part di bawah judul</b> — tiap part cover-nya berbeda, tanpa kerja manual walau 50 part sekaligus. <b>MODE MANUAL:</b> gambar cover mengisi penuh layar (crop pas). Cover tampil <b>diam-diam</b> (tanpa suara), lalu video &amp; suara asli berjalan normal. GABUNG VIDEO dapat cover sekali di pembuka gabungan, polos tanpa nomor. Video <b>9:16</b> → sampul vertikal paling pas; <b>16:9</b> → landscape.</div>
       </div></div></div>
     </div>
 

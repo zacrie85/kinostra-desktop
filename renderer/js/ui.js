@@ -382,15 +382,28 @@ function syncCoverUI() {
   if (!el) return;
   /* v3.6.1: info label part aktif ikut tampil di status */
   const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b> di bawah judul` : '';
-  el.innerHTML = state.cover.img
-    ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
-    : 'Belum ada cover — impor gambar atau buat di Studio Sampul';
+  /* v3.7: tampilkan sembunyikan panel sesuai sumber cover */
+  const rowM = $('#coverManualRow'), boxA = $('#coverAutoBox'), btnP = $('#btnCoverPrev');
+  if (rowM) rowM.style.display = state.cover.auto ? 'none' : '';
+  if (boxA) boxA.style.display = state.cover.auto ? '' : 'none';
+  if (btnP) btnP.style.display = state.cover.auto ? '' : 'none';
+  if (state.cover.auto) {
+    el.innerHTML = state.cover.on
+      ? `<b style="color:var(--acc)">AKTIF · OTOMATIS DARI VIDEO</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b> · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine} — tiap part dapat adegan &amp; cover berbeda`
+      : `Mode <b>OTOMATIS DARI VIDEO</b> siap — nyalakan <b>AKTIF</b> agar tiap part mendapat sampul dari adegannya sendiri (bingkai ${state.cover.style || 'KLASIK'}${partLine})`;
+  } else {
+    el.innerHTML = state.cover.img
+      ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
+      : 'Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS DARI VIDEO';
+  }
 }
 /* pasang gambar cover dari dataUrl (dipakai impor manual & Studio Sampul) */
 function setCoverFromDataUrl(dataUrl, name, autoOn = true) {
   const img = new Image();
   img.onload = () => {
     state.cover.img = img; state.cover.dataUrl = dataUrl; state.cover.name = name || 'cover';
+    /* v3.7: gambar manual dipasang → sumber kembali MANUAL (gambar pilihan menang) */
+    if (state.cover.auto) { state.cover.auto = false; setSegOn('segCoverSrc', 'manual'); }
     if (autoOn && !state.cover.on) { state.cover.on = true; setSegOn('segCover', 'on'); }
     syncCoverUI();
     toast(`Cover video dipasang: ${state.cover.name} — ${state.cover.on ? 'AKTIF, tampil ' + state.cover.dur + ' dtk di awal tiap file ekspor' : 'siap (masih mati)'}`, 'ok');
@@ -408,15 +421,16 @@ $('#btnCoverStudio').onclick = () => {
   openSampul(true);   /* true = mode cover: muncul tombol "PAKAI SEBAGAI COVER" */
 };
 bindSeg('segCover', v => {
-  if (v === 'on' && !state.cover.img) {
+  /* v3.7: mode OTOMATIS tidak butuh gambar — boleh langsung AKTIF */
+  if (v === 'on' && !state.cover.auto && !state.cover.img) {
     setSegOn('segCover', 'off');
-    toast('Impor cover dulu — tekan IMPOR COVER atau BUAT DI STUDIO SAMPUL', 'warn');
+    toast('Impor cover dulu — atau pilih sumber OTOMATIS DARI VIDEO agar cover dibuat otomatis', 'warn');
     return;
   }
   state.cover.on = v === 'on';
   syncCoverUI();
   toast(state.cover.on
-    ? `COVER VIDEO: AKTIF — tampil ${state.cover.dur} dtk di awal SETIAP file hasil ekspor & split`
+    ? `COVER VIDEO: AKTIF — tampil ${state.cover.dur} dtk di awal SETIAP file hasil ekspor & split${state.cover.auto ? ' · sampul disusun otomatis dari adegan tiap part (v3.7)' : ''}`
     : 'Cover video: mati — file ekspor langsung mulai dari awal video', state.cover.on ? 'ok' : 'info');
 });
 bindSeg('segCoverDur', v => {
@@ -432,6 +446,51 @@ bindSeg('segCoverPart', v => {
     ? `Tulisan part di sampul: ${state.cover.part === '#' ? '#1, #2, #3, …' : state.cover.part + ' 1, ' + state.cover.part + ' 2, …'} — tercetak di bawah judul tiap cover, nomor sesuai part tiap file`
     : 'Tulisan part di sampul: TANPA — semua cover polos tanpa nomor part', 'ok');
 });
+/* ================================================================
+   v3.7 — SUMBER COVER OTOMATIS DARI VIDEO (modul 08B)
+   Setiap part memindai adegan di rentangnya sendiri, memilih frame
+   terbaik, lalu menyusun sampul: bingkai menarik + judul + label part.
+   ================================================================ */
+bindSeg('segCoverSrc', v => {
+  state.cover.auto = v === 'auto';
+  if (!state.cover.auto && !state.cover.img && state.cover.on) {
+    state.cover.on = false; setSegOn('segCover', 'off');   /* manual tanpa gambar → cover mati */
+  }
+  syncCoverUI();
+  toast(state.cover.auto
+    ? 'Sumber cover: OTOMATIS DARI VIDEO — tiap part memindai adegannya sendiri, sampul (bingkai + judul + part) disusun otomatis, tanpa perlu gambar'
+    : 'Sumber cover: MANUAL — impor gambar atau buat di Studio Sampul', 'ok');
+});
+bindSeg('segCoverStyle', v => {
+  state.cover.style = v || 'KLASIK';
+  syncCoverUI();
+  toast(`Gaya bingkai sampul otomatis: ${state.cover.style}`, 'ok');
+});
+if ($('#inCoverTitle')) $('#inCoverTitle').oninput = e => { state.cover.title = e.target.value; };
+/* pratinjau contoh sampul otomatis dari video yang sedang dimuat */
+if ($('#btnCoverPrev')) $('#btnCoverPrev').onclick = async () => {
+  const b = $('#btnCoverPrev');
+  if (!state.file || state.isAudio) { toast('Impor video dulu — pratinjau mengambil adegan dari video yang dimuat', 'warn'); return; }
+  if (!state.cover.auto) { toast('Pratinjau khusus sumber OTOMATIS DARI VIDEO', 'warn'); return; }
+  try {
+    b.disabled = true;
+    toast('Memindai adegan terbaik…', 'info');
+    const t0 = videoEl.currentTime || 0;
+    try { videoEl.pause(); } catch (e) { }
+    const dims = state.ratio === '9:16' ? { W: 720, H: 1280 } : { W: 1280, H: 720 };
+    const segEnd = Math.max(0.5, state.duration || videoEl.duration || 5);
+    const cvp = await buildAutoCover(videoEl, { start: 0, end: segEnd }, dims.W, dims.H);
+    await seekTo(t0, videoEl);   /* kembalikan playhead seperti semula */
+    showModal({ title: 'PRATINJAU COVER OTOMATIS', sub: 'Contoh dari video yang dimuat — saat ekspor, TIAP PART mengambil adegan dari rentangnya sendiri', cancel: false, body: '<canvas id="autoPrevCv" style="width:100%;border-radius:10px;background:#000"></canvas>' });
+    const pcv = $('#autoPrevCv');
+    pcv.width = dims.W; pcv.height = dims.H;
+    pcv.getContext('2d').drawImage(cvp, 0, 0);
+    M.c.textContent = 'TUTUP'; M.c.style.display = ''; M.c.onclick = hideModal;
+    if (M.b) M.b.hidden = true;
+  } catch (e) {
+    toast('Gagal pratinjau cover: ' + (e.message || e), 'err');
+  } finally { b.disabled = false; }
+};
 syncCoverUI();
 
 /* ---------- v2.8: FRAME NEON BERPUTAR (9:16 & 16:9) ---------- */
