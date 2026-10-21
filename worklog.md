@@ -250,3 +250,25 @@ Stage Summary:
 - RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.6.0 (2026-10-21T08:43:47Z)
 - v3.6.0 COVER VIDEO PEMBUKA (modul 08B) resmi terbit: impor manual atau Studio Sampul; tampil di awal setiap hasil EKSPORT & SPLIT/BATCH + pembuka GABUNG; durasi 1/2/3/5 dtk (default 2)
 - Uji v3.6 29/29 LULUS; regresi fungsi v3.0–v3.5 bersih
+
+---
+Task ID: 12
+Agent: main (GLM)
+Task: v3.6.1 TULISAN PART DI SAMPUL — upgrade modul 08B + rilis
+
+Work Log:
+- Permintaan user (dgn gambar referensi sampul HOROR ALAMGAIB): sampul sudah bagus + judul masuk, tapi TANPA tanda part → minta tulisan part di bawah judul, nomor sesuai part tiap file
+- Implementasi: state.cover.part ('' | PART | EPISODE | EPS | BAGIAN | #, default PART); UI #segCoverPart 6 chip + note diperbarui + beta "DIPERBARUI · v3.6.1" (index.html); bindSeg segCoverPart + partLine di syncCoverUI (ui.js); exporter.js: drawCoverFrame(x,W,H,partNum=0) + coverPartText(n) + drawCoverPartLabel (baseline H*0.945, fs 46u renggang 0.18em, krem #F2E8D5 + stroke hitam 85% + glow rgba(215,55,45,.55), auto-kecil s/d maxW 82%, kompensasi center letterSpacing) — panggilan tunggal di blok cover renderPartWorker dgn pNo = mergeCtx ? 0 : seg.i+1; console.info + cvLine "+ LABEL X"
+- Uji baru scripts/kinostra-v361-test.mjs (22 kasus): smoke UI 6 chip default PART; ganti label EPS/TANPA/#/PART; unit pixel strip bawah (TANPA polos, PART1 krem+gelap, PART1≠PART2, coverPartText semua format); EKSPOR NYATA SPLIT 2 part (keduanya 6 dtk, label terbukti di file final strip-stats, PART_01≠PART_02 stripDiff>500, konten utuh); TANPA ekspor polos; GABUNG polos walau label aktif → 22/22 LULUS
+- Regresi suite v3.6: run pertama F gagal file merge 0 byte (moov not found) → re-run 29/29 LULUS → flake lingkungan Xvfb, bukan regresi (jalur merge tak tersentuh; pNo=0 identik); suite v30–v35 dilewati (jalur tak terkait, lulus penuh di rilis v3.6.0 pagi ini)
+- Alat baru scripts/run-test-xvfb.sh: Xvfb + node test DALAM SATU sesi shell — Xvfb yang dinyalakan terpisah selalu mati saat panggilan tool berakhir (pelajaran lama terbukti ulang); xvfb-run tak terpakai (xauth tidak ada)
+- Bump 3.6.1: package.json (versi+deskripsi), installer.nsi (5 titik), afterpack.js, README (badge + baris fitur 46 cover v3.6.1), PANDUAN (judul, nama file, baris 08B, bagian "Yang Baru di v3.6.1"), index.html boot+header
+- Git: push pertama REJECTED non-fast-forward — commit worklog "11-finish" terduplikasi (lokal e19ddf5 vs remote c0de5a7, diff cuma file-mode) → git rebase --onto FETCH_HEAD e19ddf5 main bersih → push OK (28153a5)
+- Build: dist:full → Portable 3.6.1 132.1MB + win-unpacked (NSIS "VIProductVersion already defined" = warning protokol); makensis manual → Setup 3.6.1.exe 95.7MB; verifikasi UTF-16: KINOSTRA.exe 3.6.1 + 3.6.1.0 utf16 ✓, Setup 3.6.1.0 utf16 ✓, zip berisi KINOSTRA.exe ✓
+- Rilis: token divalidasi GET /user (zacrie85) dulu; release-v361.sh → ID 419555563; 3 aset 201: Setup 91.3MB, Portable 126.0MB, PANDUAN.md; API final: draft False, prerelease False, semua uploaded
+
+Stage Summary:
+- RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.6.1 (2026-10-21T12:53:05Z)
+- Fitur: TULISAN PART DI SAMPUL — nomor otomatis di bawah judul tiap sampul hasil EKSPORT & SPLIT + BATCH; 6 format (TANPA/PART/EPISODE/EPS/BAGIAN/#); GABUNG tetap polos; satu pass tanpa re-encode
+- Desain label: baseline H*0.945 (di bawah judul 0.72–0.86 & subjudul 0.88 Studio Sampul), skala u=H/1080 konsisten dgn sampul
+- PELAJARAN: (1) Xvfb wajib dihidupkan dalam sesi shell yang sama dgn test (run-test-xvfb.sh); (2) commit duplikat saat sesi terputus → cek dulu git fetch + bandingkan sebelum push, rebase --onto utk buang duplikat; (3) file merge 0 byte sesekali terjadi di Xvfb → re-run dulu sebelum menyimpulkan regresi
