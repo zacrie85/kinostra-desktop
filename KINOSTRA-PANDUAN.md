@@ -52,7 +52,7 @@ Sesuai permintaan: **cukup SATU cover per film** — tidak perlu memindai tiap p
 
 Tidak perlu lagi membuat cover satu per satu — **tiap part kini menyusun sampulnya sendiri** dari adegan di dalam video:
 
-- **Cara pakai**: modul **08B COVER VIDEO PEMBUKA** → **SUMBER COVER** → pilih **OTOMATIS DARI VIDEO** → chip **AKTIF**. Selesai — tidak butuh gambar apa pun
+- **Cara pakai**: modul **08B COVER VIDEO PEMBUKA** → **SUMBER COVER** → pilih **OTOMATIS TIAP PART** → chip **AKTIF**. Selesai — tidak butuh gambar apa pun
 - **Pemindaian adegan per part**: setiap part memeriksa beberapa titik di rentang waktunya sendiri, lalu memilih frame **terbaik** (paling jernih, berwarna, dan eksposurnya seimbang) — frame hampir hitam (fade) otomatis dihindari → **cover tiap part berbeda-beda** karena diambil dari adegan masing-masing
 - **Sampul disusun lengkap otomatis**: gambar video + peredup sinematik atas & bawah (teks selalu terbaca) + **bingkai menarik** — pilih gaya: **KLASIK** (bingkai ganda emas + aksen sudut), **GARIS** (garis halus minimalis), **SINEMA** (bar letterbox + garis emas gaya poster bioskop), atau **TANPA**
 - **Judul otomatis dari nama file** (garis bawah/titik diubah spasi) atau ketik sendiri di kolom **judul di sampul**; huruf besar krem + garis hitam + glow merah — serasi papan judul Studio Sampul
