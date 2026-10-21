@@ -1336,6 +1336,20 @@ ipcMain.handle('dialog:openWatermark', async () => {
   return { name: path.basename(p), data: buf.toString('base64') };
 });
 
+/* v3.6: IMPOR COVER PEMBUKA — pilih gambar cover untuk pembuka video
+   (dipakai modul 08B COVER VIDEO PEMBUKA; tampil 2 dtk di awal tiap file) */
+ipcMain.handle('dialog:openCover', async () => {
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Pilih Gambar Cover Pembuka (PNG/JPG — pas dgn rasio video)',
+    properties: ['openFile'],
+    filters: [{ name: 'Gambar', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
+  });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const p = r.filePaths[0];
+  const buf = await fsp.readFile(p);
+  return { name: path.basename(p), data: buf.toString('base64') };
+});
+
 /* v2.12: IMPOR SUBTITEL — pilih file .srt, isi file dikirim sebagai teks */
 ipcMain.handle('dialog:openSrt', async () => {
   const r = await dialog.showOpenDialog(win, {

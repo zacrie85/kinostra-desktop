@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.5.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.6.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.5.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.6.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.5.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.6.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -30,8 +30,20 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
+| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.6: satu gambar cover tampil di awal SETIAP file hasil ekspor** (default 2 detik, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, semua video BATCH EKSPOR & pembuka GABUNG VIDEO. Sumber: impor manual PNG/JPG/WebP atau dibuat langsung di STUDIO SAMPUL (tombol PAKAI SEBAGAI COVER VIDEO) |
 | 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+
+## Yang Baru di v3.6 — COVER VIDEO PEMBUKA (modul 08B)
+
+Pasang **satu gambar cover** yang tampil **2 detik di awal SETIAP file** hasil ekspor — ident channel, judul serial, atau pembuka episode:
+
+- **Cara pakai**: modul **08B COVER VIDEO PEMBUKA** → **IMPOR COVER…** (pilih PNG/JPG/WebP dari disk) atau **BUAT DI STUDIO SAMPUL** (ambil frame video + papan judul bergaya, lalu tekan **PAKAI SEBAGAI COVER VIDEO**) → chip **AKTIF**
+- **Muncul di semua hasil ekspor**: setiap part **EKSPORT & SPLIT MP4**, semua video & part di **BATCH EKSPOR**, dan pembuka **GABUNG VIDEO** (cover cuma sekali di awal gabungan, tidak diulang antar film)
+- **DURASI COVER**: 1 / 2 / 3 / 5 detik — default **2 detik** persis seperti permintaan
+- Cover **mengisi penuh layar** (crop otomatis pas — gambar vertikal untuk video 9:16, landscape untuk 16:9) dan tampil **diam-diam** (audio bungkam) — video & suara asli berjalan normal setelahnya
+- Teknologi: frame cover di-encode lebih dulu lalu stempel waktu konten digeser mengikuti — **satu pass encoding, tanpa concat/re-encode**, kecepatan ekspor tetap; LANJUTKAN EKSPOR, KOMPRES PINTAR & RESOLUSI OUTPUT tetap serasi
+- Diuji otomatis **29/29 lulus** — termasuk ekspor nyata: durasi 8 dtk → 10 dtk persis, frame 0.1–1.9 dtk terbukti cover (pixel), frame @2.5 konten asli, audio 2 dtk pertama bungkam (−91 dB) lalu suara asli (−22 dB), split 2 part keduanya dibuka cover, gabungan 2 film cover cuma di awal
 
 ## Yang Baru di v3.5 — CARA PERPINDAHAN FOKUS: GESER / FADE / LANGSUNG (modul 02C)
 

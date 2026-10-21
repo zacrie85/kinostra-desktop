@@ -367,6 +367,63 @@ $('#btnWmLogo').onclick = async () => {
   img.src = 'data:image/' + (r.name.toLowerCase().endsWith('svg') ? 'svg+xml' : 'png') + ';base64,' + r.data;
 };
 
+/* ================================================================
+   v3.6 — COVER VIDEO PEMBUKA (modul 08B)
+   Gambar pembuka tampil state.cover.dur detik di awal SETIAP file
+   hasil EKSPORT & SPLIT, BATCH EKSPOR & GABUNG. Sumber: impor manual
+   atau langsung jadi dari STUDIO SAMPUL (tombol di modal sampul).
+   ================================================================ */
+function mimeCover(nm) {
+  const e = (nm || '').toLowerCase().split('.').pop();
+  return e === 'jpg' || e === 'jpeg' ? 'image/jpeg' : e === 'webp' ? 'image/webp' : e === 'svg' ? 'image/svg+xml' : 'image/png';
+}
+function syncCoverUI() {
+  const el = $('#coverStat');
+  if (!el) return;
+  el.innerHTML = state.cover.img
+    ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor`
+    : 'Belum ada cover — impor gambar atau buat di Studio Sampul';
+}
+/* pasang gambar cover dari dataUrl (dipakai impor manual & Studio Sampul) */
+function setCoverFromDataUrl(dataUrl, name, autoOn = true) {
+  const img = new Image();
+  img.onload = () => {
+    state.cover.img = img; state.cover.dataUrl = dataUrl; state.cover.name = name || 'cover';
+    if (autoOn && !state.cover.on) { state.cover.on = true; setSegOn('segCover', 'on'); }
+    syncCoverUI();
+    toast(`Cover video dipasang: ${state.cover.name} — ${state.cover.on ? 'AKTIF, tampil ' + state.cover.dur + ' dtk di awal tiap file ekspor' : 'siap (masih mati)'}`, 'ok');
+  };
+  img.onerror = () => toast('Gambar cover tidak bisa dibaca', 'err');
+  img.src = dataUrl;
+}
+$('#btnCoverImport').onclick = async () => {
+  const r = await window.kinostra.pickCover();
+  if (!r) return;
+  setCoverFromDataUrl('data:' + mimeCover(r.name) + ';base64,' + r.data, r.name);
+};
+$('#btnCoverStudio').onclick = () => {
+  if (!state.file) { toast('Impor media dulu — Studio Sampul butuh frame video', 'warn'); return; }
+  openSampul(true);   /* true = mode cover: muncul tombol "PAKAI SEBAGAI COVER" */
+};
+bindSeg('segCover', v => {
+  if (v === 'on' && !state.cover.img) {
+    setSegOn('segCover', 'off');
+    toast('Impor cover dulu — tekan IMPOR COVER atau BUAT DI STUDIO SAMPUL', 'warn');
+    return;
+  }
+  state.cover.on = v === 'on';
+  syncCoverUI();
+  toast(state.cover.on
+    ? `COVER VIDEO: AKTIF — tampil ${state.cover.dur} dtk di awal SETIAP file hasil ekspor & split`
+    : 'Cover video: mati — file ekspor langsung mulai dari awal video', state.cover.on ? 'ok' : 'info');
+});
+bindSeg('segCoverDur', v => {
+  state.cover.dur = clamp(parseInt(v) || 2, 1, 10);
+  syncCoverUI();
+  toast(`Durasi cover: ${state.cover.dur} detik di awal tiap file`, 'ok');
+});
+syncCoverUI();
+
 /* ---------- v2.8: FRAME NEON BERPUTAR (9:16 & 16:9) ---------- */
 function syncNeonLabels() {
   $('#neonWV').textContent = String(state.neon.width);

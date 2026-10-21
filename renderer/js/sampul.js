@@ -114,13 +114,17 @@ function drawSampul(x, W, H, t, style, titleTxt, subTxt) {
 
 let _sampulIv = null, _sampulT = 0, _sampulCounter = 0;
 
-/* buka studio sampul (modal) */
-function openSampul() {
+/* buka studio sampul (modal)
+   v3.6: asCover = true → mode COVER VIDEO: modal menampilkan tombol
+   "PAKAI SEBAGAI COVER VIDEO" — hasil kanvas langsung dipasang sebagai
+   cover pembuka (modul 08B) tanpa perlu menyimpan PNG dulu. */
+function openSampul(asCover = false) {
   if (!state.file) { toast('Impor media dulu', 'warn'); return; }
   if (state.isAudio) { toast('Sampul hanya untuk video', 'warn'); return; }
   _sampulT = videoEl.currentTime || 0;
   const body = `
     <div class="sampulwrap">
+      ${asCover ? `<button class="btn acc wide" id="btnSampulUseCover" style="margin-bottom:8px"><i data-lucide="film"></i> PAKAI SEBAGAI COVER VIDEO — TAMPIL ${state.cover.dur || 2} DTK DI AWAL TIAP FILE EKSPOR</button>` : ''}
       <canvas id="sampulCv" width="1280" height="720"></canvas>
       <div class="row" style="margin-top:8px;align-items:center">
         <button class="btn sm" id="btnSampulHere"><i data-lucide="crosshair"></i> PAKAI PLAYHEAD</button>
@@ -133,7 +137,7 @@ function openSampul() {
       <input class="in" id="inSampulSub" placeholder="Subjudul opsional — mis. PART 1 · FULL MOVIE" maxlength="48">
       <div class="note">Hasil PNG ${state.ratio === '9:16' ? '720×1280' : '1280×720'} siap upload. Filter warna & efek modul 08 ikut terpasang. Tekan <b>SIMPAN PNG</b> — bisa simpan banyak sampul (nomor urut otomatis).</div>
     </div>`;
-  showModal({ title: 'STUDIO SAMPUL — THUMBNAIL OTOMATIS', body, cancel: false });
+  showModal({ title: asCover ? 'STUDIO SAMPUL — BUAT COVER VIDEO PEMBUKA' : 'STUDIO SAMPUL — THUMBNAIL OTOMATIS', body, cancel: false });
   M.c.textContent = 'SIMPAN PNG';
   M.c.style.display = '';
   M.b.hidden = false;
@@ -170,6 +174,20 @@ function openSampul() {
   _sampulIv = setInterval(() => { if (M.el.classList.contains('hidden')) { clearInterval(_sampulIv); return; } redraw(); }, 400);
   /* tombol BATAL/TUTUP modal (M.x / ESC) menutup interval via guard di atas */
   M.onCancel = () => { clearInterval(_sampulIv); hideModal(); };
+  /* v3.6: mode cover — tombol PAKAI SEBAGAI COVER VIDEO memasang kanvas
+     saat ini sebagai cover pembuka (state.cover) lalu menutup modal */
+  if (asCover) {
+    const bUC = $('#btnSampulUseCover');
+    if (bUC) bUC.onclick = () => {
+      try {
+        const durl = cvS.toDataURL('image/png');
+        if (typeof setCoverFromDataUrl === 'function') {
+          setCoverFromDataUrl(durl, 'STUDIO SAMPUL');
+          clearInterval(_sampulIv); hideModal();
+        } else toast('Modul cover belum siap', 'err');
+      } catch (e) { toast('Gagal memasang cover: ' + (e.message || e), 'err'); }
+    };
+  }
   /* tombol SIMPAN PNG (tombol cancel modal dipakai sebagai aksi utama) */
   M.c.onclick = async () => {
     try {

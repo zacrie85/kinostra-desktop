@@ -322,7 +322,7 @@ async function renderMix(start, durOut, spd = 1) {
    seg.start + outOff·spd), stempel waktu dihitung dari penghitung global.
    v3.0: mergeOff = offset waktu output global saat GABUNG VIDEO;
    fbuf dipakai ulang antar detik (kurangi tekanan GC ±40%). */
-async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec, mergeOff = 0) {
+async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec, mergeOff = 0, preSil = 0) {
   const sr = 48000, chs = 2;
   const aenc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => console.warn('aenc', e) });
   aenc.configure({ codec, sampleRate: sr, numberOfChannels: chs, bitrate: 160000 });
@@ -330,6 +330,23 @@ async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec, mergeOff = 
     const BLK = 60;
     const fbuf = new Float32Array(sr * chs);
     let outOff = 0;
+    /* v3.6: COVER PEMBUKA — audio BUNGKAM (nol) selama cover tampil di awal,
+       stempel waktu kontinu; konten asli menyusul setelahnya (ts + preSil) */
+    if (preSil > 0.001) {
+      let silDone = 0;
+      while (silDone < preSil - 1e-6) {
+        if (state.abort) throw new Error('Dibatalkan');
+        if (state.exportFatal) throw state.exportFatal;
+        const n = Math.min(sr, Math.max(1, Math.round((preSil - silDone) * sr)));
+        fbuf.fill(0, 0, n * chs);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs,
+          timestamp: Math.round((mergeOff + silDone) * 1e6), data: fbuf });
+        aenc.encode(ad); ad.close();
+        let drainMs = 0;
+        while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if (state.exportFatal) throw state.exportFatal; if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
+        silDone += n / sr;
+      }
+    }
     while (outOff < durOut - 1e-6) {
       if (state.abort) throw new Error('Dibatalkan');
       if (state.exportFatal) throw state.exportFatal;
@@ -343,7 +360,7 @@ async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec, mergeOff = 
         fbuf.set(L.subarray(off, off + n), 0);
         if (chs > 1) fbuf.set(R2.subarray(off, off + n), n);
         const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: chs,
-          timestamp: Math.round((mergeOff + outOff + off / sr) * 1e6), data: fbuf });
+          timestamp: Math.round((mergeOff + preSil + outOff + off / sr) * 1e6), data: fbuf });
         aenc.encode(ad); ad.close();
         let drainMs = 0;
         while (aenc.encodeQueueSize > 10) { await sleep(2); if (state.abort) throw new Error('Dibatalkan'); if (state.exportFatal) throw state.exportFatal; if ((drainMs += 2) > 30000) throw new Error('encoder audio macet'); }
@@ -363,6 +380,41 @@ async function ensureFontsReady() {
 }
 
 /* nama file output per part */
+/* ================================================================
+   v3.6 — COVER VIDEO PEMBUKA (modul 08B)
+   Gambar statis (impor manual atau langsung dari STUDIO SAMPUL)
+   tampil di awal SETIAP file hasil ekspor: frame cover di-encode
+   LEBIH DULU (PTS mulai 0), stempel waktu konten video digeser
+   mengikuti, audio dibungkam selama cover tampil — tetap SATU pass
+   encoding (tanpa concat / re-encode), semua jalur otomatis:
+   EKSPORT & SPLIT MP4, BATCH EKSPOR & GABUNG VIDEO.
+   ================================================================ */
+function coverActive() {
+  const C = state.cover;
+  if (!C || !C.on || !C.img || state.isAudio) return null;
+  try {
+    const iw = C.img.naturalWidth || C.img.width || 0;
+    if (!C.img.complete || !iw) return null;
+  } catch (e) { return null; }
+  return C;
+}
+/* durasi cover efektif part ini (detik) — GABUNG: hanya bagian pertama
+   (mergeCtx.off masih 0) yang mendapat cover, sisanya sambungan mulus */
+function coverDurFor(mergeCtx) {
+  const C = coverActive();
+  if (!C) return 0;
+  if (mergeCtx && mergeCtx.off >= 0.001) return 0;   /* bukan bagian pertama gabungan */
+  return clamp(C.dur || 2, 0.5, 10);
+}
+/* gambar 1 frame cover penuh layar (crop pas, latar hitam) */
+function drawCoverFrame(x, W, H) {
+  const im = state.cover.img;
+  x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+  const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+  const r = coverRect(iw, ih, W, H);
+  x.drawImage(im, r.x, r.y, r.w, r.h);
+}
+
 function partFileName(title, prefix, idx) {
   return `${slug(title)}${prefix !== '#' ? '_' + prefix.replace(/\s+/g, '_') : ''}_${String(idx).padStart(2, '0')}.mp4`;
 }
@@ -416,13 +468,15 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
      0.5 = slow-motion. Durasi output = durasi sumber ÷ spd. */
   const spd = clamp(state.speed || 1, 0.25, 4);
   const durS = (seg.end - seg.start) / spd;
+  /* v3.6: COVER PEMBUKA — durasi cover part ini (0 = tanpa cover) */
+  const coverD = coverDurFor(mergeCtx);
   const v = document.createElement('video');
   v.muted = true; v.playsInline = true; v.preload = 'auto';
   v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2px;height:2px;opacity:0';
   v.src = srcUrl;
   document.body.appendChild(v);
   v.addEventListener('error', () => console.error(`part ${seg.i + 1} media error: code=${v.error && v.error.code} msg=${v.error && v.error.message}`));
-  let venc = null, _stage = 'init', n = 0;
+  let venc = null, _stage = 'init', n = 0, nMain = 0;
   let audioP = null, audioErr = null;   /* v3.0: audio paralel dgn video */
   try {
     await new Promise((res, rej) => {
@@ -491,7 +545,7 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
          Kedua encoder mengalir ke muxer yang sama — mp4-muxer menerima
          potongan video/audio ter-selang; hasil identik, ±30-45% lebih cepat. */
       audioP = withTimeout(
-        encodeAudioStream(muxer, seg, durS, spd, aCodec, mergeCtx ? mergeCtx.off : 0),
+        encodeAudioStream(muxer, seg, durS, spd, aCodec, mergeCtx ? mergeCtx.off : 0, coverD),
         300000, 'encoding audio macet'
       ).catch(e => { audioErr = audioErr || e; });
     }
@@ -526,6 +580,27 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     venc.configure({ ...vCfg, latencyMode: 'realtime' });
     const CAP = hw ? 40 : 14;
 
+    /* v3.6: COVER PEMBUKA — encode frame cover statis SEBELUM konten video.
+       PTS cover mulai 0; PTS konten digeser +coverD (lihat outTs di bawah).
+       Frame pertama cover = keyframe agar pemutaran & seek mulus. */
+    if (coverD > 0) {
+      const nC = Math.max(1, Math.round(coverD * fps));
+      for (let i = 0; i < nC; i++) {
+        if (state.abort) throw new Error('Dibatalkan');
+        if (state.exportFatal) throw state.exportFatal;
+        drawCoverFrame(ec, W, H);
+        const vf = new VideoFrame(ecv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+        venc.encode(vf, { keyFrame: i === 0 }); vf.close();
+        n++; slot.fr = n;
+        while (venc.encodeQueueSize > CAP) {
+          await sleep(2);
+          if (state.abort) throw new Error('Dibatalkan');
+          if (state.exportFatal) throw state.exportFatal;
+        }
+      }
+      console.info(`part ${seg.i + 1}: cover pembuka ${coverD.toFixed(1)} dtk (${nC} frame) dimasukkan di awal (v3.6)`);
+    }
+
     /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata
        v2.12: PTS = waktu OUTPUT = (m − mulai part) ÷ kecepatan
        v3.0: + offset global mergeCtx.off saat GABUNG VIDEO */
@@ -535,9 +610,10 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
       setCompSrc(null);
       const vf = new VideoFrame(ecv, { timestamp: ts, duration: Math.round(1e6 / fps) });
       venc.encode(vf, { keyFrame: n % (fps * 2) === 0 }); vf.close();
-      n++; slot.fr = n;
+      n++; nMain++; slot.fr = n;
     };
-    const outTs = (m) => Math.max(0, Math.round((((mergeCtx ? mergeCtx.off : 0) + (m - seg.start) / spd) * 1e6)));
+    /* v3.6: PTS output = cover + offset gabung + waktu relatif part */
+    const outTs = (m) => Math.max(0, Math.round((((mergeCtx ? mergeCtx.off : 0) + coverD + (m - seg.start) / spd) * 1e6)));
 
     if (RVFC_OK && !state.isAudio) {
       /* ============ v2.2: CAPTURE PLAYBACK (tanpa seek per frame) ============
@@ -690,17 +766,21 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         pump();
       });
       if (refillN) console.info(`part ${seg.i + 1}: ${n} frame dirender · ${refillN} diisi-ulang (lompatan maks ${Math.round(maxGapMs)} ms) — anti-beku v2.11 aktif`);
-      if (n === 0) {
-        /* sumber aneh / tidak menghasilkan frame — jalankan jalur lama */
+      if (nMain === 0) {
+        /* sumber aneh / tidak menghasilkan frame — jalankan jalur lama
+           v3.6: cek pakai nMain (frame cover tidak dihitung sbg konten);
+           renderFramesBySeek menimpa slot.fr → jumlah frame cover dijaga */
         _stage = 'fallback-seek';
-        await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, false, spd, mergeCtx ? mergeCtx.off : 0);
-        n = slot.fr;
+        const nCov = n - nMain;
+        await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, false, spd, (mergeCtx ? mergeCtx.off : 0) + coverD);
+        nMain = slot.fr; n = nCov + nMain;
       }
     } else {
       /* audio-only / tanpa rVFC: jalur frame loop (tanpa seek utk audio) */
       _stage = 'frames';
-      await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, !!state.isAudio, spd, mergeCtx ? mergeCtx.off : 0);
-      n = slot.fr;
+      const nCov = n - nMain;
+      await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, !!state.isAudio, spd, (mergeCtx ? mergeCtx.off : 0) + coverD);
+      nMain = slot.fr; n = nCov + nMain;
     }
 
     _stage = 'flush';
@@ -810,8 +890,10 @@ async function exportPartsToDir(dir, ui) {
   _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
-  /* slot progres per part — total frame = durasi output × fps */
-  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) / spd * fps)), working: false, stage: null, saveProg: 0 }));
+  /* slot progres per part — total frame = durasi output × fps
+     v3.6: + frame cover pembuka (bila aktif) agar progres tepat 100% */
+  const cvFrG = coverActive() ? Math.max(1, Math.round(clamp(state.cover.dur || 2, 0.5, 10) * fps)) : 0;
+  const slots = segs.map(s => ({ seg: s, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((s.end - s.start) / spd * fps)) + cvFrG, working: false, stage: null, saveProg: 0 }));
   const totalFr = slots.reduce((a, s) => a + s.total, 0);
   const t0 = performance.now();
   let lastUi = 0;
@@ -1052,7 +1134,9 @@ function updateExportInfo() {
   const afixLine = state.audioFix.on ? ` · AUDIO SEHAT${state.audioFix.hiss ? '+REDAM DESIS' : ''}` : '';
   /* v3.1: ZOOM PEMBICARA tampil di ringkasan */
   const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}
+  /* v3.6: COVER PEMBUKA tampil di ringkasan */
+  const cvLine = (state.cover && state.cover.on && state.cover.img) ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL</b>` : '';
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }
@@ -1098,6 +1182,8 @@ async function exportMergeToDir(paths, dir, ui) {
     audio: { codec: aCodec === 'mp4a.40.2' ? 'aac' : 'opus', numberOfChannels: 2, sampleRate: 48000 }
   });
   state._noPart = true;          /* label PART tidak masuk file gabungan */
+  /* v3.6: frame cover utk slot progres (cover hanya di bagian pertama) */
+  const cvFrM = coverActive() ? Math.max(1, Math.round(clamp(state.cover.dur || 2, 0.5, 10) * fps)) : 0;
   const prevFatal = state.exportFatal;
   state.exportFatal = null;
   const t0 = performance.now();
@@ -1136,7 +1222,10 @@ async function exportMergeToDir(paths, dir, ui) {
         for (const seg of segs) {
           if (state.abort) throw new Error('Dibatalkan');
           if (state.exportFatal) throw state.exportFatal;
-          const slot = { seg, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((seg.end - seg.start) / spd * fps)), working: true, stage: null, saveProg: 0 };
+          const slot = { seg, dir, prog: 0, fr: 0, total: Math.max(1, Math.round((seg.end - seg.start) / spd * fps)) + cvFrM, working: true, stage: null, saveProg: 0 };
+          /* v3.6: cover cuma masuk di bagian PERTAMA gabungan (off 0) —
+             setelah part pertama selesai, durasi cover dijumlahkan ke off */
+          const offBefore = mergeCtx.off;
           try {
             await renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, () => {
               doneParts += 0.0001;
@@ -1148,7 +1237,8 @@ async function exportMergeToDir(paths, dir, ui) {
               await renderPartWorker(seg, srcUrl, W, H, fps, br, swCfg, aCodec, slot, null, mergeCtx);
             } else throw e;
           }
-          mergeCtx.off += (seg.end - seg.start) / spd;
+          mergeCtx.off += (seg.end - seg.start) / spd
+            + (cvFrM && offBefore < 0.001 ? cvFrM / fps : 0);   /* v3.6: durasi cover */
           if (ui.prog) ui.prog(clamp(mergeCtx.off / Math.max(0.1, (state.duration || 1) * paths.length), 0, 1));
           if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${nmv} · part ${slot.seg.i + 1}/${segs.length} selesai · total ${fmtT(mergeCtx.off)}`);
         }

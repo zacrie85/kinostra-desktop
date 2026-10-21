@@ -131,6 +131,12 @@ const state = {
   /* v2.14: AKSELERASI EKSPOR — auto (uji kecepatan GPU vs CPU, pilih
      terkencang) | gpu (paksa encoder hardware) | cpu (paksa software) */
   acc: 'auto',
+  /* v3.6: COVER VIDEO PEMBUKA — gambar pembuka yang tampil beberapa detik
+     (default 2) di awal SETIAP file hasil EKSPORT & SPLIT MP4, BATCH EKSPOR
+     & GABUNG VIDEO. Sumber: impor manual (pickCover) atau dibuat langsung
+     lewat STUDIO SAMPUL. img = HTMLImageElement dari dataUrl. Setelan
+     GLOBAL semua video — dipakai ulang tiap video berikutnya. */
+  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2 },
   /* v3.4: RESOLUSI OUTPUT TETAP — '720' | '1080' | '1440' | '2160' (kunci
      RESOUTS) | '' = AUTO (mengikuti SKALA RESOLUSI 100/75/50%, perilaku lama).
      Setelan GLOBAL: berlaku untuk EKSPORT & SPLIT MP4, BATCH EKSPOR (semua
