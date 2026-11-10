@@ -1,8 +1,8 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "3.13.0",
-  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.13: SLIDER UKURAN TULISAN PART COVER (PART/EPISODE/EPS/BAGIAN/# bisa dikecilkan 50%–dibesarkan 250% di semua 10 layout) · v3.12: AUTO-FIT JUDUL COVER (judul panjang masuk semua) + COVER BERSIH (latar tanpa teks video) · v3.11: MESIN COVER NOVACUT 100 TEMPLATE + KEN BURNS + 28 TRANSISI + 8 ANIMASI TEKS · v3.10: 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG · v3.9: MODE KILAT · GABUNG VIDEO · TTS NARASI",
+  "version": "3.14.0",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.14: UKURAN TULISAN PART DI VIDEO — tulisan PART/EPISODE/EPS/BAGIAN/# di dalam video (bumper intro & label pojok, modul 02) bisa dikecilkan 50%–dibesarkan 250%, garis hias & sub-info ikut proporsional · v3.13: SLIDER UKURAN TULISAN PART COVER · v3.12: AUTO-FIT JUDUL COVER + COVER BERSIH · v3.11: MESIN COVER NOVACUT 100 TEMPLATE + KEN BURNS + 28 TRANSISI + 8 ANIMASI TEKS · v3.10: 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG · v3.9: MODE KILAT · GABUNG VIDEO · TTS NARASI",
   "main": "main/main.js",
   "author": "KINOSTRA",
   "license": "MIT",

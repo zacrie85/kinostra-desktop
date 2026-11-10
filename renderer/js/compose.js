@@ -231,6 +231,11 @@ function drawComposition(x, W, H, t, opts) {
      lokal = detik OUTPUT sejak awal part (ikut kecepatan) */
   const _spdP = clamp(state.speed || 1, 0.25, 4);
   const _tinP = (t - segB.start) / _spdP;
+  /* v3.14: UKURAN TULISAN PART DI VIDEO — faktor skala 0.5–2.5 (1 = normal);
+     berlaku utk bumper intro & label pojok: font, spasi huruf, garis hiasan
+     & offset vertikal ikut diskala agar proporsional (animasi masuk part
+     ikut akurat karena fsPx & ls dikirim terskala ke ncTextState helpers) */
+  const _sP = clamp(state.partSize || 1, 0.5, 2.5);
   const _pA = (state.partAnim && state.partAnim !== 'off' && _tinP < 1.6)
     ? ncTextState(state.partAnim, _tinP, 1e9, seg * 131 + 7 + Math.floor(t * 30)) : null;
   if (state.partShow === 'intro') {
@@ -244,14 +249,14 @@ function drawComposition(x, W, H, t, opts) {
         if (_pA.scale !== 1) { x.translate(cx, cy); x.scale(_pA.scale, _pA.scale); x.translate(-cx, -cy); }
         if (_pA.dy) x.translate(0, _pA.dy * H);
       }
-      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy - 84 * u, 120 * u, 3 * u);
-      x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u)}px "${F}"`;
+      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u * _sP, cy - 84 * u * _sP, 120 * u * _sP, 3 * u * _sP);
+      x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u * _sP)}px "${F}"`;
       const _pTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
-      ncAnimSpacedLine(x, _pA, _pTxt, cx, cy + 40 * u, 8 * u, 112 * u,
-        (t2, ls2, dx) => drawSpaced(x, t2, cx + dx, cy + 40 * u, ls2, 'center'), W);
-      x.fillStyle = 'rgba(239,237,231,.55)'; x.font = `500 ${Math.round(24 * u)}px "JetBrains Mono"`;
-      x.fillText(`SEGMEN ${seg + 1} / ${total} · ${Math.round(state.splitSec)} DTK`, cx, cy + 92 * u);
-      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy + 116 * u, 120 * u, 3 * u);
+      ncAnimSpacedLine(x, _pA, _pTxt, cx, cy + 40 * u * _sP, 8 * u * _sP, 112 * u * _sP,
+        (t2, ls2, dx) => drawSpaced(x, t2, cx + dx, cy + 40 * u * _sP, ls2, 'center'), W);
+      x.fillStyle = 'rgba(239,237,231,.55)'; x.font = `500 ${Math.round(24 * u * _sP)}px "JetBrains Mono"`;
+      x.fillText(`SEGMEN ${seg + 1} / ${total} · ${Math.round(state.splitSec)} DTK`, cx, cy + 92 * u * _sP);
+      x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u * _sP, cy + 116 * u * _sP, 120 * u * _sP, 3 * u * _sP);
       x.restore();
     }
   } else {
@@ -263,12 +268,12 @@ function drawComposition(x, W, H, t, opts) {
       if (_pA.scale !== 1) { x.translate(px, py); x.scale(_pA.scale, _pA.scale); x.translate(-px, -py); }
       if (_pA.dy) x.translate(0, _pA.dy * H);
     }
-    x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u, 4 * u, 50 * u);
-    x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u)}px "${F}"`;
+    x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u * _sP, 4 * u * _sP, 50 * u * _sP);
+    x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u * _sP)}px "${F}"`;
     const _cTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
-    const w = drawSpaced(x, ncAnimSpacedTxt(x, _pA, _cTxt), px + 16 * u, py, 3 * u + (_pA && _pA.kind === 'tracking' ? (1 - ncEaseOut(_pA.inP || 0)) * 46 * u * 0.5 : 0), 'left');
-    x.fillStyle = 'rgba(239,237,231,.5)'; x.font = `500 ${Math.round(20 * u)}px "JetBrains Mono"`;
-    x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
+    const w = drawSpaced(x, ncAnimSpacedTxt(x, _pA, _cTxt), px + 16 * u * _sP, py, 3 * u * _sP + (_pA && _pA.kind === 'tracking' ? (1 - ncEaseOut(_pA.inP || 0)) * 46 * u * _sP * 0.5 : 0), 'left');
+    x.fillStyle = 'rgba(239,237,231,.5)'; x.font = `500 ${Math.round(20 * u * _sP)}px "JetBrains Mono"`;
+    x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u * _sP + w + 10 * u * _sP, py);
     x.restore();
   }
   }

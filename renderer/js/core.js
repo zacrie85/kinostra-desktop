@@ -130,6 +130,9 @@ const state = {
   /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
   frame: { zoom: 1, panX: 0, panY: 0 },
   splitSec: 30, splitCustom: false, partPrefix: 'PART', partShow: 'intro',
+  /* v3.14: UKURAN TULISAN PART DI VIDEO — faktor skala 0.5–2.5 (1 = 100% normal);
+     berlaku utk bumper intro & label pojok di dalam video (bukan cover) */
+  partSize: 1,
   /* v3.2: JUMLAH PART OTOMATIS — isi N → durasi per part = durasi video / N
      (0 = mati; dihitung ulang otomatis tiap video baru dimuat) */
   splitParts: 0,

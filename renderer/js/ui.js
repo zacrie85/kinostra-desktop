@@ -79,6 +79,20 @@ $('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.valu
 $('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
 syncTextPosLabels();
 
+/* ---------- v3.14: UKURAN TULISAN PART DI VIDEO — 50%–250%, normal 100%;
+   berlaku utk bumper intro & label pojok di dalam video (bukan cover);
+   pratinjau langsung karena drawComposition membaca state.partSize ---------- */
+function syncPartSizeV() {
+  const lbl = $('#partSizeV'), sld = $('#inPartSize');
+  if (lbl) lbl.textContent = Math.round((state.partSize || 1) * 100) + '%';
+  if (sld) sld.value = state.partSize || 1;
+}
+if ($('#inPartSize')) {
+  $('#inPartSize').oninput = e => { state.partSize = clamp(parseFloat(e.target.value) || 1, 0.5, 2.5); syncPartSizeV(); };
+  $('#inPartSize').onchange = () => toast(`Ukuran tulisan part di video: ${Math.round(state.partSize * 100)}%`, 'ok');
+}
+syncPartSizeV();
+
 /* ---------- v3.9: 10 FRAME FITURISTIK JUDUL DI VIDEO ---------- */
 (function initTitleFrames() {
   const box = $('#titleFrameChips');

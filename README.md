@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.13.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.14.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -71,6 +71,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 50 | **28 Transisi Cover → Video + 8 Animasi Teks** ⭐v3.11 | Transisi NOVACUT penuh: FLASH SNAP, WHIP PAN, ZOOM PUNCH/BLAST, RGB GLITCH, IMPACT SHAKE, CINEMATIC BARS, FILM BURN, SLIDE, PUSH PARALLAX, DIAGONAL WIPE, IRIS, BLINDS, SPLIT, BOUNCE, FLARE SWEEP, CROSS DISSOLVE, DIP HITAM/PUTIH, BLUR DISSOLVE, SPIN SWAP, PIXELATE, TV STATIC, CHROMATIC SLIDE, MOSAIC + **animasi masuk** judul & PART (FADE, RISE UP, TYPEWRITER, TITLE SLAM, NEON FLICKER, TRACKING, GLITCH, WIPE) di cover DAN di video |
 | 51 | **AUTO-FIT JUDUL COVER + COVER BERSIH** ⭐v3.12 | **Judul video yang panjang kini MASUK SEMUA di cover**: font otomatis mengecil bertahap (semua 10 layout) sampai seluruh kata judul tercakup — tidak ada lagi kata terpotong; judul pendek tetap sebesar semula. **Tangkapan adegan utk latar cover kini BERSIH**: frame video diambil **tanpa teks overlay video** (judul, label PART/EPISODE, deskripsi, subtitel, watermark, frame neon) — satu-satunya tulisan di cover = judul + part dari PENGATURAN COVER, persis referensi cover pendek |
 | 52 | **SLIDER UKURAN TULISAN PART COVER** ⭐v3.13 | Tulisan **PART / EPISODE / EPS / BAGIAN / #** di cover kini **bisa dikecilkan & dibesarkan** sesuai selera: slider **50% – 250%** (normal 100%) di modul 08B. Kotak badge / strip aksen otomatis menyesuaikan agar teks tetap muat (layout Kotak, Sticker, Outline adaptif), berlaku di **ke-10 layout & 10 palet**, pratinjau berubah langsung, hasil ekspor = pratinjau persis |
+| 53 | **UKURAN TULISAN PART DI VIDEO** ⭐v3.14 | Tulisan **PART / EPISODE / EPS / BAGIAN / #** yang terbakar **DI DALAM VIDEO** (bumper intro & label pojok, modul 02) kini **bisa dikecilkan & dibesarkan**: slider **50% – 250%** (normal 100%). Garis hias, sub-informasi (SEGMEN x/y · detik, /total) & ke-8 animasi masuk ikut proporsional — pratinjau langsung, ikut terbakar saat ekspor |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
@@ -85,8 +86,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-3.13.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-3.13.0-win64.zip` | ±126 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-3.14.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-3.14.0-win64.zip` | ±126 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 

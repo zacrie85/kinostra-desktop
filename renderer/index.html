@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.13.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.14.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.13.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.14.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -168,6 +168,12 @@
           <option>PART</option><option>EPISODE</option><option>EPS</option>
           <option>BAGIAN</option><option>#</option>
         </select>
+        <div class="lbl">UKURAN TULISAN PART DI VIDEO <span class="beta">BARU · v3.14</span> <span style="opacity:.65;font-weight:500">— besar-kecilnya sesuai selera</span></div>
+        <div class="row" style="align-items:center">
+          <input type="range" id="inPartSize" min="0.5" max="2.5" step="0.05" value="1" style="flex:1">
+          <span class="mono" id="partSizeV" style="font-size:10px;width:80px;text-align:right">100%</span>
+        </div>
+        <div class="note">Atur <b>besar kecil</b> tulisan <b>PART / EPISODE / EPS / BAGIAN / #</b> yang tampil <b>DI DALAM VIDEO</b> (bumper intro &amp; label pojok — bukan di cover): geser ke kiri untuk memperkecil (sampai <b>50%</b>) atau ke kanan untuk memperbesar (sampai <b>250%</b>). Normal = <b>100%</b>. Garis hiasan, sub-informasi &amp; animasi masuk ikut proporsional. Pratinjau langsung &amp; ikut terbakar saat ekspor.</div>
         <div class="lbl">POSISI PART — KIRI ⬅ ➡ KANAN <b id="partXV">TENGAH</b></div>
         <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
         <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>

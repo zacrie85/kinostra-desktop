@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.13.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.14.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.13.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.14.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.13.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.14.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -23,7 +23,7 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 |----|-------|--------|
 | 00 | **Kotak Video · Urutan** ⭐v2.2 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH FILE batch. Berurutan dari atas ke bawah. Thumbnail otomatis, tombol naik/turun urutan, hapus & pratinjau |
 | 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. **v2.6: geser KIRI/KANAN/ATAS/BAWAH selalu berfungsi** (termasuk zoom 1× — memindahkan posisi video di dalam frame 9:16), Zoom Fokus 1–4×, latar BLUR SINEMATIK tampil otomatis (tidak hitam lagi) |
-| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v3.10: 10 FRAME FITURISTIK JUDUL DI VIDEO + posisi JUDUL sampai PALING BAWAH & posisi PART sampai PALING ATAS + gaya TANPA LABEL**. v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
+| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v3.14: UKURAN TULISAN PART DI VIDEO — besar/kecilnya tulisan PART/EPISODE/EPS/BAGIAN/# di dalam video bisa diatur 50%–250%**. **v3.10: 10 FRAME FITURISTIK JUDUL DI VIDEO + posisi JUDUL sampai PALING BAWAH & posisi PART sampai PALING ATAS + gaya TANPA LABEL**. v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
 | 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
 | 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
@@ -57,6 +57,15 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.14 — UKURAN TULISAN PART DI VIDEO BISA DIATUR
+
+### Slider UKURAN TULISAN PART DI VIDEO (modul 02)
+- Tulisan **PART / EPISODE / EPS / BAGIAN / #** yang tampil **DI DALAM VIDEO** kini **bisa dikecilkan & dibesarkan** sesuai selera — geser slider **UKURAN TULISAN PART DI VIDEO** di modul 02: **50% sampai 250%** (normal = 100%)
+- Berlaku di **kedua gaya tampil**: **BUMPER INTRO** (tulisan besar di tengah layar di awal part — font, garis amber atas-bawah & sub-informasi SEGMEN ikut proporsional) dan **SELALU TAMPIL** (label pojok kecil — strip amber & angka /total ikut proporsional)
+- **Kedua mode split ikut**: PER DURASI dan PER ADEGAN; semua **prefix** (PART/EPISODE/EPS/BAGIAN/#) sama-sama terskala
+- **Animasi masuk part** (FADE, RISE UP, TYPEWRITER, TITLE SLAM, NEON FLICKER, TRACKING, GLITCH, WIPE) tetap akurat karena ukuran font & spasi huruf terskala ikut diteruskan ke mesin animasi
+- **Pratinjau berubah langsung** saat slider digeser; hasil ekspor = pratinjau persis (satu mesin gambar compose). Bila 100% → tampilan = persis seperti v3.13
 
 ## Yang Baru di v3.13 — UKURAN TULISAN PART COVER BISA DIATUR
 
