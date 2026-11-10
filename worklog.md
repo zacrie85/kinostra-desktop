@@ -351,3 +351,13 @@ Stage Summary:
 - Regresi: v30 39/39, v33 14/14, v34 34/34, v35 27/27, v36 29/29, v38 30/30, node 12/12; expected-only: v31 29/30 (versi), v32 20/21 (versi), v361 21/22 (label modul), v37 41/43 (chip 2→3 + versi) — NOL regresi fungsi
 - Bump 3.9.0 (6 file): package.json, installer.nsi (5 titik), afterpack.js, README (badge + fitur 47/48 + nama paket install), PANDUAN (judul, Setup/Portable, tabel 02 & 09, bagian "Yang Baru di v3.9" 3 sub-bab), index.html (boot+header); + scripts/release-v390.sh
 - Build: dist:full → Portable 3.9.0-win64.zip 132.1MB (NSIS step konflik VIProductVersion = protokol lama); makensis manual → KINOSTRA-Setup-3.9.0.exe 95.8MB; UTF-16 verifikasi: KINOSTRA.exe 3.9.0.0 ✓, Setup 3.9.0.0 ✓
+- PERBAIKAN LABEL RILIS: v3.9.0 sudah terpakai oleh rilis Task 15 (bingkai sampul + MODE KILAT, ID 439929122) → koreksi ini wajib naik ke v3.10.0; merge 53820ca sudah menaikkan 6 file ke 3.10.0 (package.json, installer.nsi 5 titik, afterpack.js, README badge+paket, PANDUAN judul+Setup/Portable, index.html boot+header)
+- Build ulang dgn label 3.10.0: dist:full → KINOSTRA-Portable-3.10.0-win64.zip 126.0MB (NSIS step konflik VIProductVersion = protokol lama); makensis manual → KINOSTRA-Setup-3.10.0.exe 91.3MB; UTF-16 verifikasi: KINOSTRA.exe 3.10.0.0 ✓, Setup 3.10.0.0 ✓, app package.json 3.10.0 ✓, zip 211 entri ✓
+- Sanity ulang di sesi rilis: fastcut-node-test.mjs 12/12 LULUS (kode = commit teruji, tanpa perubahan)
+- Git: remote origin hilang lagi → dibangun ulang dgn token; push cdafe6b..0b27b4a (b7129f8 koreksi + merge 53820ca + commit gateway)
+- Rilis: token valid; scripts/release-v3100.sh (baru, dibuat sesi ini) → release ID 440003560; 3 aset 201 (Setup 91.3MB, Portable 126.0MB, PANDUAN 0.1MB); API final: draft False, prerelease False, semua uploaded
+
+Stage Summary:
+- RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.10.0 (2026-11-10)
+- Fitur: 10 FRAME JUDUL DI DALAM VIDEO (modul 02, koreksi dari salah faham bingkai sampul) · POSISI JUDUL sampai PALING BAWAH & POSISI PART sampai PALING ATAS · TANPA LABEL · POTONG LANGSUNG tanpa re-encode (kualitas asli, fallback otomatis ke RENDER PENUH)
+- Catatan: rilis v3.9.0 (Task 15) tetap di GitHub sbg versi bingkai-sampul; v3.10.0 = koreksi sesuai maksud user
