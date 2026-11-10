@@ -198,11 +198,18 @@ $('#btnRangeReset').onclick = () => {
 /* TERAPKAN KE SEMUA VIDEO DI KOTAK — menyimpan waktu mulai (video aktif)
    + durasi split per part (setelan di atas) sebagai preset massal. Semua
    video berikutnya (batch / batch ekspor) mulai dari waktu itu; berhenti
-   tetap sampai masing-masing video habis. */
+   tetap sampai masing-masing video habis.
+   v3.15: bila JUMLAH PART OTOMATIS aktif, tampilan & toast menunjukkan
+   part per video (bukan detik) — tiap video dihitung ulang otomatis dari
+   durasinya sendiri (applySplitParts), jadi "10 PART" tetap 10 part utk
+   video panjang/pendek. */
 function syncRangeApplyUI() {
   const st = $('#rangeApplyStat'), on = state.applyAllStart != null;
+  const splitTxt = state.splitParts > 0
+    ? `<b>${state.splitParts} PART/video</b> (otomatis dari durasi)`
+    : `split <b>${Math.round(state.splitSec)} dtk</b>`;
   if (st) st.innerHTML = on
-    ? `<b>AKTIF</b> · mulai <b>${fmtClock(state.applyAllStart)}</b> · split <b>${Math.round(state.splitSec)} dtk</b> — berlaku utk semua video di kotak`
+    ? `<b>AKTIF</b> · mulai <b>${fmtClock(state.applyAllStart)}</b> · ${splitTxt} — berlaku utk semua video di kotak`
     : 'MATI — setiap video diekspor penuh dari 0:00 sampai habis';
   const b = $('#btnRangeApplyAll');
   if (b) b.classList.toggle('on', on);
@@ -211,7 +218,10 @@ $('#btnRangeApplyAll').onclick = () => {
   if (!state.batch.length) { toast('Kotak masih kosong — impor video dulu (modul 00)', 'warn'); return; }
   state.applyAllStart = rangeInfo().start;
   syncRangeApplyUI(); renderQueue(); updateAll();
-  toast(`Diterapkan ke ${state.batch.length} video di kotak: mulai ${fmtClock(state.applyAllStart)} · split ${Math.round(state.splitSec)} dtk`, 'ok');
+  const splitTxt = state.splitParts > 0
+    ? `${state.splitParts} PART per video`
+    : `split ${Math.round(state.splitSec)} dtk`;
+  toast(`Diterapkan ke ${state.batch.length} video di kotak: mulai ${fmtClock(state.applyAllStart)} · ${splitTxt}`, 'ok');
 };
 $('#btnRangeApplyReset').onclick = () => {
   if (state.applyAllStart == null) { toast('Penerapan massal memang sedang mati'); return; }

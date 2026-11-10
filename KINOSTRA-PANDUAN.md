@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.14.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.15.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.14.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.15.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.14.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.15.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -57,6 +57,20 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.15 — BATCH ANTI-GAGAL (video ke-2 dst di kotak kini tahan banting)
+
+### Gejala yang diperbaiki
+- Impor banyak video sekaligus → ekspor semua: video pertama lancar, **video kedua dst berhenti setengah jalan dengan tulisan GAGAL (import/muat/durasi)** di Kotak Video, lalu video berikutnya gagal serupa
+
+### Perbaikan 4 lapis
+1. **Metadata dimuat ulang otomatis 3×** — metadata balasan decoder/kfile kadang terpotong (durasi NaN/0/terbalik), dulu langsung dianggap gagal (“durasi tidak terbaca — format tak didukung engine”). Kini dibaca ulang hingga 3× dgn timeout naik (4/7/11 dtk) sebelum menyerah; **muat metadata kini juga anti-macet** (timeout pasti menyelesaikan promise) dan **durasi Infinity ditolak**
+2. **Percobaan ulang otomatis dengan SETELAN AMAN** — render yang gagal di tengah jalan (encoder GPU kewalahan, dekoder menumpuk antar film) diulang **1×** dengan paralel 1 · encoder software · tanpa kilat · render penuh; **part yang sudah jadi TIDAK diulang** (LANJUTKAN EKSPOR melewatinya) — berlaku di BATCH EKSPOR maupun EKSPOR & SPLIT tunggal
+3. **Thumbnail tidak lagi saingan ekspor** — dulu dekode/seek film ke-3/4/5 untuk thumbnail kotak tetap jalan **bersamaan** dengan render film aktif → RAM, dekoder & CPU berebut. Kini antrean thumbnail **ditunda selama proses** dan dilanjutkan otomatis setelahnya
+4. **Bersih-bersih total antar film + jeda napas** — buffer audio, probe kilat, sisa promise decode & cache RMS dilepas eksplisit sebelum film berikutnya dimuat (jeda 120 ms) → film ke-2 dst selalu mulai dari kondisi bersih
+
+### Fitur TERAPKAN KE SEMUA VIDEO (modul 02)
+- Kini menampilkan **N PART/video** bila **JUMLAH PART OTOMATIS** aktif (dulu selalu detik) — tiap video tetap dibagi merata dari durasinya sendiri, mis. “10 PART” → film 20 mnt = 10 × 2 mnt, film 1 mnt = 10 × 6 dtk
 
 ## Yang Baru di v3.14 — UKURAN TULISAN PART DI VIDEO BISA DIATUR
 

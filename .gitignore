@@ -16,3 +16,6 @@ Thumbs.db
 # Environment / secrets
 .env
 tool-results/
+
+# Artefak hasil kerja (tidak untuk repo)
+download/

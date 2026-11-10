@@ -1,0 +1,216 @@
+/* ================================================================
+   KINOSTRA DESKTOP — core.js
+   Helper global, state utama, modal/toast, simpan ke disk
+   ================================================================ */
+'use strict';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtT = t => { t = Math.max(0, t || 0); const m = Math.floor(t / 60), s = t % 60; return `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`; };
+const fmtMB = b => (b / 1048576).toFixed(1) + ' MB';
+const slug = s => (s || 'VIDEO').trim().replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '').toUpperCase() || 'VIDEO';
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+const QUAL = {
+  max: { br: 12e6, label: 'MAKSIMAL 12 Mbps' },
+  balanced: { br: 6e6, label: 'SEIMBANG 6 Mbps' },
+  compressed: { br: 2.5e6, label: 'HEMAT 2.5 Mbps' },
+  ultra: { br: 1e6, label: 'ULTRA HEMAT 1 Mbps' }
+};
+/* v2.12: katalog gaya frame (tampil sebagai chip di modul 08) */
+const FRAMESTYLES = [
+  { k: 'off', n: 'TANPA FRAME', d: 'Video polos tanpa hiasan' },
+  { k: 'neon', n: 'NEON BERPUTAR', d: 'Garis neon keliling · berputar otomatis (v2.8)' },
+  { k: 'bioskop', n: 'BIOSKOP', d: 'Tirai merah · lampu bioskop berkelip · film & popcorn' },
+  { k: 'merahputih', n: 'MERAH PUTIH', d: 'Bingkai emas · awan putih · pita bendera' },
+  { k: 'kayu', n: 'KAYU & BUNGA', d: 'Papan kayu · daun hijau · bunga matahari' },
+  { k: 'gelombang', n: 'GELOMBANG WARNA', d: 'Gelombang merah-kuning-pink yang mengalir' },
+  { k: 'elegan', n: 'PUTIH ELEGAN', d: 'Latar gading · ornamen jingga melengkung' },
+  { k: 'awan', n: 'AWAN BIRU', d: 'Awan biru berlapis · matahari · gaya LIVE REPORT' },
+  { k: 'panel', n: 'PANEL BIRU', d: 'Panel putih bulat di atas biru cerah' },
+  { k: 'gradien', n: 'GRADIEN TIPIS', d: 'Garis gradien minimalis hijau-pink-oranye' },
+  /* v2.16: 12 FRAME KHUSUS — papan judul bertuliskan tema TETAP di atas:
+     6 frame HOROR (tulisan "HOROR ALAMGAIB") + 6 frame KOPLO
+     (tulisan "DANGDUT IDOLADESA"). g = grup chip di menu. */
+  { k: 'hororhutan', n: 'HOROR · HUTAN MISTIS', d: 'Hutan gelap berkabut · roh hijau melayang · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororkuburan', n: 'HOROR · KUBURAN', d: 'Bulan purnama · nisan & pohon mati · kelelawar · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororrumah', n: 'HOROR · RUMAH BERHANTU', d: 'Rumah tua angker · jendela berkedip · pagar patah · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'horordarah', n: 'HOROR · DARAH KUTUKAN', d: 'Tetesan darah menetes · tengkorak · merah gelap · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororhantu', n: 'HOROR · JEJAK HANTU', d: 'Hantu putih melayang · uap ectoplasm biru · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'hororlilin', n: 'HOROR · LILIN MALAM', d: 'Lilin berkedip · tengkorak · lingkar ritual · HOROR ALAMGAIB', g: 'HOROR ALAMGAIB' },
+  { k: 'koplopanggung', n: 'KOPLO · PANGGUNG', d: 'Tirai panggung emas · lampu sorot berputar · speaker · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplogendang', n: 'KOPLO · GENDANG', d: 'Kendang & gong emas · terompet · denyut koplo · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplogliter', n: 'KOPLO · GLITER EMAS', d: 'Emas berkilau berjatuhan · catatan musik · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koploneon', n: 'KOPLO · NEON DISKO', d: 'Neon pink-biru · bola disko berputar · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koploobor', n: 'KOPLO · OBOR DESA', d: 'Obor kampung menyala · umbul bendera · kembang merah · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' },
+  { k: 'koplokipas', n: 'KOPLO · KIPAS GLITER', d: 'Kipas penari mengembang · sequin berkilau · DANGDUT IDOLADESA', g: 'DANGDUT IDOLADESA' }
+];
+const FONTS = [
+  { n: 'Cinzel', d: 'TRAJAN · GLADIATOR / TROY' },
+  { n: 'Bebas Neue', d: 'KONDENSI POSTER · HOLLYWOOD' },
+  { n: 'Anton', d: 'ULTRA BOLD · POSTER AKSI' },
+  { n: 'Oswald', d: 'KONDENSI NETRAL · TRAILER' },
+  { n: 'Montserrat', d: 'GOTHAM-LIKE · THE DARK KNIGHT' },
+  { n: 'Jost', d: 'FUTURA · 2001: A SPACE ODYSSEY' },
+  { n: 'Playfair Display', d: 'DIDOT SERIF · DRAMA PERIODE' },
+  { n: 'Orbitron', d: 'SCI-FI GEOMETRIS · DUNE UI' },
+  { n: 'Michroma', d: 'EUROSTILE/BANK GOTHIC · ALIEN' },
+  { n: 'Cormorant Garamond', d: 'GARAMOND ELEGAN · ARTHA DRAMA' }
+];
+const TRACKCOLORS = ['#F7A600', '#3EE6C1', '#FF4FA3', '#9BE15D'];
+/* v2.8: palet frame neon — key 'rainbow' = warna mengikuti putaran */
+const NEONCOLORS = [
+  ['CYAN', '#2EE6FF'], ['AMBER', '#F7A600'], ['MAGENTA', '#FF4FA3'],
+  ['HIJAU', '#9BE15D'], ['BIRU', '#4D7CFF'], ['PUTIH', '#F5F3ED'],
+  ['RAINBOW', 'rainbow']
+];
+
+const state = {
+  file: null, duration: 0, isAudio: false, audioBuffer: null, peaks: null,
+  title: '', titleOn: true, autoTitle: true, desc: '', descOn: true, descPos: 'under',
+  titleSize: 40,                           /* v2.3: ukuran font judul default 40 */
+  ratio: '16:9', bgMode: 'blur',
+  /* UPGRADE v2.1: zoom & geser fokus (mode 9:16) */
+  frame: { zoom: 1, panX: 0, panY: 0 },
+  splitSec: 30, splitCustom: false, partPrefix: 'PART', partShow: 'intro',
+  /* v2.6: posisi teks bisa digeser (−1..1, 0 = posisi default) */
+  titlePosY: 0, partPosX: 0, partPosY: 0,
+  font: 'Bebas Neue', titleScale: 1, subScale: 1, upper: true,
+  subs: [], subsOn: true, subTarget: 'src',
+  /* v2.5: posisi vertikal subtitel (0.45=tengah … 0.97=bawah; default 0.90) */
+  subPosY: 0.9,
+  trackMode: false,
+  track: { active: false, points: [], tpl: null, tpl0: null, tw: 30, th: 30, stats: null, label: 'TARGET 01', color: '#F7A600', vx: 0, vy: 0, scale: 1, lost: 0 },
+  music: { buffer: null, mood: 'epic', intensity: 0.6, gain: 0.6, seed: (Math.random() * 1e9) | 0 },
+  audioGain: 0.9, quality: 'balanced', scale: 1, fps: 30,
+  /* UPGRADE v2.1: jumlah render paralel (0 = otomatis) */
+  parallel: 0,
+  /* v2.14: AKSELERASI EKSPOR — auto (uji kecepatan GPU vs CPU, pilih
+     terkencang) | gpu (paksa encoder hardware) | cpu (paksa software) */
+  acc: 'auto',
+  /* UPGRADE: efek visual & watermark */
+  vfx: { bright: 1, contrast: 1, saturate: 1, vignette: false, grain: false },
+  wm: { mode: 'off', text: '@KINOSTRA', img: null, imgName: '', pos: 'br', opacity: 0.6, scale: 1 },
+  /* v2.8: FRAME NEON BERPUTAR — garis neon mengelilingi pinggir video,
+     terus berputar otomatis, berlaku untuk rasio 9:16 & 16:9 */
+  neon: { on: false, color: '#2EE6FF', width: 7, speed: 1, dual: true },
+  /* v2.9: WAKTU MULAI & BERHENTI EKSPOR (detik; 0 = awal / sampai habis) */
+  rangeStart: 0, rangeEnd: 0,
+  /* v2.9: preset TERAPKAN KE SEMUA VIDEO — detik mulai utk semua video
+     di kotak (null = mati). Durasi split mengikuti state.splitSec global */
+  applyAllStart: null,
+  /* v2.12: GAYA FRAME VIDEO — 'off' | 'neon' (garis berputar, state.neon)
+     | bioskop | merahputih | kayu | gelombang | elegan | awan | panel | gradien */
+  frameStyle: 'off',
+  /* v2.12: KEN BURNS — perbesar perlahan / geser otomatis per part
+     mode: off | in | out | panx | pany · strength 0.05..0.6 */
+  kb: { mode: 'off', strength: 0.3 },
+  /* v2.12: TRANSISI ANTAR BAGIAN — fade | slide | off · durasi detik */
+  trans: { mode: 'off', dur: 0.8 },
+  /* v2.12: KECEPATAN VIDEO global semua part (0.5 = pelan, 2 = cepat) */
+  speed: 1,
+  /* v2.12: HAPUS BAGIAN — daftar rentang yang dibuang saat ekspor [{s,e}] */
+  cuts: [],
+  /* UPGRADE: batch */
+  batch: [],
+  busy: false, abort: false, scanAbort: false,
+  /* v2.10: kegagalan internal ekspor (bukan batal pengguna) — dipisah agar
+     batch bisa lanjut ke video berikutnya saat satu video gagal */
+  exportFatal: null
+};
+
+const videoEl = $('#vid'), cv = $('#cv'), ctx = cv.getContext('2d');
+const stage = $('#stage'), stageWrap = $('#stagewrap');
+
+/* ---------- TOAST & MODAL ---------- */
+function toast(msg, type = 'info') {
+  const d = document.createElement('div'); d.className = 'toast ' + type; d.textContent = msg;
+  $('#toasts').appendChild(d); setTimeout(() => { d.style.opacity = '0'; d.style.transition = '.4s'; setTimeout(() => d.remove(), 400); }, 4200);
+}
+const M = { el: $('#modal'), t: $('#mTitle'), b: $('#mBody'), bar: $('#mBar'), f: $('#mFill'), s: $('#mSub'), c: $('#mCancel'), x: $('#mClose'), onCancel: null };
+function showModal({ title, sub = '', cancel = false, onCancel = null, body = null }) {
+  M.t.textContent = title; M.s.textContent = sub; M.onCancel = onCancel;
+  M.c.style.display = cancel ? '' : 'none';
+  M.c.textContent = 'BATAL';
+  if (body != null) { M.b.hidden = false; M.b.innerHTML = body; M.bar.style.display = 'none'; }
+  else { M.b.hidden = true; M.bar.style.display = ''; }
+  M.f.style.width = '0%'; M.el.classList.remove('hidden');
+}
+function setProg(p) { M.f.style.width = (clamp(p, 0, 1) * 100).toFixed(1) + '%'; }
+function setSub(s) { M.s.textContent = s; }
+function hideModal() { M.el.classList.add('hidden'); M.onCancel = null; }
+M.c.onclick = () => { if (M.onCancel) M.onCancel(); else hideModal(); };
+/* v2.7: MODAL SELALU BISA DITUTUP — dulu pop-up hasil ekspor tanpa tombol
+   close membuat aplikasi tidak bisa dipakai. Sekarang 3 jalan keluar:
+   1) tombol × di header (selalu tampil) — saat proses berjalan berfungsi
+      seperti BATAL, saat pop-up info langsung menutup
+   2) tombol ESC di keyboard
+   3) klik area gelap di luar kotak (hanya utk pop-up info, bukan proses —
+      agar render yang berjalan lama tidak terbatalkan tak sengaja) */
+M.x.onclick = () => { if (M.onCancel) M.onCancel(); hideModal(); };
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !M.el.classList.contains('hidden')) {
+    if (M.onCancel) M.onCancel(); else hideModal();
+  }
+});
+M.el.addEventListener('pointerdown', e => { if (e.target === M.el && !M.onCancel) hideModal(); });
+
+/* ---------- WEB AUDIO CONTEXT ---------- */
+let _actx = null;
+const getActx = () => _actx || (_actx = new (window.AudioContext || window.webkitAudioContext)());
+
+/* ---------- PENYIMPANAN DESKTOP (streaming ke disk) ---------- */
+async function saveBlobToDir(blob, dir, fileName) {
+  const { id, path: finalPath } = await window.kinostra.beginWrite(dir, fileName);
+  try {
+    const CHUNK = 8 * 1024 * 1024; // 8 MB
+    const arr = new Uint8Array(await blob.arrayBuffer());
+    for (let off = 0; off < arr.length; off += CHUNK) {
+      await window.kinostra.writeChunk(id, arr.subarray(off, Math.min(off + CHUNK, arr.length)));
+    }
+    const res = await window.kinostra.endWrite(id);
+    return res; // { path, size }
+  } catch (e) {
+    try { await window.kinostra.abortWrite(id); } catch (_) { }
+    throw e;
+  }
+}
+
+/* v2.1: tulis ArrayBuffer LANGSUNG (tanpa Blob — hindari spill blob storage,
+   lebih cepat & hemat memori untuk file MP4 hasil muxer)
+   v2.5: dukung onProgress(written, total) — dipakai watchdog ekspor agar
+   penulisan disk yang lambat (USB/HDD) tidak dianggap macet */
+async function saveBufferToDir(buffer, dir, fileName, onProgress) {
+  const { id, path: finalPath } = await window.kinostra.beginWrite(dir, fileName);
+  try {
+    const CHUNK = 8 * 1024 * 1024; // 8 MB
+    const arr = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    for (let off = 0; off < arr.length; off += CHUNK) {
+      await window.kinostra.writeChunk(id, arr.subarray(off, Math.min(off + CHUNK, arr.length)));
+      onProgress && onProgress(Math.min(arr.length, off + CHUNK), arr.length);
+    }
+    const res = await window.kinostra.endWrite(id);
+    return res; // { path, size }
+  } catch (e) {
+    try { await window.kinostra.abortWrite(id); } catch (_) { }
+    throw e;
+  }
+}
+
+/* ---------- SIMPAN TEKS (SRT) — dialog simpan via fallback anchor ----------
+   SRT kecil: tulis via stream ke folder output terakhir, atau unduh biasa */
+let _lastOutDir = null;
+async function saveTextFile(text, defaultName) {
+  const dir = _lastOutDir || await window.kinostra.pickOutputDir();
+  if (!dir) return null;
+  _lastOutDir = dir;
+  return await saveBlobToDir(new Blob([text], { type: 'text/plain;charset=utf-8' }), dir, defaultName);
+}
+
+/* ---------- BOOT ---------- */
+window.addEventListener('load', () => {
+  if (window.lucide) lucide.createIcons();
+  setTimeout(() => { $('#boot').classList.add('off'); setTimeout(() => { const b = $('#boot'); if (b) b.remove(); }, 900); }, 1000);
+});

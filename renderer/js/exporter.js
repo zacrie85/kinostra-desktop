@@ -1605,7 +1605,12 @@ async function doExport() {
        pembatalan pengguna dilempar sebagai 'Dibatalkan'. */
     await ensureAutoSubs({ ownModal: true });
     const tStart = performance.now();
-    const results = await exportPartsToDir(dir, {
+    /* v3.15: PEMULIHAN OTOMATIS — bila render gagal BUKAN karena dibatalkan
+       pengguna, ulangi SEKALI dengan SETELAN AMAN (paralel 1, encoder
+       software, tanpa kilat, render penuh). Part yang sudah tersimpan TIDAK
+       diulang (LANJUTKAN EKSPOR) — file setengah jalan kini menuntaskan
+       dirinya sendiri. Menyamai lapisan pemulihan BATCH EKSPOR. */
+    const uiEksporTunggal = {
       title(segs) {
         const par = pickParallelCount(segs.length, _lastEnc.kind === 'hw');
         showModal({ title: `MERENDER ${segs.length} PART · PARALEL ${par}×`,
@@ -1613,7 +1618,25 @@ async function doExport() {
       },
       prog: p => setProg(p),
       sub: s => setSub(s)
-    });
+    };
+    let results = null;
+    try {
+      results = await exportPartsToDir(dir, uiEksporTunggal);
+    } catch (errEkspor) {
+      const m0 = String((errEkspor && errEkspor.message) || errEkspor);
+      if (state.abort || m0.includes('Dibatalkan')) throw errEkspor;
+      console.warn('ekspor: render gagal (' + m0 + ') — percobaan ulang dgn setelan aman');
+      setSub('Render bermasalah — mencoba ulang 1× dengan setelan aman (paralel 1 · encoder software)…');
+      setProg(0.05);
+      const sPar = state.parallel, sKil = state.kilat, sAcc = state.acc, sCut = state.cutMode;
+      state.parallel = 1; state.kilat = 'off'; state.acc = 'cpu'; state.cutMode = 'render';
+      try {
+        results = await exportPartsToDir(dir, uiEksporTunggal);
+        console.info('ekspor: percobaan ulang setelan aman SUKSES');
+      } finally {
+        state.parallel = sPar; state.kilat = sKil; state.acc = sAcc; state.cutMode = sCut;
+      }
+    }
     const el = (performance.now() - tStart) / 1000;
     hideModal(); showResults(results, dir);
     toast(`${results.length} file selesai · ${el < 90 ? el.toFixed(0) + ' detik' : (el / 60).toFixed(1) + ' menit'}`, 'ok');

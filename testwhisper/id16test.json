@@ -1,0 +1,742 @@
+{
+	"systeminfo": "WHISPER : VITISAI = 0 | COREML = 0 | OPENVINO = 0 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX_VNNI = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | AVX512 = 1 | AVX512_VBMI = 1 | AVX512_VNNI = 1 | AVX512_BF16 = 1 | AMX_INT8 = 1 | REPACK = 1 | ",
+	"model": {
+		"type": "tiny",
+		"multilingual": true,
+		"vocab": 51865,
+		"audio": {
+			"ctx": 1500,
+			"state": 384,
+			"head": 6,
+			"layer": 4
+		},
+		"text": {
+			"ctx": 448,
+			"state": 384,
+			"head": 6,
+			"layer": 4
+		},
+		"mels": 80,
+		"ftype": 9
+	},
+	"params": {
+		"model": "ggml-tiny-q5_1.bin",
+		"language": "id",
+		"translate": false
+	},
+	"result": {
+		"language": "id"
+	},
+	"transcription": [
+		{
+			"timestamps": {
+				"from": "00:00:00,000",
+				"to": "00:00:03,120"
+			},
+			"offsets": {
+				"from": 0,
+				"to": 3120
+			},
+			"text": " selamat pagi semuanya, selamat takkan kembali",
+			"tokens": [
+				{
+					"text": "[_BEG_]",
+					"timestamps": {
+						"from": "00:00:00,000",
+						"to": "00:00:00,000"
+					},
+					"offsets": {
+						"from": 0,
+						"to": 0
+					},
+					"id": 50364,
+					"p": 0.982281,
+					"t_dtw": -1
+				},
+				{
+					"text": " sel",
+					"timestamps": {
+						"from": "00:00:00,030",
+						"to": "00:00:00,230"
+					},
+					"offsets": {
+						"from": 30,
+						"to": 230
+					},
+					"id": 5851,
+					"p": 0.174752,
+					"t_dtw": -1
+				},
+				{
+					"text": "amat",
+					"timestamps": {
+						"from": "00:00:00,230",
+						"to": "00:00:00,450"
+					},
+					"offsets": {
+						"from": 230,
+						"to": 450
+					},
+					"id": 39143,
+					"p": 0.884605,
+					"t_dtw": -1
+				},
+				{
+					"text": " pag",
+					"timestamps": {
+						"from": "00:00:00,640",
+						"to": "00:00:00,760"
+					},
+					"offsets": {
+						"from": 640,
+						"to": 760
+					},
+					"id": 11812,
+					"p": 0.848198,
+					"t_dtw": -1
+				},
+				{
+					"text": "i",
+					"timestamps": {
+						"from": "00:00:00,820",
+						"to": "00:00:00,840"
+					},
+					"offsets": {
+						"from": 820,
+						"to": 840
+					},
+					"id": 72,
+					"p": 0.992235,
+					"t_dtw": -1
+				},
+				{
+					"text": " sem",
+					"timestamps": {
+						"from": "00:00:00,840",
+						"to": "00:00:01,070"
+					},
+					"offsets": {
+						"from": 840,
+						"to": 1070
+					},
+					"id": 4361,
+					"p": 0.166338,
+					"t_dtw": -1
+				},
+				{
+					"text": "u",
+					"timestamps": {
+						"from": "00:00:01,070",
+						"to": "00:00:01,130"
+					},
+					"offsets": {
+						"from": 1070,
+						"to": 1130
+					},
+					"id": 84,
+					"p": 0.887529,
+					"t_dtw": -1
+				},
+				{
+					"text": "anya",
+					"timestamps": {
+						"from": "00:00:01,140",
+						"to": "00:00:01,500"
+					},
+					"offsets": {
+						"from": 1140,
+						"to": 1500
+					},
+					"id": 8791,
+					"p": 0.924422,
+					"t_dtw": -1
+				},
+				{
+					"text": ",",
+					"timestamps": {
+						"from": "00:00:01,500",
+						"to": "00:00:01,630"
+					},
+					"offsets": {
+						"from": 1500,
+						"to": 1630
+					},
+					"id": 11,
+					"p": 0.216872,
+					"t_dtw": -1
+				},
+				{
+					"text": " sel",
+					"timestamps": {
+						"from": "00:00:01,630",
+						"to": "00:00:01,830"
+					},
+					"offsets": {
+						"from": 1630,
+						"to": 1830
+					},
+					"id": 5851,
+					"p": 0.549005,
+					"t_dtw": -1
+				},
+				{
+					"text": "amat",
+					"timestamps": {
+						"from": "00:00:01,830",
+						"to": "00:00:02,000"
+					},
+					"offsets": {
+						"from": 1830,
+						"to": 2000
+					},
+					"id": 39143,
+					"p": 0.999201,
+					"t_dtw": -1
+				},
+				{
+					"text": " tak",
+					"timestamps": {
+						"from": "00:00:02,140",
+						"to": "00:00:02,260"
+					},
+					"offsets": {
+						"from": 2140,
+						"to": 2260
+					},
+					"id": 991,
+					"p": 0.3582,
+					"t_dtw": -1
+				},
+				{
+					"text": "kan",
+					"timestamps": {
+						"from": "00:00:02,310",
+						"to": "00:00:02,510"
+					},
+					"offsets": {
+						"from": 2310,
+						"to": 2510
+					},
+					"id": 5225,
+					"p": 0.201592,
+					"t_dtw": -1
+				},
+				{
+					"text": " ke",
+					"timestamps": {
+						"from": "00:00:02,520",
+						"to": "00:00:02,690"
+					},
+					"offsets": {
+						"from": 2520,
+						"to": 2690
+					},
+					"id": 803,
+					"p": 0.681718,
+					"t_dtw": -1
+				},
+				{
+					"text": "mb",
+					"timestamps": {
+						"from": "00:00:02,690",
+						"to": "00:00:02,860"
+					},
+					"offsets": {
+						"from": 2690,
+						"to": 2860
+					},
+					"id": 2504,
+					"p": 0.26886,
+					"t_dtw": -1
+				},
+				{
+					"text": "ali",
+					"timestamps": {
+						"from": "00:00:02,860",
+						"to": "00:00:03,080"
+					},
+					"offsets": {
+						"from": 2860,
+						"to": 3080
+					},
+					"id": 5103,
+					"p": 0.996348,
+					"t_dtw": -1
+				}
+			]
+		},
+		{
+			"timestamps": {
+				"from": "00:00:03,120",
+				"to": "00:00:05,950"
+			},
+			"offsets": {
+				"from": 3120,
+				"to": 5950
+			},
+			"text": " di handle kami, hari di kita akan belajar",
+			"tokens": [
+				{
+					"text": " di",
+					"timestamps": {
+						"from": "00:00:03,120",
+						"to": "00:00:03,220"
+					},
+					"offsets": {
+						"from": 3120,
+						"to": 3220
+					},
+					"id": 1026,
+					"p": 0.94264,
+					"t_dtw": -1
+				},
+				{
+					"text": " handle",
+					"timestamps": {
+						"from": "00:00:03,350",
+						"to": "00:00:03,730"
+					},
+					"offsets": {
+						"from": 3350,
+						"to": 3730
+					},
+					"id": 4813,
+					"p": 0.0897774,
+					"t_dtw": -1
+				},
+				{
+					"text": " kami",
+					"timestamps": {
+						"from": "00:00:03,840",
+						"to": "00:00:04,100"
+					},
+					"offsets": {
+						"from": 3840,
+						"to": 4100
+					},
+					"id": 34502,
+					"p": 0.861746,
+					"t_dtw": -1
+				},
+				{
+					"text": ",",
+					"timestamps": {
+						"from": "00:00:04,180",
+						"to": "00:00:04,240"
+					},
+					"offsets": {
+						"from": 4180,
+						"to": 4240
+					},
+					"id": 11,
+					"p": 0.324824,
+					"t_dtw": -1
+				},
+				{
+					"text": " hari",
+					"timestamps": {
+						"from": "00:00:04,240",
+						"to": "00:00:04,570"
+					},
+					"offsets": {
+						"from": 4240,
+						"to": 4570
+					},
+					"id": 33264,
+					"p": 0.686319,
+					"t_dtw": -1
+				},
+				{
+					"text": " di",
+					"timestamps": {
+						"from": "00:00:04,570",
+						"to": "00:00:04,730"
+					},
+					"offsets": {
+						"from": 4570,
+						"to": 4730
+					},
+					"id": 1026,
+					"p": 0.649123,
+					"t_dtw": -1
+				},
+				{
+					"text": " kita",
+					"timestamps": {
+						"from": "00:00:04,730",
+						"to": "00:00:05,060"
+					},
+					"offsets": {
+						"from": 4730,
+						"to": 5060
+					},
+					"id": 8965,
+					"p": 0.765233,
+					"t_dtw": -1
+				},
+				{
+					"text": " akan",
+					"timestamps": {
+						"from": "00:00:05,060",
+						"to": "00:00:05,390"
+					},
+					"offsets": {
+						"from": 5060,
+						"to": 5390
+					},
+					"id": 16281,
+					"p": 0.890375,
+					"t_dtw": -1
+				},
+				{
+					"text": " bel",
+					"timestamps": {
+						"from": "00:00:05,390",
+						"to": "00:00:05,600"
+					},
+					"offsets": {
+						"from": 5390,
+						"to": 5600
+					},
+					"id": 989,
+					"p": 0.501951,
+					"t_dtw": -1
+				},
+				{
+					"text": "aj",
+					"timestamps": {
+						"from": "00:00:05,640",
+						"to": "00:00:05,790"
+					},
+					"offsets": {
+						"from": 5640,
+						"to": 5790
+					},
+					"id": 1805,
+					"p": 0.104559,
+					"t_dtw": -1
+				},
+				{
+					"text": "ar",
+					"timestamps": {
+						"from": "00:00:05,790",
+						"to": "00:00:05,940"
+					},
+					"offsets": {
+						"from": 5790,
+						"to": 5940
+					},
+					"id": 289,
+					"p": 0.817145,
+					"t_dtw": -1
+				}
+			]
+		},
+		{
+			"timestamps": {
+				"from": "00:00:05,950",
+				"to": "00:00:09,340"
+			},
+			"offsets": {
+				"from": 5950,
+				"to": 9340
+			},
+			"text": " membuat video yang menyakan bersama teman-teman",
+			"tokens": [
+				{
+					"text": " mem",
+					"timestamps": {
+						"from": "00:00:05,950",
+						"to": "00:00:06,180"
+					},
+					"offsets": {
+						"from": 5950,
+						"to": 6180
+					},
+					"id": 1334,
+					"p": 0.77439,
+					"t_dtw": -1
+				},
+				{
+					"text": "buat",
+					"timestamps": {
+						"from": "00:00:06,190",
+						"to": "00:00:06,500"
+					},
+					"offsets": {
+						"from": 6190,
+						"to": 6500
+					},
+					"id": 45143,
+					"p": 0.573144,
+					"t_dtw": -1
+				},
+				{
+					"text": " video",
+					"timestamps": {
+						"from": "00:00:06,510",
+						"to": "00:00:06,920"
+					},
+					"offsets": {
+						"from": 6510,
+						"to": 6920
+					},
+					"id": 960,
+					"p": 0.692608,
+					"t_dtw": -1
+				},
+				{
+					"text": " yang",
+					"timestamps": {
+						"from": "00:00:06,920",
+						"to": "00:00:07,250"
+					},
+					"offsets": {
+						"from": 6920,
+						"to": 7250
+					},
+					"id": 5581,
+					"p": 0.960103,
+					"t_dtw": -1
+				},
+				{
+					"text": " men",
+					"timestamps": {
+						"from": "00:00:07,250",
+						"to": "00:00:07,480"
+					},
+					"offsets": {
+						"from": 7250,
+						"to": 7480
+					},
+					"id": 1706,
+					"p": 0.449548,
+					"t_dtw": -1
+				},
+				{
+					"text": "y",
+					"timestamps": {
+						"from": "00:00:07,490",
+						"to": "00:00:07,560"
+					},
+					"offsets": {
+						"from": 7490,
+						"to": 7560
+					},
+					"id": 88,
+					"p": 0.310951,
+					"t_dtw": -1
+				},
+				{
+					"text": "akan",
+					"timestamps": {
+						"from": "00:00:07,570",
+						"to": "00:00:07,840"
+					},
+					"offsets": {
+						"from": 7570,
+						"to": 7840
+					},
+					"id": 14910,
+					"p": 0.620499,
+					"t_dtw": -1
+				},
+				{
+					"text": " bers",
+					"timestamps": {
+						"from": "00:00:07,880",
+						"to": "00:00:08,210"
+					},
+					"offsets": {
+						"from": 7880,
+						"to": 8210
+					},
+					"id": 32147,
+					"p": 0.592001,
+					"t_dtw": -1
+				},
+				{
+					"text": "ama",
+					"timestamps": {
+						"from": "00:00:08,220",
+						"to": "00:00:08,460"
+					},
+					"offsets": {
+						"from": 8220,
+						"to": 8460
+					},
+					"id": 2404,
+					"p": 0.898421,
+					"t_dtw": -1
+				},
+				{
+					"text": " tem",
+					"timestamps": {
+						"from": "00:00:08,460",
+						"to": "00:00:08,690"
+					},
+					"offsets": {
+						"from": 8460,
+						"to": 8690
+					},
+					"id": 1383,
+					"p": 0.129466,
+					"t_dtw": -1
+				},
+				{
+					"text": "an",
+					"timestamps": {
+						"from": "00:00:08,760",
+						"to": "00:00:08,860"
+					},
+					"offsets": {
+						"from": 8760,
+						"to": 8860
+					},
+					"id": 282,
+					"p": 0.895331,
+					"t_dtw": -1
+				},
+				{
+					"text": "-",
+					"timestamps": {
+						"from": "00:00:08,860",
+						"to": "00:00:08,940"
+					},
+					"offsets": {
+						"from": 8860,
+						"to": 8940
+					},
+					"id": 12,
+					"p": 0.58384,
+					"t_dtw": -1
+				},
+				{
+					"text": "t",
+					"timestamps": {
+						"from": "00:00:08,940",
+						"to": "00:00:09,020"
+					},
+					"offsets": {
+						"from": 8940,
+						"to": 9020
+					},
+					"id": 83,
+					"p": 0.676403,
+					"t_dtw": -1
+				},
+				{
+					"text": "eman",
+					"timestamps": {
+						"from": "00:00:09,020",
+						"to": "00:00:09,340"
+					},
+					"offsets": {
+						"from": 9020,
+						"to": 9340
+					},
+					"id": 15023,
+					"p": 0.757319,
+					"t_dtw": -1
+				}
+			]
+		},
+		{
+			"timestamps": {
+				"from": "00:00:09,340",
+				"to": "00:00:10,600"
+			},
+			"offsets": {
+				"from": 9340,
+				"to": 10600
+			},
+			"text": " semuanya rumah.",
+			"tokens": [
+				{
+					"text": " sem",
+					"timestamps": {
+						"from": "00:00:09,340",
+						"to": "00:00:09,570"
+					},
+					"offsets": {
+						"from": 9340,
+						"to": 9570
+					},
+					"id": 4361,
+					"p": 0.794319,
+					"t_dtw": -1
+				},
+				{
+					"text": "u",
+					"timestamps": {
+						"from": "00:00:09,580",
+						"to": "00:00:09,650"
+					},
+					"offsets": {
+						"from": 9580,
+						"to": 9650
+					},
+					"id": 84,
+					"p": 0.944843,
+					"t_dtw": -1
+				},
+				{
+					"text": "anya",
+					"timestamps": {
+						"from": "00:00:09,660",
+						"to": "00:00:09,970"
+					},
+					"offsets": {
+						"from": 9660,
+						"to": 9970
+					},
+					"id": 8791,
+					"p": 0.694769,
+					"t_dtw": -1
+				},
+				{
+					"text": " rumah",
+					"timestamps": {
+						"from": "00:00:09,980",
+						"to": "00:00:10,480"
+					},
+					"offsets": {
+						"from": 9980,
+						"to": 10480
+					},
+					"id": 44988,
+					"p": 0.848858,
+					"t_dtw": -1
+				},
+				{
+					"text": ".",
+					"timestamps": {
+						"from": "00:00:10,600",
+						"to": "00:00:10,600"
+					},
+					"offsets": {
+						"from": 10600,
+						"to": 10600
+					},
+					"id": 13,
+					"p": 0.606532,
+					"t_dtw": -1
+				},
+				{
+					"text": "[_TT_530]",
+					"timestamps": {
+						"from": "00:00:10,600",
+						"to": "00:00:10,600"
+					},
+					"offsets": {
+						"from": 10600,
+						"to": 10600
+					},
+					"id": 50894,
+					"p": 0.0582059,
+					"t_dtw": -1
+				}
+			]
+		}
+	]
+}

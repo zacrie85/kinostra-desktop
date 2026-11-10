@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KINOSTRA — Suite Video Otonom · Desktop</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="css/kinestra.css">
+</head>
+<body>
+
+<div id="boot">
+  <div class="blogo">KINO<b>STRA</b></div>
+  <div class="bline"></div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v2.16.0 · MESIN LOKAL</div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="blk"></div>
+    <div class="wm">KINOSTRA</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v2.16.0</div>
+  </div>
+  <div class="top-r">
+    <div class="chip ok" id="chipOffline">100% OFFLINE</div>
+    <div class="chip" id="chipCodec">WEBCODECS</div>
+    <button class="btn acc" id="btnImport"><i data-lucide="import"></i> IMPOR MEDIA</button>
+    <input type="file" id="fileInput" hidden accept=".mp4,.mkv,.ts,.webm,.mp3,.m4a,.mov,video/*,audio/*">
+  </div>
+</header>
+
+<main>
+  <section id="stagewrap">
+    <div id="stage" style="width:640px;height:360px">
+      <canvas id="cv"></canvas>
+      <div id="emptyMsg"><span>MENUNGGU MEDIA</span><span>IMPOR MP4 · MKV · TS · WEBM · MP3</span></div>
+      <div id="stageHud">
+        <div class="hud hud-tl" id="hudName">TIDAK ADA MEDIA</div>
+        <div class="hud hud-tr" id="hudRatio">16:9</div>
+        <div class="hud hud-bl" id="hudState">STANDBY</div>
+        <div class="hud hud-br" id="hudPart">—</div>
+        <div id="crosshair"></div>
+        <div id="dropHint">LEPAS FILE UNTUK MEMUAT</div>
+      </div>
+    </div>
+    <div id="transport">
+      <div class="tgrp">
+        <button class="ic" id="btnPrev" title="Part sebelumnya"><i data-lucide="skip-back"></i></button>
+        <button class="ic main" id="btnPlay"><i data-lucide="play"></i></button>
+        <button class="ic" id="btnNext" title="Part berikutnya"><i data-lucide="skip-forward"></i></button>
+      </div>
+      <div class="ttime mono" id="tTime">00:00.0 / 00:00.0</div>
+      <div class="tinfo mono" id="tInfo">MENUNGGU MEDIA</div>
+    </div>
+  </section>
+
+  <aside id="panel">
+
+    <div class="mod open" id="mq">
+      <button class="mod-h"><span class="no">00</span><span class="t">KOTAK VIDEO · URUTAN <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Satu kotak untuk <b>semua video</b> — dari tombol <b>IMPOR MEDIA</b>, drag-drop, maupun <b>TAMBAH FILE</b> di batch. Tersusun <b>dari atas ke bawah</b> sesuai urutan dimasukkan = urutan proses batch. Klik baris untuk menonton.</div>
+        <div class="row">
+          <button class="btn" id="btnQAdd"><i data-lucide="folder-plus"></i> TAMBAH VIDEO…</button>
+          <button class="btn sm" id="btnQClear" style="flex:0 0 auto" title="Kosongkan kotak"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="qlist" id="queueList"><div class="empty">KOTAK KOSONG — SEMUA VIDEO YANG DIIMPOR MUNCUL DI SINI</div></div>
+        <div class="substat" id="qStat">0 video dalam kotak</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod open" id="m0">
+      <button class="mod-h"><span class="no">01</span><span class="t">SUMBER &amp; RASIO</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="fmeta">
+          <div class="fm-name" id="fName">—</div>
+          <div class="fm-grid">
+            <div><span>DURASI</span><b id="fDur">—</b></div>
+            <div><span>RESOLUSI</span><b id="fRes">—</b></div>
+            <div><span>UKURAN</span><b id="fSize">—</b></div>
+            <div><span>FORMAT</span><b id="fFmt">—</b></div>
+          </div>
+        </div>
+        <div class="lbl">RASIO OUTPUT</div>
+        <div class="seg" id="segRatio"><button data-v="16:9" class="on">16 : 9</button><button data-v="9:16">9 : 16</button></div>
+        <div id="bgRow" style="display:none">
+          <div class="lbl">LATAR VERTIKAL</div>
+          <div class="seg" id="segBg"><button data-v="blur" class="on">BLUR SINEMATIK</button><button data-v="dark">GELAP</button></div>
+          <div class="lbl">ZOOM FOKUS <b id="zoomV">1.00×</b></div>
+          <input type="range" id="inZoom" min="1" max="4" step="0.05" value="1">
+          <div class="lbl">GESER KIRI / KANAN <b id="panXV">TENGAH</b></div>
+          <input type="range" id="inPanX" min="-1" max="1" step="0.02" value="0">
+          <div class="lbl">GESER ATAS / BAWAH <b id="panYV">TENGAH</b></div>
+          <input type="range" id="inPanY" min="-1" max="1" step="0.02" value="0">
+          <div class="row" style="align-items:center">
+            <button class="btn sm" id="btnFrameReset"><i data-lucide="rotate-ccw"></i> RESET POSISI</button>
+            <span class="mono" style="font-size:9.5px;color:var(--tx3)">atau drag langsung di preview →</span>
+          </div>
+          <div class="note"><b>v2.6 — geser sekarang selalu berfungsi:</b> di zoom 1× geser memindahkan <b>posisi video</b> ke atas/bawah/kiri/kanan di dalam frame 9:16. Zoom ≥ ±3.2× (video landscape) menutup penuh frame tanpa latar, geser memilih bagian yang diambil. Latar <b>BLUR SINEMATIK</b> tampil otomatis selama video belum menutup frame.</div>
+        </div>
+        <div class="note">Decode lewat engine Chromium: <b>MP4 (H.264), MKV (Matroska), WEBM, TS*</b>, dan <b>MP3</b>. *TS tergantung codec di dalamnya.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m1">
+      <button class="mod-h"><span class="no">02</span><span class="t">JUDUL &amp; PART OTOMATIS</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <label class="chk"><input type="checkbox" id="titleOn" checked><span>TAMPILKAN JUDUL DI VIDEO</span></label>
+        <label class="chk"><input type="checkbox" id="titleAuto" checked><span>JUDUL OTOMATIS DARI NAMA FILE</span></label>
+        <input class="in" id="inTitle" placeholder="Judul — otomatis dari nama file">
+        <div class="row">
+          <div><div class="lbl">FONT JUDUL</div>
+            <select class="in" id="selTitleFont"></select></div>
+          <div><div class="lbl">UKURAN JUDUL <b id="tszV">40</b></div>
+            <input type="number" class="in mono" id="inTitleSize" min="14" max="160" step="2" value="40"></div>
+        </div>
+        <div class="lbl">DURASI SPLIT PER PART</div>
+        <div class="seg wrap" id="segSplit">
+          <button data-v="20">20 dtk</button><button data-v="30" class="on">30 dtk</button>
+          <button data-v="40">40 dtk</button><button data-v="50">50 dtk</button>
+          <button data-v="60">60 dtk</button><button data-v="custom">ATUR SENDIRI</button>
+        </div>
+        <div class="row" id="splitCustom" style="display:none">
+          <input type="number" class="in mono" id="inSplit" min="3" max="600" value="45">
+          <span class="mono" style="font-size:10px;color:var(--tx2);flex:0 0 auto">DETIK</span>
+        </div>
+        <div class="lbl" style="margin-top:6px">WAKTU MULAI EKSPOR <span class="beta">BARU · v2.9</span></div>
+        <div class="row">
+          <input class="in mono" id="inRangeStart" placeholder="0:00">
+          <button class="btn sm" id="btnRangeStartHere" style="flex:0 0 auto" title="Ambil dari posisi putar sekarang">PAKAI PLAYHEAD</button>
+        </div>
+        <div class="lbl">WAKTU BERHENTI EKSPOR</div>
+        <div class="row">
+          <input class="in mono" id="inRangeEnd" placeholder="SAMPAI HABIS">
+          <button class="btn sm" id="btnRangeEndHere" style="flex:0 0 auto" title="Ambil dari posisi putar sekarang">PAKAI PLAYHEAD</button>
+        </div>
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnRangeReset" style="flex:0 0 auto"><i data-lucide="rotate-ccw"></i> RESET PENUH</button>
+          <span class="substat" id="rangeStat">PENUH</span>
+        </div>
+        <div class="note">Isi <b>detik</b> (90) atau <b>m:ss / h:mm:ss</b> (1:30 · 1:02:03). Contoh: video 5 menit, mulai <b>2:00</b> berhenti <b>4:00</b> → hanya bagian 2:00–4:00 yang dipecah jadi part &amp; diekspor. Zona di luar rentang tampil redup bergaris di TIMELINE SPLIT.</div>
+        <div class="lbl" style="margin-top:8px">PENERAPAN MASSAL — SEMUA VIDEO DI KOTAK <span class="beta">BARU · v2.9</span></div>
+        <div class="row">
+          <button class="btn acc" id="btnRangeApplyAll"><i data-lucide="check-check"></i> TERAPKAN KE SEMUA VIDEO</button>
+          <button class="btn sm" id="btnRangeApplyReset" style="flex:0 0 auto">MATIKAN</button>
+        </div>
+        <div class="substat" id="rangeApplyStat">MATI — setiap video diekspor penuh dari 0:00 sampai habis</div>
+        <div class="note">Yang diterapkan ke video-video berikutnya: <b>waktu mulai</b> &amp; <b>durasi split per part</b> (setelan di atas). Video lain tetap diekspor <b>sampai habis</b> — waktu berhenti hanya berlaku untuk video yang sedang dibuka.</div>
+        <div class="lbl">PREFIX NOMOR PART</div>
+        <select class="in" id="selPrefix">
+          <option>PART</option><option>EPISODE</option><option>EPS</option>
+          <option>BAGIAN</option><option>#</option>
+        </select>
+        <div class="lbl">POSISI PART — KIRI ⬅ ➡ KANAN <b id="partXV">TENGAH</b></div>
+        <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
+        <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>
+        <input type="range" id="inPartY" min="-1" max="1" step="0.05" value="0">
+        <div class="lbl">POSISI JUDUL — ATAS ⬆ ⬇ BAWAH <b id="titleYV">TENGAH · DEFAULT</b></div>
+        <input type="range" id="inTitleY" min="-1" max="1" step="0.05" value="0">
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnTextPosReset"><i data-lucide="rotate-ccw"></i> RESET POSISI TEKS</button>
+        </div>
+        <div class="lbl">GAYA TAMPIL PART</div>
+        <div class="seg" id="segPartShow"><button data-v="intro" class="on">BUMPER INTRO</button><button data-v="always">SELALU TAMPIL</button></div>
+        <div class="outfile mono" id="outName">—</div>
+        <div class="note">Nomor part terisi <b>otomatis berurutan 01 → N</b> mengikuti setiap hasil split, dan ikut tertulis di video.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m1c">
+      <button class="mod-h"><span class="no">02B</span><span class="t">POTONG &amp; HAPUS BAGIAN <span class="beta">BARU · v2.12</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Buang bagian video yang tidak diinginkan ( Salah ambil, iklan, jeda panjang ) dari hasil ekspor &amp; split: putar video ke posisi <b>mulai potong</b> → tekan <b>MULAI POTONG</b>, lanjutkan ke posisi <b>akhir potong</b> → tekan <b>BERAKHIR POTONG</b>. Bagian itu tidak ikut diekspor — nomor part tetap berurutan menyambung. Bisa potong <b>banyak bagian sekaligus</b>.</div>
+        <div class="row">
+          <button class="btn" id="btnCutStart"><i data-lucide="scissors"></i> MULAI POTONG DI SINI</button>
+          <button class="btn" id="btnCutEnd"><i data-lucide="check"></i> BERAKHIR DI SINI</button>
+        </div>
+        <div class="cutlist" id="cutList"><div class="empty">BELUM ADA POTONGAN — video diekspor utuh</div></div>
+        <div class="row" style="align-items:center">
+          <button class="btn sm" id="btnCutClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i> HAPUS SEMUA POTONGAN</button>
+          <span class="substat" id="cutStat">0 potongan · 0 dtk dibuang</span>
+        </div>
+        <div class="note">Saat pratinjau, video <b>melompat otomatis</b> melewati bagian yang dipotong. Zona potongan tampil <b>merah</b> di TIMELINE SPLIT. Potongan berlaku untuk ekspor tunggal &amp; batch ekspor.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m2">
+      <button class="mod-h"><span class="no">03</span><span class="t">DESKRIPSI VIDEO</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <label class="chk"><input type="checkbox" id="descOn" checked><span>TAMPILKAN DESKRIPSI</span></label>
+        <textarea class="in" id="inDesc" placeholder="Teks deskripsi yang akan ditanam di dalam video…"></textarea>
+        <div class="lbl">POSISI</div>
+        <div class="seg" id="segDescPos"><button data-v="under" class="on">BAWAH JUDUL</button><button data-v="bottom">STRIP BAWAH</button></div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m3">
+      <button class="mod-h"><span class="no">04</span><span class="t">SUBTITEL AI · VOCALIS v4 NATIVE <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="row">
+          <div><div class="lbl">BAHASA VIDEO <b id="vmLang">AUTO</b></div>
+            <select class="in" id="asrLang">
+              <option value="auto">OTOMATIS · JAWA / INDONESIA</option>
+              <option value="javanese">JAWA</option>
+              <option value="indonesian">INDONESIA</option>
+            </select></div>
+          <div><div class="lbl">MESIN VOCALIS v4</div>
+            <select class="in" id="asrModel">
+              <option value="turbo">TURBO · PALING AKURAT (±547 MB)</option>
+              <option value="small">SEDANG · SEIMBANG (±181 MB)</option>
+              <option value="base">CEPAT · RINGAN &amp; TAJAM (±60 MB)</option>
+              <option value="tiny">RINGAN · TERCEPAT (±32 MB)</option>
+            </select></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="singMode" checked><span>MODE LAGU / VOKAL (VIDEO BERNYANYI)</span></label>
+        <label class="chk"><input type="checkbox" id="autoSub" checked><span>AUTO-SUBTITEL — SEMUA VIDEO OTOMATIS DIBUATKAN SUBTITEL SAAT EKSPOR / SPLIT / BATCH <span class="beta">BARU · v2.13</span></span></label>
+        <label class="chk"><input type="checkbox" id="subSkipSilence" checked><span>MODE TURBO — LEWATI BAGIAN TANPA SUARA (JAUH LEBIH CEPAT)</span></label>
+        <button class="btn acc wide" id="btnGen"><i data-lucide="brain-circuit"></i> BUAT SUBTITEL DARI VOKAL</button>
+        <div class="substat" id="subStat">VOCALIS v4 siap · mesin native (tanpa batas memori browser) · 100% lokal</div>
+        <div class="note"><b>v2.13 — VOCALIS TURBO &amp; AUTO-SUBTITEL.</b> Dengan <b>AUTO-SUBTITEL</b> aktif, setiap video yang diimpor <b>langsung dibuatkan subtitelnya otomatis saat EKSPOR / SPLIT / BATCH</b> — tidak perlu menekan BUAT SUBTITEL dulu; berlaku untuk semua video di kotak. Subtitel buatanmu sendiri atau hasil IMPOR SRT tetap dihormati (tidak ditimpa). <b>TURBO</b>: audio dipecah lalu ditranskrip <b>paralel 2-4 pekerja</b> di CPU multi-core (2-4× lebih cepat) dan bagian tanpa suara dilewati. Mesin <b>CEPAT</b> (±60 MB) adalah pilihan seimbang tercepat untuk lagu; <b>TURBO</b> tetap paling akurat. Kalau deteksi bahasa keliru, pilih bahasa manual di atas.</div>
+        <label class="chk"><input type="checkbox" id="subsOn" checked><span>BURN-IN SUBTITEL KE VIDEO</span></label>
+        <div class="lbl">UKURAN SUBTITEL <b id="subSizeV">1.0×</b></div>
+        <input type="range" id="subSize" min="0.6" max="1.8" step="0.05" value="1">
+        <div class="lbl">POSISI SUBTITEL — GESER KE ATAS ⬆ / KE BAWAH ⬇ <b id="subPosYV">90% · BAWAH</b></div>
+        <input type="range" id="subPosY" min="0.45" max="0.97" step="0.005" value="0.9">
+        <div class="note">Geser ke kiri untuk memindahkan subtitel <b>ke atas</b> (menjauh dari tulisan PART), geser ke kanan untuk <b>ke bawah</b>. Posisi ini ikut terbakar ke video saat ekspor.</div>
+        <div class="lbl">GESER WAKTU SEMUA BARIS</div>
+        <div class="row">
+          <button class="btn sm" id="btnShiftB">−0.5 DTK</button>
+          <button class="btn sm" id="btnShiftF">+0.5 DTK</button>
+        </div>
+        <div class="row">
+          <button class="btn sm" id="btnSrt"><i data-lucide="file-down"></i> EKSPOR .SRT</button>
+          <button class="btn sm" id="btnSrtImport"><i data-lucide="file-up"></i> IMPOR SRT… <span class="beta">BARU</span></button>
+          <button class="btn sm" id="btnSubClear"><i data-lucide="trash-2"></i></button>
+        </div>
+        <div class="sublist" id="subList"><div class="empty">BELUM ADA SUBTITEL</div></div>
+        <div class="note" id="modelNote">VOCALIS v4 (whisper.cpp) — mesin native siap · model akan diunduh sekali saat pertama dipakai. <b id="modelLink" style="cursor:pointer;color:var(--acc)">Buka folder model →</b></div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m4">
+      <button class="mod-h"><span class="no">05</span><span class="t">TRACKING OBJEK</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Seperti grafis balap <b>MotoGP</b>: aktifkan mode bidik, lalu <b>klik objek bergerak</b> di preview. <b>v2.6 — tracker pintar:</b> prediksi arah gerak + pencarian multi-skala + <b>pencarian ulang otomatis</b> di seluruh frame memakai pencocokan kemiripan dengan template asli target (mesin kemiripan visual lokal, 100% offline) — objek yang berpindah posisi cepat tetap dikejar, tidak lagi tertinggal.</div>
+        <label class="chk"><input type="checkbox" id="trackMode"><span>MODE BIDIK TARGET</span></label>
+        <input class="in" id="trackLabel" value="TARGET 01" maxlength="24">
+        <div class="lbl">WARNA LABEL</div>
+        <div class="chips" id="trackColors"></div>
+        <div class="row">
+          <button class="btn" id="btnScan"><i data-lucide="scan-search"></i> PINDAI SEPANJANG VIDEO</button>
+          <button class="btn sm" id="btnTrackClear" style="flex:0 0 auto"><i data-lucide="x"></i></button>
+        </div>
+        <div class="substat" id="trackStat">0 titik terlacak</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m5">
+      <button class="mod-h"><span class="no">06</span><span class="t">SKOR MUSIK AI</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="lbl">MOOD</div>
+        <div class="seg wrap" id="segMood">
+          <button data-v="epic" class="on">EPIC</button><button data-v="neon">NEON DRIVE</button>
+          <button data-v="chill">LO-FI</button><button data-v="tension">TENSION</button>
+        </div>
+        <div class="lbl">INTENSITAS <b id="intV">60%</b></div>
+        <input type="range" id="inInt" min="0" max="1" step="0.05" value="0.6">
+        <div class="row">
+          <button class="btn acc" id="btnCompose"><i data-lucide="audio-waveform"></i> SUSUN SKOR</button>
+          <button class="btn" id="btnReroll" title="Susun ulang dengan seed baru" style="flex:0 0 auto"><i data-lucide="dices"></i></button>
+        </div>
+        <div class="lbl">MIX SKOR <b id="mgV">60%</b></div>
+        <input type="range" id="inMG" min="0" max="1" step="0.05" value="0.6">
+        <div class="lbl">MIX AUDIO ASLI <b id="agV">90%</b></div>
+        <input type="range" id="inAG" min="0" max="1" step="0.05" value="0.9">
+        <div class="substat" id="musStat">Skor belum tersusun</div>
+        <div class="note">Mesin komposisi prosedural lokal: progresi akor, bass, arpeggio, perkusi &amp; reverb — unik per <b>seed</b>, sepanjang durasi videomu.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m6">
+      <button class="mod-h"><span class="no">07</span><span class="t">TIPOGRAFI SINEMATIK</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="lbl">FONT OVERLAY (JUDUL · PART · SUBTITEL)</div>
+        <div class="fontgrid" id="fontGrid"></div>
+        <div class="lbl">SKALA JUDUL <b id="tsV">1.0×</b></div>
+        <input type="range" id="inTS" min="0.6" max="1.6" step="0.05" value="1">
+        <label class="chk"><input type="checkbox" id="upperOn" checked><span>KAPITAL SEMUA</span></label>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m8">
+      <button class="mod-h"><span class="no">08</span><span class="t">EFEK VISUAL &amp; WATERMARK</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="lbl">KECERAHAN <b id="vbV">100%</b></div>
+        <input type="range" id="inVB" min="0.5" max="1.5" step="0.02" value="1">
+        <div class="lbl">KONTRAS <b id="vcV">100%</b></div>
+        <input type="range" id="inVC" min="0.5" max="1.5" step="0.02" value="1">
+        <div class="lbl">KEJENUHAN WARNA <b id="vsV">100%</b></div>
+        <input type="range" id="inVS" min="0" max="2" step="0.02" value="1">
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="vignetteOn"><span>VIGNETTE</span></label>
+          <label class="chk"><input type="checkbox" id="grainOn"><span>FILM GRAIN</span></label>
+        </div>
+        <div class="lbl">WATERMARK</div>
+        <div class="seg" id="segWm"><button data-v="off" class="on">MATI</button><button data-v="text">TEKS</button><button data-v="logo">LOGO</button></div>
+        <input class="in" id="wmText" placeholder="Teks watermark — mis. @KAMU" value="@KINOSTRA" maxlength="28">
+        <div class="row">
+          <button class="btn sm" id="btnWmLogo"><i data-lucide="image"></i> PILIH LOGO…</button>
+          <span class="mono" id="wmLogoName" style="font-size:10px;color:var(--tx2)">belum ada logo</span>
+        </div>
+        <div class="lbl">POSISI WATERMARK</div>
+        <div class="seg" id="segWmPos">
+          <button data-v="tl">KIRI ATAS</button><button data-v="tr">KANAN ATAS</button>
+          <button data-v="bl">KIRI BAWAH</button><button data-v="br" class="on">KANAN BAWAH</button>
+        </div>
+        <div class="lbl">OPASITAS <b id="wmOv">60%</b></div>
+        <input type="range" id="inWmO" min="0.1" max="1" step="0.05" value="0.6">
+        <div class="lbl">UKURAN <b id="wmSv">1.0×</b></div>
+        <input type="range" id="inWmS" min="0.5" max="2.5" step="0.05" value="1">
+        <div class="lbl">FRAME NEON BERPUTAR <span class="beta">BARU · v2.8</span></div>
+        <label class="chk"><input type="checkbox" id="neonOn"><span>GARIS NEON KELILING VIDEO — BERPUTAR OTOMATIS (9:16 &amp; 16:9)</span></label>
+        <div class="lbl">WARNA NEON</div>
+        <div class="chips" id="neonColors"></div>
+        <div class="row">
+          <div><div class="lbl">KETEBALAN <b id="neonWV">7</b></div>
+            <input type="range" id="inNeonW" min="2" max="16" step="1" value="7"></div>
+          <div><div class="lbl">KECEPATAN PUTAR <b id="neonSV">1.0×</b></div>
+            <input type="range" id="inNeonS" min="0.2" max="3" step="0.1" value="1"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="neonDual" checked><span>DUA GARIS BERLAWANAN ARAH SEKALIGUS</span></label>
+        <div class="note">Seperti gambar referensi: <b>garis neon bercahaya</b> mengelilingi pinggir video dalam bingkai membulat dan <b>terus berputar otomatis</b> sepanjang video — videomu tampil di bagian dalamnya. Berlaku untuk rasio <b>9:16 dan 16:9</b>, tampil di preview dan <b>terbakar ke video saat ekspor</b>. Pilih RAINBOW untuk warna pelangi yang ikut berputar.</div>
+        <div class="lbl" style="margin-top:10px">FRAME VIDEO — 20 GAYA <span class="beta">BARU · v2.16</span></div>
+        <div class="chips" id="frameStyles"></div>
+        <div class="note">Pilih gaya frame: <b>BIOSKOP</b> · <b>MERAH PUTIH</b> · <b>KAYU &amp; BUNGA</b> · <b>GELOMBANG WARNA</b> · <b>PUTIH ELEGAN</b> · <b>AWAN BIRU</b> · <b>PANEL BIRU</b> · <b>GRADIEN TIPIS</b> — plus <b>12 FRAME KHUSUS v2.16</b> dengan papan judul tema terpasang di bagian atas frame: <b>HOROR ALAMGAIB</b> (Hutan Mistis, Kuburan, Rumah Berhantu, Darah Kutukan, Jejak Hantu, Lilin Malam — bertema horor misteri &amp; hantu) dan <b>DANGDUT IDOLADESA</b> (Panggung, Gendang, Gliter Emas, Neon Disko, Obor Desa, Kipas Gliter — bertema musik dangdut koplo). Judul videomu otomatis tampil di bawah papan tema, deskripsi di banner bawah, PART di pojok. Semua dianimasikan halus &amp; terbakar ke video saat ekspor.</div>
+        <div class="lbl" style="margin-top:10px">KECEPATAN VIDEO <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segSpeed">
+          <button data-v="0.5">0.5× PELAN</button><button data-v="1" class="on">1× NORMAL</button>
+          <button data-v="1.25">1.25×</button><button data-v="1.5">1.5×</button><button data-v="2">2× CEPAT</button>
+        </div>
+        <div class="note">Mempercepat / memperlambat <b>seluruh video &amp; audionya</b> — part menjadi lebih pendek (cepat) atau lebih panjang (pelan) otomatis. Cocok untuk gaya cepat TikTok/Shorts.</div>
+        <div class="lbl" style="margin-top:10px">KEN BURNS — PERBESAR PERLAHAN OTOMATIS <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segKb">
+          <button data-v="off" class="on">MATI</button><button data-v="in">ZOOM IN</button>
+          <button data-v="out">ZOOM OUT</button><button data-v="panx">GESER KIRI→KANAN</button>
+          <button data-v="pany">GESER ATAS→BAWAH</button><button data-v="diag">ZOOM+GESER</button>
+        </div>
+        <div class="lbl">KEKUATAN GERAK <b id="kbSV">30%</b></div>
+        <input type="range" id="inKbS" min="0.05" max="0.6" step="0.05" value="0.3">
+        <div class="note">Efek sinematik klasik: video <b>perlahan diperbesar / digeser</b> sepanjang part agar terasa hidup — efek diulang dari awal di setiap part. Berlaku di rasio 16:9 &amp; 9:16, tampil di preview dan terbakar saat ekspor.</div>
+        <div class="lbl" style="margin-top:10px">TRANSISI ANTAR BAGIAN <span class="beta">BARU · v2.12</span></div>
+        <div class="seg wrap" id="segTrans">
+          <button data-v="off" class="on">MATI</button><button data-v="fade">FADE HITAM</button><button data-v="slide">SLIDE</button>
+        </div>
+        <div class="lbl">DURASI TRANSISI <b id="transDV">0.8 dtk</b></div>
+        <input type="range" id="inTransD" min="0.3" max="2" step="0.1" value="0.8">
+        <div class="note">Setiap part masuk &amp; keluar dengan transisi halus — FADE lewat hitam atau SLIDE menyamping — sehingga video hasil split diputar berurutan terasa seperti satu film yang menyambung.</div>
+        <div class="note">Efek diterapkan langsung saat preview &amp; saat render ekspor — tanpa plugin tambahan.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m9">
+      <button class="mod-h"><span class="no">09</span><span class="t">EKSPOR &amp; KOMPRESI</span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="lbl">PRESET EKSPOR — SATU KLIK <span class="beta">BARU · v2.12</span></div>
+        <div class="chips" id="expPresets"></div>
+        <div class="note"><b>YOUTUBE</b> 16:9 · 1080p · 30fps — <b>TIKTOK</b> 9:16 · penuh · 30fps — <b>REELS</b> 9:16 · penuh · 30fps — <b>SHORTS</b> 9:16 · penuh · 60fps. Satu klik langsung mengatur rasio, resolusi, fps &amp; kualitas — sisanya tetap bisa diubah manual di bawah.</div>
+        <div class="lbl">KUALITAS / TINGKAT KOMPRES</div>
+        <div class="seg wrap" id="segQual">
+          <button data-v="max">MAKSIMAL</button><button data-v="balanced" class="on">SEIMBANG</button>
+          <button data-v="compressed">HEMAT</button><button data-v="ultra">ULTRA HEMAT</button>
+        </div>
+        <div class="lbl">SKALA RESOLUSI</div>
+        <div class="seg" id="segScale"><button data-v="1" class="on">100%</button><button data-v="0.75">75%</button><button data-v="0.5">50%</button></div>
+        <div class="lbl">FRAME RATE</div>
+        <div class="seg" id="segFps"><button data-v="24">24</button><button data-v="30" class="on">30</button><button data-v="60">60</button></div>
+        <div class="lbl">AKSELERASI GPU — EKSPOR LEBIH CEPAT <span class="beta">BARU · v2.14</span></div>
+        <div class="substat" id="gpuInfo">Mendeteksi GPU terpasang…</div>
+        <div class="seg wrap" id="segAcc">
+          <button data-v="auto" class="on">OTOMATIS</button><button data-v="gpu">GPU</button><button data-v="cpu">CPU</button>
+        </div>
+        <div class="note"><b>OTOMATIS</b>: aplikasi menguji kecepatan encoder GPU vs CPU sesaat sebelum ekspor lalu memakai yang <b>terbukti lebih kencang</b>. <b>GPU</b>: paksa encoder hardware (NVENC / QuickSync / AMF) — bisa 5-10× lebih cepat dari CPU, ramai CPU tetap lega. <b>CPU</b>: paksa software (paling serasi). Cek hasil deteksi di kotak di atas — bila GPU-mu tampil &amp; encoder GPU aktif, video panjang (mis. 58 menit) bisa selesai <b>jauh lebih cepat</b>. Render paralel otomatis naik sampai 6× saat GPU dipakai.</div>
+        <div class="lbl">RENDER PARALEL</div>
+        <div class="seg wrap" id="segParallel">
+          <button data-v="0" class="on">OTOMATIS</button><button data-v="1">1×</button>
+          <button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
+          <button data-v="5">5×</button><button data-v="6">6×</button>
+        </div>
+        <div class="expsum" id="expSum">Impor media untuk melihat ringkasan.</div>
+        <button class="btn acc big wide" id="btnExport"><i data-lucide="clapperboard"></i> EKSPOR &amp; SPLIT MP4</button>
+        <div class="lbl" style="margin-top:14px">BATCH EKSPOR <span class="beta">BARU · v2.8</span></div>
+        <button class="btn wide" id="btnExportAll"><i data-lucide="layers"></i> BATCH EKSPOR — SEMUA VIDEO DI KOTAK</button>
+        <div class="substat" id="expAllStat">Kotak kosong — impor video dulu (modul 00 / IMPOR MEDIA)</div>
+        <div class="note"><b>Batch ekspor:</b> semua video dalam <b>KOTAK VIDEO</b> diekspor <b>berurutan satu per satu</b> otomatis ke satu folder pilihanmu — memakai setelan ekspor saat ini (rasio, split, judul otomatis, deskripsi, efek, frame neon, musik &amp; kualitas). Setiap video menghasilkan part MP4 sesuai durasinya. Video berstatus SELESAI diproses ulang juga. <b>v2.13:</b> dengan AUTO-SUBTITEL aktif, semua video langsung bersubtitel.</div>
+        <div class="note">Rendering <b>lokal penuh</b> (GPU/CPU, tanpa upload). <b>v2.2 TURBO:</b> frame diambil sambil video <b>diputar cepat</b> (tanpa seek per frame), lapisan statis di-cache, semua part dirender <b>paralel</b> + encoder hardware GPU. Output: MP4 H.264 + AAC/Opus.</div>
+      </div></div></div>
+    </div>
+
+    <div class="mod" id="m10">
+      <button class="mod-h"><span class="no">10</span><span class="t">BATCH PROSES <span class="beta">BARU</span></span><i data-lucide="chevron-down"></i></button>
+      <div class="mod-b"><div class="mod-i"><div class="mod-c">
+        <div class="note">Bisa <b>sekaligus banyak</b>: pilih sampai <b>100 video</b> dalam satu dialog impor (Ctrl+A untuk semua). Semua masuk <b>KOTAK VIDEO (modul 00)</b> berurutan atas→bawah, lalu diproses <b>satu per satu berurutan</b> memakai setelan saat ini (rasio, split, judul otomatis, deskripsi, efek, watermark, musik &amp; kualitas). <b>v2.13 — AUTO-SUBTITEL:</b> bila aktif (modul 04), setiap video otomatis dibuatkan subtitel AI saat diproses. Tracking tetap per-video, dilewati di batch.</div>
+        <div class="row">
+          <button class="btn" id="btnBatchAdd"><i data-lucide="folder-plus"></i> TAMBAH FILE KE KOTAK…</button>
+          <button class="btn sm" id="btnBatchClear" style="flex:0 0 auto"><i data-lucide="trash-2"></i></button>
+        </div>
+        <label class="chk"><input type="checkbox" id="massImport" checked><span>IMPOR MASSAL — PILIH SAMPAI <b>100 VIDEO</b> SEKALIGUS</span></label>
+        <label class="chk"><input type="checkbox" id="autoRun" checked><span>LANGSUNG PROSES BERURUTAN SETELAH IMPOR MASSAL</span></label>
+        <button class="btn acc wide" id="btnBatchRun"><i data-lucide="layers"></i> MULAI BATCH — PROSES KOTAK DARI ATAS</button>
+        <div class="substat" id="batchStat">0 file dalam kotak</div>
+      </div></div></div>
+    </div>
+
+  </aside>
+</main>
+
+<footer>
+  <div class="tl-head">
+    <span class="tl-title">TIMELINE SPLIT</span>
+    <span class="mono" id="tlMeta">—</span>
+  </div>
+  <!-- v2.8.1: tlPlay dipindah ke dalam tlInner → posisi playhead benar saat timeline panjang discrol -->
+  <div id="timeline"><div id="tlInner"><div id="tlPlay"></div></div></div>
+</footer>
+
+<div id="modal" class="hidden"><div class="mbox">
+  <div class="mhead"><div class="mtitle" id="mTitle"></div><button id="mClose" title="Tutup (Esc)">×</button></div>
+  <div class="mbody" id="mBody" hidden></div>
+  <div class="mbar" id="mBar"><div id="mFill"></div></div>
+  <div class="msub" id="mSub"></div>
+  <div class="mact"><button class="btn" id="mCancel">BATAL</button></div>
+</div></div>
+
+<div id="toasts"></div>
+<video id="vid" playsinline></video>
+
+<script src="vendor/lucide.min.js"></script>
+<script src="vendor/mp4-muxer.min.js"></script>
+<script type="module" src="vendor/transformers-loader.js"></script>
+<script src="js/core.js"></script>
+<script src="js/media.js"></script>
+<script src="js/compose.js"></script>
+<script src="js/frames.js"></script>
+<script src="js/tracker.js"></script>
+<script src="js/music.js"></script>
+<script src="js/subs.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/batch.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

@@ -66,10 +66,15 @@ function clearQueue() {
   toast(n ? `Kotak dikosongkan (${n} video dihapus)` : 'Kotak sudah kosong');
 }
 
-/* ---------- THUMBNAIL BERANTIRAN (satu file dalam satu waktu) ---------- */
+/* ---------- THUMBNAIL BERANTIRAN (satu file dalam satu waktu) ----------
+   v3.15: antrean TIDAK lagi menjalankan thumbnail baru selagi EKSPOR/BATCH
+   berjalan (state.busy) — dulu dekode/seek file BESAR utk thumbnail film
+   ke-3/4/5 jalan BERSAMAAN dgn render film aktif → saling berebut RAM,
+   dekoder & CPU → ekspor film berikutnya bisa gagal di tengah jalan.
+   Antrean dilanjutkan otomatis setelah proses selesai (runBatch finally). */
 let _thumbRunning = false;
 function queueBatchThumb() {
-  if (_thumbRunning) return;
+  if (_thumbRunning || state.busy) return;
   const it = state.batch.find(b => !b.thumb && b.status === 'wait' && !b._thumbErr);
   if (!it) return;
   _thumbRunning = true;
@@ -223,24 +228,34 @@ async function runBatch(forceAll = false) {
       state.batch.forEach(b => { if (b !== it) b.sel = false; });
       renderQueue();
       showModal({ title: `BATCH ${(ok + fail + 1).toString().padStart(2, '0')} / ${total}`,
-        sub: `Memuat ${it.name}…`, cancel: true, onCancel() { state.abort = true; } });
+        sub: `Video ${(pi + 1)}/${total} — memuat ${it.name}…`, cancel: true, onCancel() { state.abort = true; } });
       setProg(0.02);
       try {
         /* --- v2.15: lepaskan buffer audio film sebelumnya SEBELUM memuat
                film berikutnya — decode audio film 60 mnt menahan ±1.4 GB
                di RAM; tanpa pelepasan eksplisit puncak memori naik terus
-               tiap film → film ke-3 dst masuk swap & ekspor merambat --- */
-        state.audioBuffer = null; state.peaks = null;
+               tiap film → film ke-3 dst masuk swap & ekspor merambat ---
+           v3.15: bersih-bersih TOTAL antar film + JEDA NAPAS — audioReady,
+           probe kilat & sisa buffer komposisi juga dilepas; jeda 120 ms
+           memberi waktu Chromium melepas dekoder/encoder film sebelumnya
+           sehingga film ke-2 dst mulai dari kondisi bersih (inilah akar
+           lama "video pertama lancar, video kedua dst gagal"). */
+        state.audioBuffer = null; state.peaks = null; state.audioReady = null;
+        state.audioRms = 0; state._kilat = null;
+        await sleep(120);
         /* --- v2.6: muat STREAMING via kfile:// — tanpa membaca seluruh
                file ke memori (video besar langsung siap, hemat RAM) --- */
         await loadFromPath(it.path, true);   /* force: abaikan guard busy */
         /* v2.10: pastikan yang termuat BENAR-BENAR video ini & durasinya
            terbaca — dulu kegagalan muat ditelan diam-diam lalu diekspor
-           memakai durasi video sebelumnya (sumber gagal terselubung) */
+           memakai durasi video sebelumnya (sumber gagal terselubung).
+           v3.15: pesan memandu (dulu “format tak didukung engine” di-
+           sangka user sebagai “gagal import video” padahal media udah
+           dimuat ulang 3× oleh media.js). */
         if (!state.file || state.file.path !== it.path)
-          throw new Error('media tidak bisa dimuat');
+          throw new Error('video tidak bisa dimuat — coba konversi MP4/H.264');
         if (!state.duration)
-          throw new Error('durasi tidak terbaca — format tak didukung engine');
+          throw new Error('durasi tidak terbaca — coba konversi MP4/H.264');
         if (state.file.size) it.size = state.file.size;
         setSub(`Media siap · ${fmtT(state.duration)} · ${segmentsCount()} part`);
         it._t0 = performance.now();
@@ -261,15 +276,39 @@ async function runBatch(forceAll = false) {
         setSub('Memeriksa subtitel otomatis…');
         await ensureAutoSubs({ sub: setSub, prog: p => setProg(clamp(0.04 + p * 0.12, 0, 0.16)) });
 
-        /* --- render semua part (paralel via mesin TURBO) --- */
-        const results = await exportPartsToDir(dir, {
+        /* --- render semua part (paralel via mesin TURBO) ---
+           v3.15: PEMULIHAN OTOMATIS — bila render gagal BUKAN karena
+           dibatalkan pengguna, ulangi SEKALI dgn SETELAN AMAN (paralel 1,
+           encoder software, tanpa kilat, render penuh). Part yang sudah
+           jadi TIDAK diulang (LANJUTKAN EKSPOR melewatinya) → film yang
+           mati setengah jalan dulu (GPU/encoder menumpuk antar film,
+           dekoder kewalahan) kini selesai tanpa campur tangan. */
+        let results = null;
+        const uiEkspor = {
           title(segs) {
             showModal({ title: `BATCH ${it.name.slice(0, 26)} · ${segs.length} PART`,
               sub: 'Rendering lokal — bisa dibatalkan', cancel: true, onCancel() { state.abort = true; } });
           },
           prog: p => setProg(p),
           sub: s => setSub(s)
-        });
+        };
+        try {
+          results = await exportPartsToDir(dir, uiEkspor);
+        } catch (errEkspor) {
+          const m0 = String((errEkspor && errEkspor.message) || errEkspor);
+          if (state.abort || /^Dibatalkan/.test(m0)) throw errEkspor;
+          console.warn('batch: render gagal (' + m0 + ') — percobaan ulang dgn setelan aman');
+          setSub('Render bermasalah — mencoba ulang 1× dengan setelan aman (paralel 1 · encoder software)…');
+          setProg(0.05);
+          const sPar = state.parallel, sKil = state.kilat, sAcc = state.acc, sCut = state.cutMode;
+          state.parallel = 1; state.kilat = 'off'; state.acc = 'cpu'; state.cutMode = 'render';
+          try {
+            results = await exportPartsToDir(dir, uiEkspor);
+            console.info('batch: percobaan ulang setelan aman SUKSES utk ' + it.name);
+          } finally {
+            state.parallel = sPar; state.kilat = sKil; state.acc = sAcc; state.cutMode = sCut;
+          }
+        }
         it.status = 'done'; it.msg = `${results.length} part`;
         /* v3.0: data utk LAPORAN REKAP */
         it.durS = state.duration || 0;
@@ -318,6 +357,7 @@ async function runBatch(forceAll = false) {
   } finally {
     state.busy = false;
     renderQueue();
+    queueBatchThumb();   /* v3.15: lanjutkan thumbnail yang tertunda saat batch */
   }
 }
 

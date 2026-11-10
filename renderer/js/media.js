@@ -92,28 +92,53 @@ async function loadFileBlob(file, force = false) {
   /* v3.1: ANTIANTRIAN META — bila metadata terbaca tapi DURASI TIDAK MASUK
      AKAL (mis. 0.1 dtk utk file ratusan KB — balasan decoder/kfile kadang
      terpotong di headless/disk lambat), muat ULANG sekali. Dulu durasi
-     sampah mengalir ke segments() → ekspor "berhasil" berisi 4 frame. */
-  const awaitMeta = () => new Promise((res, rej) => {
-    const ok = () => { clean(); res(); }, bad = () => { clean(); rej(); };
-    const clean = () => { videoEl.removeEventListener('loadedmetadata', ok); videoEl.removeEventListener('error', bad); };
+     sampah mengalir ke segments() → ekspor "berhasil" berisi 4 frame.
+     v3.15 FIX "GAGAL IMPORT VIDEO DI VIDEO KE-2 DST (BATCH)":
+     - dulu bila metadata tak pernah datang & readyState < 1, promise ini
+       TIDAK PERNAH selesai (timeout hanya men-resolve bila readyState>=1)
+       → batch macet tanpa pesan. Kini timeout WAJIB menyelesaikan promise
+       (resolve bila ada metadata, REJECT bila tidak).
+     - dulu durasi NaN/0 LANGSUNG dianggap gagal ("durasi tidak terbaca —
+       format tak didukung engine" → ditandai GAGAL IMPORT di kotak) tanpa
+       muat ulang; v3.1 hanya menangani 0<d<0.5 dtk. Kini muat ULANG hingga
+       3× (timeout naik 4/7/11 dtk — file besar di disk lambat butuh waktu)
+       sebelum menyerah; durasi Infinity juga ditolak.
+     - mediaEpoch dinaikkan tiap buka-ulang → semua cache komposisi valid. */
+  const awaitMeta = tm => new Promise((res, rej) => {
+    const ok = () => { clean(); res(); }, bad = () => { clean(); rej(new Error('meta error')); };
+    const clean = () => { videoEl.removeEventListener('loadedmetadata', ok); videoEl.removeEventListener('error', bad); clearTimeout(tmId); };
+    const tmId = setTimeout(() => {
+      if (videoEl.readyState >= 1) ok();
+      else { clean(); rej(new Error('meta lambat')); }
+    }, tm);
     videoEl.addEventListener('loadedmetadata', ok); videoEl.addEventListener('error', bad);
-    setTimeout(() => { if (videoEl.readyState >= 1) ok(); }, 4000);
   });
+  const durMasukAkal = () => {
+    const d = videoEl.duration;
+    return isFinite(d) && d > 0 && !(d < 0.5 && (file.size || 0) > 200 * 1024);
+  };
   try {
-    await awaitMeta();
-    if (videoEl.duration > 0 && videoEl.duration < 0.5 && (file.size || 0) > 200 * 1024) {
-      console.warn('metadata durasi tidak masuk akal (' + videoEl.duration + ' dtk) — muat ulang sekali');
-      videoEl.src = url;
-      await awaitMeta();
-      /* media efektifnya berubah → invalidasi SEMUA cache lapisan/komposisi */
-      state.mediaEpoch = (state.mediaEpoch || 0) + 1;
+    for (let coba = 1; coba <= 3; coba++) {
+      try {
+        await awaitMeta(coba === 1 ? 4000 : coba === 2 ? 7000 : 11000);
+        if (durMasukAkal()) break;
+        if (coba < 3) {
+          console.warn(`metadata durasi tidak masuk akal (${videoEl.duration}) — buka ulang (${coba}/3)`);
+          videoEl.src = url; state.mediaEpoch = (state.mediaEpoch || 0) + 1;
+        }
+      } catch (e) {
+        if (coba < 3) {
+          console.warn(`metadata tidak datang (${e.message}) — buka ulang (${coba}/3)`);
+          videoEl.src = url; state.mediaEpoch = (state.mediaEpoch || 0) + 1;
+        } else throw e;
+      }
     }
   } catch (e) {
     /* v2.10: muat gagal → bersihkan state agar pemanggil (terutama BATCH)
        tahu video ini TIDAK termuat. Dulu file & durasi lama tetap terpasang,
        batch lalu "mengekspor" video rusak memakai durasi video sebelumnya. */
     state.file = null; state.duration = 0; state.audioBuffer = null;
-    toast(`Format .${ext} tidak bisa diputar engine Chromium — coba konversi ke MP4/H.264`, 'err');
+    toast(`Video tidak bisa dibaca engine (${file.name}) — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
   if (state.isAudio) {
