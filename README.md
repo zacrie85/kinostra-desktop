@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.8.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.9.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -62,9 +62,9 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 41 | **Audio Sehat** ⭐v3.0 | Normalizer loudness satu klik (RMS → target −16 dBFS, rentang 0.5–4×) + kompresor lembut + redam desis/dengung — volume seragam antar video batch |
 | 42 | **Batch Pro: Lanjut & Shutdown** ⭐v3.0 | Ekspor terputus **tidak diulang dari nol** — part yang filenya sudah ada otomatis dilewati; **matikan PC otomatis** setelah batch (hitung mundur 30 dtk bisa dibatalkan); **laporan rekap KINOSTRA-LAPORAN.txt** otomatis di folder output |
 | 43 | **Narasi AI (TTS Offline)** ⭐v3.0 | Suara AI bahasa Indonesia 100% offline (VITS MMS ±37 MB, unduh sekali): teks → suara → pasang di playhead → ter-mix ke hasil ekspor/split/batch |
-| 44 | **Optimasi Kecepatan 100%** ⭐v3.0 | Audio di-encode **bersamaan** dengan video (±30-45% lebih cepat per part), buffer audio dipakai ulang (GC −40%), pratinjau statis tak digambar ulang 60×/dtk (hemat CPU & baterai) |
+| 44 | **Optimasi Kecepatan 100%** ⭐v3.9 | **BARU v3.9: MODE KILAT — ekspor memotong LANGSUNG dari wadah MP4 + dekode hardware, tanpa memutar video → jauh lebih cepat, hasil minimal 720p** (uji: ±4,7×; dengan GPU lebih besar lagi). v3.0: audio di-encode bersamaan dengan video (±30-45% lebih cepat per part), buffer audio dipakai ulang (GC −40%) |
 | 45 | **Zoom Pembicara Otomatis (AI)** ⭐v3.1 | Seperti aplikasi AI potong podcast: kamera **otomatis meng-zoom orang yang sedang bicara** dan pindah halus saat gantian — deteksi orang (YOLOS ONNX offline, ±10 MB unduh sekali) + **gerakan mulut** + **kapan ada suara**. Rasio **9:16** = hasil vertikal siap Reels/TikTok/Shorts. Kecepatan pindah fokus bisa diatur (cepat/normal/lambat), saat senyap tetap di pembicara atau tampilkan semua. **Berlaku global semua video** — Batch Ekspor & Gabung Video otomatis menganalisis tiap video |
-| 46 | **Cover Video Pembuka + Mode Otomatis** ⭐v3.8 | **Satu cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik). **v3.8: 1 SAMPUL SEMUA PART** — cukup pindai SEKALI per film (sekitar menit 5–7), sampul yang sama dipakai semua part-nya (film 60 mnt → 10 part = 1 cover); nomor part tetap otomatis di bawah judul. v3.7: OTOMATIS TIAP PART (cover tiap part beda dari adegannya) + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis. MANUAL (impor/Studio) tetap ada |
+| 46 | **Cover Video Pembuka + Mode Otomatis** ⭐v3.9 | **Satu cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik). **v3.8: 1 SAMPUL SEMUA PART** — cukup pindai SEKALI per film (sekitar menit 5–7), sampul yang sama dipakai semua part-nya (film 60 mnt → 10 part = 1 cover); nomor part tetap otomatis (posisinya bisa digeser sampai paling atas). **v3.9: BINGKAI JUDUL 10 gaya** (KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS) + **posisi judul bisa digeser** sampai paling bawah. v3.7: OTOMATIS TIAP PART (cover tiap part beda dari adegannya) + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis. MANUAL (impor/Studio) tetap ada |
 
 ⭐ = fitur baru/upgrade terbaru
 

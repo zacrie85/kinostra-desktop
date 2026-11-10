@@ -381,7 +381,10 @@ function syncCoverUI() {
   const el = $('#coverStat');
   if (!el) return;
   /* v3.6.1: info label part aktif ikut tampil di status */
-  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b> di bawah judul` : '';
+  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b>${(state.cover.partPos == null || state.cover.partPos >= 100) ? ' di bawah judul' : ` (${state.cover.partPos}% · ${posisiLabel(state.cover.partPos)})`}` : '';
+  /* v3.9: info bingkai judul + posisi judul */
+  const tf = state.cover.titleFrame && state.cover.titleFrame !== 'TANPA' ? ` · bingkai judul <b>${state.cover.titleFrame}</b>` : '';
+  const tp = (state.cover.titlePos == null || state.cover.titlePos === 80) ? '' : ` · judul ${state.cover.titlePos}% (${posisiLabel(state.cover.titlePos)})`;
   /* v3.7: tampilkan sembunyikan panel sesuai sumber cover */
   const rowM = $('#coverManualRow'), boxA = $('#coverAutoBox'), btnP = $('#btnCoverPrev');
   if (rowM) rowM.style.display = state.cover.auto ? 'none' : '';
@@ -393,8 +396,8 @@ function syncCoverUI() {
       ? 'satu sampul untuk SEMUA part film ini (dipindai sekali · nomor part tetap otomatis)'
       : 'tiap part dapat adegan &amp; cover berbeda';
     el.innerHTML = state.cover.on
-      ? `<b style="color:var(--acc)">AKTIF · ${scopeTxt}</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b> · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine} — ${scopeInfo}`
-      : `Mode <b>${scopeTxt}</b> siap — nyalakan <b>AKTIF</b> agar tiap file mendapat sampul otomatis (bingkai ${state.cover.style || 'KLASIK'}${partLine})`;
+      ? `<b style="color:var(--acc)">AKTIF · ${scopeTxt}</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b>${tf} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}${tp} — ${scopeInfo}`
+      : `Mode <b>${scopeTxt}</b> siap — nyalakan <b>AKTIF</b> agar tiap file mendapat sampul otomatis (bingkai ${state.cover.style || 'KLASIK'}${tf}${partLine})`;
   } else {
     el.innerHTML = state.cover.img
       ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
@@ -478,6 +481,37 @@ bindSeg('segCoverStyle', v => {
   syncCoverUI();
   toast(`Gaya bingkai sampul otomatis: ${state.cover.style}`, 'ok');
 });
+/* ================================================================
+   v3.9 — BINGKAI JUDUL (10 gaya) + POSISI JUDUL & POSISI PART
+   Judul sampul otomatis kini dibungkus bingkai pilihan (TANPA + 10);
+   POSISI JUDUL digeser 0 (paling atas) → 100 (paling bawah);
+   POSISI PART digeser 0 (paling atas) → 100 (paling bawah, default —
+   persis perilaku lama). Label part selalu otomatis menghindari judul.
+   ================================================================ */
+bindSeg('segCoverTitleFrame', v => {
+  state.cover.titleFrame = v || 'TANPA';
+  syncCoverUI();
+  toast(state.cover.titleFrame === 'TANPA'
+    ? 'Bingkai judul: TANPA — judul polos seperti sebelumnya'
+    : `Bingkai judul: ${state.cover.titleFrame} — judul di sampul otomatis kini berbingkai`, 'ok');
+});
+function posisiLabel(p, elem) { return p <= 4 ? 'paling atas' : p >= 96 ? 'paling bawah' : (p < 40 ? 'atas' : p > 60 ? 'bawah' : 'tengah'); }
+if ($('#inTitlePos')) {
+  const lbl = $('#titlePosV');
+  $('#inTitlePos').oninput = e => {
+    state.cover.titlePos = clamp(parseInt(e.target.value) || 0, 0, 100);
+    if (lbl) lbl.textContent = `${state.cover.titlePos}% · ${posisiLabel(state.cover.titlePos)}`;
+  };
+  $('#inTitlePos').onchange = () => toast(`Posisi judul: ${state.cover.titlePos}% (${posisiLabel(state.cover.titlePos)})`, 'ok');
+}
+if ($('#inPartPos')) {
+  const lbl2 = $('#partPosV');
+  $('#inPartPos').oninput = e => {
+    state.cover.partPos = clamp(parseInt(e.target.value) || 0, 0, 100);
+    if (lbl2) lbl2.textContent = `${state.cover.partPos}% · ${posisiLabel(state.cover.partPos)}`;
+  };
+  $('#inPartPos').onchange = () => toast(`Posisi tulisan part: ${state.cover.partPos}% (${posisiLabel(state.cover.partPos)})${state.cover.partPos <= 4 ? ' — paling atas sesuai permintaanmu kawan!' : ''}`, 'ok');
+}
 if ($('#inCoverTitle')) $('#inCoverTitle').oninput = e => { state.cover.title = e.target.value; };
 /* pratinjau contoh sampul otomatis dari video yang sedang dimuat */
 if ($('#btnCoverPrev')) $('#btnCoverPrev').onclick = async () => {
@@ -850,6 +884,15 @@ bindSeg('segAcc', v => {
   toast(v === 'auto' ? 'Akselerasi: OTOMATIS — dipilih hasil uji kecepatan nyata' :
     v === 'gpu' ? 'Akselerasi: GPU — encoder hardware (NVENC/QuickSync/AMF)' :
       'Akselerasi: CPU — encoder software paling serasi', 'ok');
+});
+/* v3.9: MODE KILAT — dekode langsung dari wadah MP4 (tanpa memutar video);
+   'off' = jalur TURBO lama (capture playback). */
+bindSeg('segKilat', v => {
+  state.kilat = (v === 'off') ? 'off' : 'on';
+  updateAll();
+  toast(state.kilat === 'on'
+    ? 'MODE KILAT: AKTIF — potongan langsung dari MP4 + dekode hardware, tanpa memutar video (hasil minimal 720p)'
+    : 'MODE KILAT: MATI — kembali ke jalur TURBO lama (ambil frame sambil memutar video)', state.kilat === 'on' ? 'ok' : 'info');
 });
 
 /* v2.14: DETEKSI GPU TERPASANG + UJI ENCODER (di belakang, tidak menahan boot).
