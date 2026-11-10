@@ -1,38 +1,43 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.15.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.16.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
-Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
+Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
 
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.15.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.16.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.15.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.16.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
 
-## Fitur (11 Modul)
+## Fitur (17 Modul — Urutan Alur Kerja · v3.16)
 
 | No | Modul | Fungsi |
 |----|-------|--------|
-| 00 | **Kotak Video · Urutan** ⭐v2.2 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH FILE batch. Berurutan dari atas ke bawah. Thumbnail otomatis, tombol naik/turun urutan, hapus & pratinjau |
-| 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. **v2.6: geser KIRI/KANAN/ATAS/BAWAH selalu berfungsi** (termasuk zoom 1× — memindahkan posisi video di dalam frame 9:16), Zoom Fokus 1–4×, latar BLUR SINEMATIK tampil otomatis (tidak hitam lagi) |
-| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v3.14: UKURAN TULISAN PART DI VIDEO — besar/kecilnya tulisan PART/EPISODE/EPS/BAGIAN/# di dalam video bisa diatur 50%–250%**. **v3.10: 10 FRAME FITURISTIK JUDUL DI VIDEO + posisi JUDUL sampai PALING BAWAH & posisi PART sampai PALING ATAS + gaya TANPA LABEL**. v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
-| 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
-| 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
-| 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
-| 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
-| 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
-| 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
-| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.9: BINGKAI JUDUL (10 gaya) + POSISI JUDUL & POSISI PART bisa digeser** — judul sampul dibungkus bingkai pilihan (KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS), judul bisa digeser sampai paling bawah, tulisan part bisa digeser sampai paling atas (otomatis menghindari judul). **v3.8: 1 SAMPUL SEMUA PART** — cukup SATU cover per film: adegan terbaik dipindai SEKALI di sekitar **menit 5–7** film (video pendek proporsional), sampul yang sama dipakai SEMUA part film itu — film 60 mnt → 10 part = 1 cover; **nomor part tetap tercetak otomatis** di bawah judul. **v3.7: OTOMATIS TIAP PART** — cover tiap part beda dari adegannya sendiri + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis + PRATINJAU. **v3.6: cover tampil di awal SETIAP file** (default 2 dtk, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, BATCH EKSPOR & pembuka GABUNG; MANUAL: impor PNG/JPG/WebP / STUDIO SAMPUL |
-| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **BARU v3.10: MODE PROSES POTONG LANGSUNG — pecah/split MP4 tanpa re-encode sama sekali (byte asli disalin), kualitas & resolusi 100% asli, ±10-60× lebih cepat; tanpa efek teks (otomatis jatuh ke RENDER PENUH/KILAT bila ada efek aktif)**. **v3.9: MODE KILAT — potong langsung dari wadah MP4 + dekode hardware (tanpa memutar video), kecepatan tak lagi dibatasi waktu nyata; hasil minimal 720p; gagal otomatis kembali TURBO**. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR**. **v3.4: RESOLUSI OUTPUT 720p/1080p/2K/4K** |
-| 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
+| 00 | **Kotak Video · Urutan** 📥 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH VIDEO. Berurutan atas → bawah = urutan proses batch. Thumbnail otomatis, naik/turun urutan, hapus & pratinjau. **v3.16: IMPOR MASSAL 100 video & PROSES OTOMATIS SETELAH IMPOR kini di sini** (dulu modul 10 BATCH PROSES terpisah — digabung karena tumpang tindih) |
+| 01 | **Pengaturan Tersimpan** ⭐v3.16 | **SIMpan seluruh setelan sebagai preset bernama** → mulai pekerjaan baru → klik PAKAI → semua setelan terpasang persis (rasio, judul, split, efek, cover, ekspor…). Lihat bagian *Yang Baru di v3.16* |
+| 02 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16, geser KIRI/KANAN/ATAS/BAWAH, Zoom Fokus 1–4×, latar BLUR SINEMATIK otomatis |
+| 03 | Judul & Part Otomatis | Split per 20–60 dtk / JUMLAH PART OTOMATIS (mis. 10 → dibagi merata dari durasi), judul otomatis dari nama file, prefix PART/EPISODE/EPS/BAGIAN/#, **UKURAN TULISAN PART 50%–250% (v3.14)**, posisi teks bebas, 10 FRAME JUDUL, 8 ANIMASI MASUK NOVACUT, rentang waktu ekspor + TERAPKAN KE SEMUA VIDEO |
+| 04 | Potong & Hapus Bagian | Buang bagian tak diinginkan (iklan/jeda) dari hasil ekspor — nomor part tetap berurutan, pratinjau melompat otomatis |
+| 05 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
+| 06 | Subtitel AI · Vocalis v4 | Mesin native whisper.cpp — fokus Jawa & Indonesia, Mode Lagu/Vokal, AUTO-SUBTITEL saat ekspor/batch, TURBO lewati senyap, ukuran & posisi, ekspor/impor SRT |
+| 07 | Zoom Pembicara AI | Kamera otomatis mengikuti pembicara (podcast/dialog) — geser halus / fade / cut, analisis otomatis saat ekspor, model AI ±10 MB sekali unduh |
+| 08 | Efek Visual & Watermark | Kecerahan/kontras/saturasi, vignette, film grain, 10 FILTER WARNA satu klik, watermark teks/logo, FRAME NEON BERPUTAR, **28 GAYA FRAME VIDEO** (bioskop, horor, dangdut…) |
+| 09 | **Gerak & Transisi** 🎬 | **v3.16: modul baru (dipisah dari Efek Visual biar jelas)** — KECEPATAN VIDEO 0.5–2×, KEN BURNS (zoom in/out, geser), TRANSISI ANTAR BAGIAN fade/slide + durasi |
+| 10 | Tracking Objek | Grafis balap MotoGP: mode bidik + klik objek — tracker pintar prediksi arah & cari ulang otomatis |
+| 11 | Musik & Narasi AI | Skor prosedural EPIC/NEON DRIVE/LO-FI/TENSION, backsound MP3 sendiri (loop), AUDIO SEHAT (normalizer + redam desis), NARASI TTS offline ±37 MB — pasang di playhead |
+| 12 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton…) + skala judul |
+| 13 | Cover Video Pembuka · Novacut | **100 template** (10 layout × 10 palet), latar adegan/gambar/hitam, KEN BURNS, **28 TRANSISI** cover→video, animasi teks, **UKURAN TULISAN PART COVER 50%–250%**, AUTO-FIT judul panjang, cover bersih tanpa teks video. **v3.16: BUKA STUDIO SAMPUL kini satu pintu di sini** (dulu duplikat di Efek Visual) |
+| 14 | Ekspor & Kompresi | Preset YOUTUBE/TIKTOK/REELS/SHORTS, KOMPRES PINTAR target MB, kualitas 4 tingkat, resolusi 720p–4K, fps 24/30/60, akselerasi GPU OTOMATIS/GPU/CPU, MODE KILAT, POTONG LANGSUNG, render paralel 1–6×, **BATCH EKSPOR semua video di kotak**, LANJUTKAN EKSPOR + auto-shutdown PC + laporan rekap |
+| 15 | Gabung Video | Semua video di kotak → SATU MP4, stempel waktu menyambung mulus |
+| 16 | **Perawatan & Performa** ⭐v3.16 | **OPTIMASI PERFORMA satu klik** + **BERSIHKAN CACHE** + info RAM/CPU/model AI — aplikasi kembali fresh & optimal. Lihat bagian *Yang Baru di v3.16* |
 
 ## Yang Baru di v3.9 — BINGKAI JUDUL · POSISI BEBAS · MODE KILAT
 
@@ -57,6 +62,26 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.16 — TAMPILAN RAPI + PERAWATAN + PENGATURAN TERSIMPAN
+
+### 1. Tampilan submenu dirombak total — 17 modul teratur & sederhana
+- **17 modul berurutan sesuai alur kerja**: Media (00) → Preset (01) → Sumber (02) → Teks (03–06) → Zoom Pembicara (07) → Efek (08–10) → Musik (11) → Tipografi (12) → Cover (13) → Ekspor (14) → Gabung (15) → Perawatan (16)
+- **Ikon seragam** di tiap judul modul (kotak amber) — sekali lihat langsung tahu isinya
+- **Badge “BARU · vX” & keterangan bertele-tele dihapus** — panel jadi bersih; panduan lengkap tetap ada di KINOSTRA-PANDUAN.md
+- **Modul yang tumpang tindih digabung**: BATCH PROSES (modul 10 lama) → masuk KOTAK VIDEO (tambah video & impor massal cukup satu tempat); SAMPUL AUTO (di Efek Visual) → masuk COVER NOVACUT (Studio Sampul satu pintu); tombol MULAI BATCH duplikat dihapus — cukup **BATCH EKSPOR** di Ekspor & Kompresi; GERAK & TRANSISI dipisah dari Efek Visual supaya tidak sesak
+
+### 2. PENGATURAN TERSIMPAN — preset setelan (modul 01)
+- **SIMPAN**: beri nama → seluruh setelan tersimpan sebagai preset (rasio, judul, split & jumlah part, prefix, ukuran/posisi/animasi teks, filter warna, frame video, neon, watermark, ken burns, transisi, kecepatan, musik/backsound/audio sehat, TTS, zoom pembicara, subtitel, cover NOVACUT penuh, ekspor: kualitas/resolusi/fps/GPU/kilat/paralel/kompres pintar)
+- **PAKAI**: mulai pekerjaan baru → klik PAKAI → semua setelan terpasang persis seperti yang disimpan (tekniknya: tombol & slider dijalankan ulang — persis seperti kamu atur manual)
+- **HAPUS** per preset · daftar rapi dgn tanggal & jumlah setelan · tersimpan di dalam aplikasi (localStorage) — **100% offline**
+- Yang tidak ikut (memang data per-pekerjaan, bukan setelan): file video/gambar/audio, subtitel, potongan, titik adegan, hasil tracking
+
+### 3. PERAWATAN & PERFORMA (modul 16)
+- **OPTIMASI PERFORMA — satu klik**: membersihkan memori & cache mesin (cache lapisan pratinjau & neon, adaptasi encoder, probe kilat, cache RMS), **menguji ulang encoder GPU vs CPU**, melanjutkan thumbnail yang tertunda, lalu menampilkan laporan + **saran setelan tercepat** untuk mesinmu — mis. *Akselerasi OTOMATIS* saat GPU terdeteksi, *aktifkan MODE KILAT*, *render paralel OTOMATIS* — bisa diterapkan satu klik dari laporannya
+- **BERSIHKAN CACHE**: menghapus **thumbnail kotak, file sementara transkripsi (whisper tmp), cache tampilan/HTTP aplikasi** — thumbnail dibuat ulang otomatis saat dibutuhkan
+- **Kotak info perawatan**: RAM terpasang, jumlah core CPU, ukuran cache sementara & model AI lokal
+- Aman: **pekerjaan, setelan, preset & model AI TIDAK dihapus** — hanya sisa-sisa yang tidak diperlukan lagi
 
 ## Yang Baru di v3.15 — BATCH ANTI-GAGAL (video ke-2 dst di kotak kini tahan banting)
 

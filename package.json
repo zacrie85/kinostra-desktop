@@ -1,8 +1,8 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "3.15.0",
-  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.15: BATCH ANTI-GAGAL — video ke-2 dst di kotak kini tahan banting: metadata lambat dimuat ulang otomatis 3×, render gagal diulang otomatis dgn setelan aman (paralel 1 · software), thumbnail tak lagi saingan ekspor · v3.14: UKURAN TULISAN PART DI VIDEO — tulisan PART/EPISODE/EPS/BAGIAN/# di dalam video (bumper intro & label pojok, modul 02) bisa dikecilkan 50%–dibesarkan 250%, garis hias & sub-info ikut proporsional · v3.13: SLIDER UKURAN TULISAN PART COVER · v3.12: AUTO-FIT JUDUL COVER + COVER BERSIH · v3.11: MESIN COVER NOVACUT 100 TEMPLATE + KEN BURNS + 28 TRANSISI + 8 ANIMASI TEKS · v3.10: 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG · v3.9: MODE KILAT · GABUNG VIDEO · TTS NARASI",
+  "version": "3.16.0",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.16: TAMPILAN RAPI + PERAWATAN + PRESET — seluruh submenu dirombak jadi 17 modul berurutan dgn ikon & penomoran seragam, modul yang tumpang tindih digabung (BATCH PROSES→KOTAK VIDEO, STUDIO SAMPUL→COVER), keterangan bertele-tele dihapus; PENGATURAN TERSIMPAN: simpan/muat seluruh setelan sebagai preset bernama (localStorage, 100% offline); PERAWATAN & PERFORMA: tombol OPTIMASI satu klik (bersihkan memori+cache, uji ulang encoder GPU/CPU, saran setelan) & BERSIHKAN CACHE (thumbnail, file sementara transkripsi, cache tampilan) · v3.15: BATCH ANTI-GAGAL · v3.14: UKURAN TULISAN PART DI VIDEO · v3.13: SLIDER UKURAN TULISAN PART COVER · v3.12: AUTO-FIT JUDUL COVER + COVER BERSIH · v3.11: MESIN COVER NOVACUT 100 TEMPLATE + KEN BURNS + 28 TRANSISI + 8 ANIMASI TEKS · v3.10: 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG · v3.9: MODE KILAT · GABUNG VIDEO · TTS NARASI",
   "main": "main/main.js",
   "author": "KINOSTRA",
   "license": "MIT",

@@ -1168,17 +1168,10 @@ $('#btnExport').onclick = doExport;
    berstatus selesai — nama tombol memang "SEMUA VIDEO DI KOTAK") */
 $('#btnExportAll').onclick = () => runBatch(true);
 
-/* ---------- 10 BATCH (v2.3: impor massal 100 + proses berurutan otomatis) ---------- */
-$('#btnBatchAdd').onclick = async () => {
-  const paths = await window.kinostra.openMedia();
-  if (paths && paths.length) {
-    const n = addBatchPaths(paths, 'batch');
-    toast(`${n} video masuk Kotak Video`, 'ok');
-    maybeAutoBatch(n);
-  }
-};
-$('#btnBatchClear').onclick = clearQueue;
-$('#btnBatchRun').onclick = runBatch;
+/* ---------- v3.16: modul 10 BATCH PROSES DIGABUNG —
+   TAMBAH VIDEO & IMPOR MASSAL kini hanya di 00 KOTAK VIDEO (btnQAdd),
+   proses semua video hanya lewat BATCH EKSPOR (btnExportAll, modul 14).
+   Dulu dua tombol tambah + dua tombol "mulai batch" saling tumpang tindih. */
 
 /* ---------- 00 KOTAK VIDEO (v2.3) ---------- */
 $('#btnQAdd').onclick = async () => {

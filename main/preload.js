@@ -50,6 +50,8 @@ contextBridge.exposeInMainWorld('kinostra', {
 
   /* v2.4: info sistem (RAM asli) */
   sysInfo: () => ipcRenderer.invoke('sys:info'),
+  /* v3.16: PERAWATAN — ukur ({dry:true}) / bersihkan ({dry:false}) cache */
+  cleanupCache: (opts) => ipcRenderer.invoke('sys:cleanup', opts || { dry: true }),
   /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
   gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 

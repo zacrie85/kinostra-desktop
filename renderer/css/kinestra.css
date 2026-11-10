@@ -290,3 +290,27 @@ span.qthumb{display:flex;align-items:center;justify-content:center;color:var(--t
   border-right:1px solid rgba(255,84,73,.35);border-left:1px solid rgba(255,84,73,.35)}
 .tlcut span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--err)}
 .tlcut em{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;color:rgba(255,84,73,.65);margin-top:3px;white-space:nowrap;overflow:hidden}
+
+/* ===== v3.16: IKON HEADER MODUL — kotak amber seragam di tiap judul ===== */
+.mod-h .mic{width:24px;height:24px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(247,166,0,.08);border:1px solid #4A3608;color:var(--acc)}
+.mod-h .mic i,.mod-h .mic svg{width:13px;height:13px;stroke-width:2}
+.mod-h{gap:10px}
+.mod-h .no{color:var(--tx3)}
+
+/* ===== v3.16: DAFTAR PRESET PENGATURAN TERSIMPAN ===== */
+.plist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:240px;overflow-y:auto}
+.prow{display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px solid var(--line);transition:.12s}
+.prow:last-child{border-bottom:none}
+.prow:hover{background:var(--panel2)}
+.prow .picon{color:var(--acc);display:flex;flex:0 0 auto}
+.prow .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.prow .pname{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .pmeta{font-family:var(--mono);font-size:8.5px;color:var(--tx3);letter-spacing:.08em}
+.prow .pbtns{display:flex;gap:5px;flex:0 0 auto}
+.prow .pbtns button{background:var(--panel2);border:1px solid var(--line2);color:var(--tx);font-size:10px;
+  font-weight:600;letter-spacing:.08em;padding:5px 9px;transition:.15s}
+.prow .pbtns button:hover{border-color:var(--acc);color:var(--acc)}
+.prow .pbtns button.pdel:hover{border-color:var(--err);color:var(--err)}
+.prow .pbtns button.puse{background:rgba(247,166,0,.1);border-color:#4A3608;color:var(--acc)}
+.prow .pbtns button.puse:hover{background:var(--acc);color:#0B0904}

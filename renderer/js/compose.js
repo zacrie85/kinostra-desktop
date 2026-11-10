@@ -100,6 +100,14 @@ function videoFrameRect(vw, vh, W, H, t) {
    v2.6: di PREVIEW latar blur di-refresh tiap ±1.6 dtk dari frame
    terkini (ikut video berjalan) — di ekspor tetap statis (kecepatan). */
 const _layerCache = new Map();
+/* v3.16: PERAWATAN — kosongkan seluruh cache lapisan compose (dipanggil
+   tombol OPTIMASI / BERSIHKAN CACHE di modul 16; aman kapan pun —
+   cache dibangun ulang otomatis pada frame berikutnya) */
+function clearComposeCaches() {
+  _layerCache.clear();
+  try { _neonTrackCache.clear(); } catch (e) { }
+  try { window.__kinoCacheCleared = (window.__kinoCacheCleared || 0) + 1; } catch (e) { }
+}
 function getLayer(key, build) {
   let cv = _layerCache.get(key);
   if (!cv) {

@@ -67,7 +67,7 @@ function createWindow() {
             fontCount: document.fonts ? document.fonts.size : -1,
             mods: document.querySelectorAll('.mod').length,
             btnExport: !!document.querySelector('#btnExport'),
-            batchUI: !!document.querySelector('#btnBatchRun'),
+            batchUI: !!document.querySelector('#btnExportAll'),
             vfxUI: !!document.querySelector('#inVB'),
             zoomUI: !!document.querySelector('#inZoom') && !!document.querySelector('#inPanX') && !!document.querySelector('#btnFrameReset'),
             parUI: !!document.querySelector('#segParallel'),
@@ -1249,6 +1249,46 @@ ipcMain.handle('sys:info', async () => {
     ramFreeGB: +(os.freemem() / 1073741824).toFixed(1),
     cpus: os.cpus().length
   };
+});
+
+/* ================================================================
+   v3.16: PERAWATAN — ukur & bersihkan cache aplikasi (modul 16)
+   opts.dry = true  → ukur saja (kotak info)
+   opts.dry = false → hapus: file sementara transkripsi (whisper/tmp)
+                      + cache tampilan/HTTP session Chromium.
+   Model AI & data pengguna TIDAK dihapus.
+   ================================================================ */
+ipcMain.handle('sys:cleanup', async (e, opts = {}) => {
+  const dry = !!opts.dry;
+  const out = { whisperTmp: 0, whisperTmpFiles: 0, whisperTmpCleared: 0, cacheDir: 0, modelsDir: 0, cleared: [] };
+  const dirSize = (p) => {
+    let n = 0;
+    try {
+      for (const f of fs.readdirSync(p, { withFileTypes: true })) {
+        const fp = path.join(p, f.name);
+        try { n += f.isDirectory() ? dirSize(fp) : (fs.statSync(fp).size || 0); } catch (_) { }
+      }
+    } catch (_) { }
+    return n;
+  };
+  try {
+    out.whisperTmp = dirSize(WHISPER_TMP_DIR);
+    out.whisperTmpFiles = fs.existsSync(WHISPER_TMP_DIR) ? fs.readdirSync(WHISPER_TMP_DIR).length : 0;
+  } catch (_) { }
+  try { out.modelsDir = dirSize(MODELS_DIR) + dirSize(WHISPER_MODELS_DIR); } catch (_) { }
+  try { out.cacheDir = dirSize(path.join(app.getPath('userData'), 'Cache')); } catch (_) { }
+  if (!dry) {
+    try {
+      if (fs.existsSync(WHISPER_TMP_DIR)) {
+        for (const f of fs.readdirSync(WHISPER_TMP_DIR)) {
+          try { fs.rmSync(path.join(WHISPER_TMP_DIR, f), { recursive: true, force: true }); out.whisperTmpCleared++; } catch (_) { }
+        }
+        if (out.whisperTmpCleared) out.cleared.push('tmp');
+      }
+    } catch (_) { }
+    try { if (win && win.webContents) { await win.webContents.session.clearCache(); out.cleared.push('http'); } } catch (_) { }
+  }
+  return out;
 });
 
 /* ================================================================
