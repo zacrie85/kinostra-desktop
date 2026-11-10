@@ -334,46 +334,55 @@ function ncLayoutPass(lay, phase, x, W, H, o) {
     }
     return;
   }
-  /* phase === 'part' */
+  /* phase === 'part' — v3.13: semua ukuran × ps (skala tulisan part,
+     slider 50%–250%; ps=1 → angka persis rumus lama v3.11, piksel identik) */
   if (!part) return;
-  if (lay === 'impact') ncDrawPartBadge(x, part, pal, W / 2, H * 0.74, H * 0.032, 'center');
+  const ps = o.ps || 1;
+  if (lay === 'impact') ncDrawPartBadge(x, part, pal, W / 2, H * 0.74, H * 0.032 * ps, 'center');
   else if (lay === 'lower') {
-    x.textAlign = 'left'; x.font = `700 ${H * 0.03}px ${ncFontStack('sans')}`;
+    x.textAlign = 'left'; x.font = `700 ${H * 0.03 * ps}px ${ncFontStack('sans')}`;
     x.fillStyle = acc; x.fillText(String(part).toUpperCase(), W * 0.04, H * 0.885);
-  } else if (lay === 'banner') ncDrawPartBadge(x, part, pal, W / 2, H * 0.8, H * 0.032, 'center');
+  } else if (lay === 'banner') ncDrawPartBadge(x, part, pal, W / 2, H * 0.8, H * 0.032 * ps, 'center');
   else if (lay === 'side') {
     x.textAlign = 'left'; x.fillStyle = acc;
-    x.font = `700 ${H * 0.028}px ${ncFontStack('sans')}`;
+    x.font = `700 ${H * 0.028 * ps}px ${ncFontStack('sans')}`;
     x.fillText(String(part).toUpperCase(), W * 0.05, H * 0.42 - H * 0.06);
   } else if (lay === 'boxed') {
-    x.fillStyle = pal.bg1; x.fillRect(W * 0.34, H * 0.28, W * 0.32, H * 0.045);
+    /* v3.13: kotak dasar ikut membesar; lebar menyesuaikan teks bila teks
+       lebih lebar dari kotak dasar (ps=1 & teks pendek = kotak persis lama) */
+    x.font = `700 ${H * 0.026 * ps}px ${ncFontStack('sans')}`;
+    const bw2 = Math.max(W * 0.32, x.measureText(String(part).toUpperCase()).width + H * 0.026 * ps * 2);
+    x.fillStyle = pal.bg1; x.fillRect(W / 2 - bw2 / 2, H * 0.28, bw2, H * 0.045 * ps);
     x.fillStyle = acc; x.textAlign = 'center';
-    x.font = `700 ${H * 0.026}px ${ncFontStack('sans')}`;
-    x.fillText(String(part).toUpperCase(), W / 2, H * 0.312);
+    x.fillText(String(part).toUpperCase(), W / 2, H * 0.312 + H * 0.0225 * (ps - 1));
   } else if (lay === 'neon') {
     x.textAlign = 'center'; x.fillStyle = '#fff';
-    x.font = `700 ${H * 0.028}px ${ncFontStack('sans')}`;
+    x.font = `700 ${H * 0.028 * ps}px ${ncFontStack('sans')}`;
     x.fillText(String(part).toUpperCase(), W / 2, H * 0.62);
   } else if (lay === 'bars') {
     x.textAlign = 'center'; x.fillStyle = acc;
-    x.font = `700 ${H * 0.024}px ${ncFontStack('sans')}`;
+    x.font = `700 ${H * 0.024 * ps}px ${ncFontStack('sans')}`;
     x.fillText(String(part).toUpperCase(), W / 2, H * 0.8);
   } else if (lay === 'sticker') {
     x.save(); x.translate(W * 0.72, H * 0.24); x.rotate(-0.12);
     x.fillStyle = acc; x.beginPath();
-    const bw = W * 0.2, bh = H * 0.13;
-    try { x.roundRect(-bw / 2, -bh / 2, bw, bh, H * 0.02); } catch (e) { x.rect(-bw / 2, -bh / 2, bw, bh); }
+    const bw = W * 0.2 * ps, bh = H * 0.13 * ps;
+    try { x.roundRect(-bw / 2, -bh / 2, bw, bh, H * 0.02 * ps); } catch (e) { x.rect(-bw / 2, -bh / 2, bw, bh); }
     x.fill();
-    x.fillStyle = '#000'; x.font = `900 ${H * 0.032}px ${ncFontStack('impact')}`;
+    x.fillStyle = '#000'; x.font = `900 ${H * 0.032 * ps}px ${ncFontStack('impact')}`;
     x.textAlign = 'center';
-    x.fillText(String(part).toUpperCase().slice(0, 12), 0, H * 0.012);
+    x.fillText(String(part).toUpperCase().slice(0, 12), 0, H * 0.012 * ps);
     x.restore();
   } else if (lay === 'outline') {
-    x.fillStyle = acc; x.fillRect(W * 0.2, H * 0.7, W * 0.6, H * 0.05);
+    /* v3.13: strip aksen ikut membesar & berpusat tetap; lebar menyesuaikan
+       teks (ps=1 & teks pendek = strip W*0.6 di H*0.7 persis lama) */
+    x.font = `900 ${H * 0.032 * ps}px ${ncFontStack('impact')}`;
+    const sw2 = Math.max(W * 0.6, x.measureText(String(part).toUpperCase()).width + H * 0.032 * ps * 2);
+    const sh2 = H * 0.05 * ps;
+    x.fillStyle = acc; x.fillRect(W / 2 - sw2 / 2, H * 0.725 - sh2 / 2, sw2, sh2);
     x.fillStyle = '#000'; x.textAlign = 'center';
-    x.font = `900 ${H * 0.032}px ${ncFontStack('impact')}`;
-    x.fillText(String(part).toUpperCase(), W / 2, H * 0.74);
-  } else if (lay === 'band') ncDrawPartBadge(x, part, pal, W * 0.06, H * 0.78, H * 0.03, 'left');
+    x.fillText(String(part).toUpperCase(), W / 2, H * 0.74 + (ps - 1) * H * 0.032 * 0.35);
+  } else if (lay === 'band') ncDrawPartBadge(x, part, pal, W * 0.06, H * 0.78, H * 0.03 * ps, 'left');
 }
 
 /* ---------- BINGKAI COVER (port drawCoverFrame — alpha 0.75) ---------- */
@@ -576,7 +585,10 @@ function ncTextState(anim, local, dur = 4, seed = 0) {
 function ncBuildCoverLayers(W, H, opts) {
   const nc = (opts.nc && typeof opts.nc === 'object') ? opts.nc : (state.cover.nc || {});
   const pal = ncPal(nc.palette);
-  const o = { img: opts.img || null, bgStyle: nc.bg || 'adegan', pal, title: opts.title || '', part: opts.part || '' };
+  /* v3.13: ps = skala ukuran tulisan part (badge/teks part di cover) —
+     0.5–2.5× (slider 50%–250%), default 1 = ukuran dasar persis v3.11 */
+  const ps = Math.max(0.5, Math.min(2.5, Number(opts.ps ?? nc.partScale) || 1));
+  const o = { img: opts.img || null, bgStyle: nc.bg || 'adegan', pal, title: opts.title || '', part: opts.part || '', ps };
   const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
   const draw = (cv, phase) => {
     const g = cv.getContext('2d', { alpha: phase !== 'bg' });

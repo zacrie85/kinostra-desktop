@@ -418,7 +418,7 @@ function syncCoverUI() {
   if (!el) return;
   /* v3.11: status mesin NOVACUT — layout × palet + bingkai + transisi */
   const nc = state.cover.nc || {};
-  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b>` : '';
+  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b>${(nc.partScale && nc.partScale !== 1) ? ` · ukuran part <b>${Math.round(nc.partScale * 100)}%</b>` : ''}` : '';
   const layN = (typeof NCLAYOUTS !== 'undefined' && (NCLAYOUTS.find(l => l.k === nc.layout) || {}).n) || nc.layout;
   const palN = (typeof NCPALETTES !== 'undefined' && (NCPALETTES.find(p => p.k === nc.palette) || {}).n) || nc.palette;
   const trN = nc.trans && nc.trans !== 'off' ? ` · transisi <b>${(typeof ncTransById === 'function' && (ncTransById(nc.trans) || {}).n) || nc.trans}</b>` : ' · potong langsung';
@@ -642,6 +642,20 @@ if ($('#inCoverTransDur')) {
     if (lbl) lbl.textContent = state.cover.nc.transDur.toFixed(2) + ' dtk';
   };
   $('#inCoverTransDur').onchange = () => toast(`Durasi transisi: ${state.cover.nc.transDur.toFixed(2)} detik`, 'ok');
+}
+/* v3.13: UKURAN TULISAN PART di cover — 50%–250%, normal 100%;
+   pratinjau 08B ikut berubah langsung saat slider digeser */
+if ($('#inCoverPartSize')) {
+  const lblP = $('#coverPartSizeV');
+  $('#inCoverPartSize').oninput = e => {
+    state.cover.nc.partScale = clamp(parseFloat(e.target.value) || 1, 0.5, 2.5);
+    if (lblP) lblP.textContent = Math.round(state.cover.nc.partScale * 100) + '%';
+    ncSyncCoverPreview();
+  };
+  $('#inCoverPartSize').onchange = () => {
+    syncCoverUI();
+    toast(`Ukuran tulisan part cover: ${Math.round(state.cover.nc.partScale * 100)}%`, 'ok');
+  };
 }
 function posisiLabel(p, elem) { return p <= 4 ? 'paling atas' : p >= 96 ? 'paling bawah' : (p < 40 ? 'atas' : p > 60 ? 'bawah' : 'tengah'); }
 if ($('#inCoverTitle')) $('#inCoverTitle').oninput = e => { state.cover.title = e.target.value; ncSyncCoverPreview(); };

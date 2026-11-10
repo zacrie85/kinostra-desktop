@@ -184,7 +184,9 @@ const state = {
        TRANSISI cover→video (28 gaya) + animasi masuk judul & part
        (8 gaya) — semua port dari NOVACUT Studio v1.0.23 */
     nc: { layout: 'impact', palette: 'cyber', bg: 'adegan', frame: 'none',
-      fx: 'in', trans: 'flash', transDur: 0.6, titleAnim: 'slam', partAnim: 'slam' } },
+      fx: 'in', trans: 'flash', transDur: 0.6, titleAnim: 'slam', partAnim: 'slam',
+      /* v3.13: partScale = ukuran tulisan part di cover (0.5–2.5, 1 = normal 100%) */
+      partScale: 1 } },
   /* v3.9: MODE KILAT — 'on' = ekspor memotong langsung dari wadah MP4 +
      VideoDecoder (hardware bila ada), TANPA memutar video (kecepatan tak
      lagi dibatasi waktu nyata; hasil minimal 720p). 'off' = jalur TURBO lama

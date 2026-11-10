@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.12.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.13.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.12.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.13.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.12.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.13.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -57,6 +57,14 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.13 — UKURAN TULISAN PART COVER BISA DIATUR
+
+### Slider UKURAN TULISAN PART (modul 08B)
+- Tulisan **PART / EPISODE / EPS / BAGIAN / #** di cover kini **bisa dikecilkan & dibesarkan** sesuai selera — geser slider **UKURAN TULISAN PART**: **50% sampai 250%** (normal = 100%)
+- Berlaku di **ke-10 layout & ke-10 palet** (100 template NOVACUT) — badge, strip, dan kotak latar tulisan part otomatis ikut menyesuaikan ukurannya agar teks tetap muat di dalamnya
+- **Pratinjau cover berubah langsung** saat slider digeser; hasil ekspor = pratinjau persis (satu mesin gambar NOVACUT)
+- Status modul 08B menampilkan ukuran terpilih (mis. `ukuran part 150%`); bila 100% tampilan = persis seperti v3.12
 
 ## Yang Baru di v3.12 — JUDUL COVER MASUK SEMUA + COVER BERSIH
 

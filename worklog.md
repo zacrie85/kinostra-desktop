@@ -407,3 +407,23 @@ Stage Summary:
 - RELEASE: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.12.0 (2026-11-10)
 - Fitur: (1) AUTO-FIT JUDUL COVER — font otomatis mengecil sampai judul video panjang MASUK SEMUA di 10 layout (judul pendek piksel-identik v3.11); (2) COVER BERSIH — tangkapan adegan utk latar cover tanpa teks overlay video (judul/PART/deskripsi/subtitel/watermark/neon), satu-satunya tulisan di cover = judul + part dari pengaturan cover
 - Keputusan desain: noText sbg parameter opsional drawComposition (perilaku lama utuh utk semua jalur lain); ncFitTitle menjaga rumus posisi lama dgn lh proporsional fs → nol regresi piksel utk judul pendek; baris ekstra > kata hilang
+
+---
+Task ID: 19
+Agent: main (GLM)
+Task: v3.13.0 — SLIDER UKURAN TULISAN PART COVER (besar-kecil tulisan PART/EPISODE/EPS/BAGIAN/# bisa diatur)
+
+Work Log:
+- Permintaan user: tulisan part/episode/bagian/eps dan # di cover tidak bisa dikecilkan/dibesarkan — minta pengaturan ukuran
+- Implementasi mesin (renderer/js/nccover.js): parameter ps (skala 0.5–2.5) di ncBuildCoverLayers (dari opts.ps ?? nc.partScale) → fase 'part' ncLayoutPass: semua ukuran font/badge × ps di 10 layout; layout geometri adaptif: KOTAK (lebar kotak = max dasar, teks + padding; tinggi & baseline ikut ps), STICKER (kotak, radius, offset teks × ps), OUTLINE (strip aksen berpusat tetap, tinggi × ps, lebar menyesuaikan teks, baseline bergeser proporsional); badge IMPACT/BANNER/PITA memakai ncDrawPartBadge(size×ps) — kotak badge otomatis ikut
+- NOL-REGRESI ps=1: semua rumus = persis angka lama v3.12 (H*0.032*1 dsb.; baseline H*0.312 + H*0.0225*(ps-1) = 0 saat ps=1) — diuji piksel identik di 6 layout geometri
+- State (core.js): state.cover.nc.partScale = 1 default
+- UI (ui.js + index.html): slider #inCoverPartSize 0.5–2.5 step 0.05 + label #coverPartSizeV (mis. 200%) di modul 08B setelah TULISAN PART DI SAMPUL; oninput → state + pratinjau langsung; onchange → syncCoverUI + toast; status 08B menampilkan "ukuran part N%" bila ≠ 100%; note penjelasan baru
+- UJI BARU scripts/kinostra-v313-test.mjs (CDP): 21/21 LULUS — smoke slider & default; nol-regresi piksel ps=1 = rumus lama v3.12 (6 layout); area tinta part monoton 60%<100%<200% di 10/10 layout + tumbuh ≥1.35×; lebar badge impact linear (0.6×, 1.98×); layer JUDUL identik ps=1 vs ps=2.5; jalur UI slider→state→pratinjau (308/482/83 piksel beda)→status; EKSPOR NYATA 3 part via slider 200%: badge PART run cyan 142px = teoretis 142px (>2× badge 71px), judul tetap utuh auto-fit (2 baris ≤79px), cover tetap bersih (nol teks video), transisi FLASH tetap (251>118), judul video tetap terbakar di konten; gerbang POTONG LANGSUNG
+- Regresi: v3.12 22/23, v3.11 33/34, v3.10 29/30 — SEMUA tersisa = asersi versi/label (wajar); insiden sekali: ekspor gabung v311 0-byte (race, tidak berulang — ulangan 33/34 gabungan lulus 641KB)
+- Bump 3.13.0 (6 file): package.json (+deskripsi), installer.nsi (5 titik), afterpack.js (string + setProductVersion numeric minor 13 — koreksi), README (badge + fitur 52), PANDUAN (judul, Setup/Portable, bagian "Yang Baru di v3.13"), index.html (boot+header v3.13.0, label 08B "UKURAN TULISAN PART & AUTO-FIT JUDUL & COVER BERSIH"); + scripts/release-v3130.sh
+- Build: dist:full → Portable 3.13.0 132.2MB (NSIS VIProductVersion konflik = protokol normal); makensis manual SUKSES dgn kunci baru: env NSISDIR=<dir nsis> ./linux/makensis (dulu tanpa env gagal "reading stub /usr/Stubs") → Setup 3.13.0 95.8MB; UTF-16: KINOSTRA.exe 3.13.0.0 ✓, Setup 3.13.0.0 ✓, app 3.13.0 ✓, zip 212 entri ✓; artefak lama 3.12 dihapus dari dist_out
+
+Stage Summary:
+- Fitur: SLIDER UKURAN TULISAN PART COVER 50%–250% — memenuhi permintaan user utk mengatur besar-kecil tulisan PART/EPISODE/EPS/BAGIAN/# di semua template cover NOVACUT; pratinjau = ekspor persis; ps=1 piksel-identik versi lama
+- Keputusan desain: ps sebagai parameter opsional ncLayoutPass (default 1 → nol perubahan); kotak/strip adaptif max(dasar, teks+padding) agar teks besar tetap muat; hanya fase 'part' tersentuh — judul/latar/bingkai/transisi tak berubah
