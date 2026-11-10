@@ -781,7 +781,10 @@ async function buildAutoCoverScene(v, seg, W, H) {
     const t = clamp(w0 + dur * f, 0, Math.max(0, (v.duration || seg.end) - 0.02));
     try { await seekTo(t, v); } catch (e) { }
     setCompSrc(v);
-    drawComposition(scx, sw, sh, t);
+    /* v3.12: noText — frame TANPA teks overlay video (judul/PART/sub/
+       watermark) supaya LATAR COVER BERSIH; satu-satunya tulisan di
+       cover = judul + part dari pengaturan cover (template NOVACUT) */
+    drawComposition(scx, sw, sh, t, { noText: true });
     setCompSrc(null);
     let s = -Infinity;
     try { s = scoreAutoFrame(scx.getImageData(0, 0, sw, sh).data, sw, sh); } catch (e) { }
@@ -790,7 +793,7 @@ async function buildAutoCoverScene(v, seg, W, H) {
     if (!keepDrawn || s > best) {
       best = s; bestT = t; keepDrawn = true;
       setCompSrc(v);
-      drawComposition(kx, W, H, t);
+      drawComposition(kx, W, H, t, { noText: true });   /* v3.12: cover bersih */
       setCompSrc(null);
     }
   }

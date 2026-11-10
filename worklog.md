@@ -386,3 +386,24 @@ Stage Summary:
 - RELEASE SELESAI: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.11.0 (2026-11-10)
 - Fitur: MESIN COVER NOVACUT — 100 template (10 layout × 10 palet) + latar adegan/hitam + bingkai cover + KEN BURNS + 28 TRANSISI cover→video + 8 ANIMASI masuk judul & PART (cover & video) — port penuh NOVACUT Studio sesuai permintaan user
 - Keputusan desain: lapisan cover 3 fase (bg/title/part) dirender sekali per worker → frame dgn animasi = 3-4 drawImage (cepat & deterministik); transisi menempel di drawAt (PTS tak berubah); fungsi cover lama disimpan sbg LEGACY agar uji unit pixel lama tetap lulus; bug NovaCut asal (alpha clobber, wipe terbalik) diperbaiki di port
+
+---
+Task ID: 18
+Agent: main (GLM)
+Task: v3.12.0 — AUTO-FIT JUDUL COVER (judul panjang masuk semua) + COVER BERSIH (tangkapan tanpa teks video)
+
+Work Log:
+- Permintaan user (4 gambar referensi cover pendek): (1) tulisan judul di cover harus MASUK SEMUA — dulu font sangat besar sehingga judul video panjang terpotong; (2) tangkapan screenshot video utk latar cover tidak boleh menyertakan tulisan episode/part/bagian/judul yang disetel di video — cover harus BERSIH, satu-satunya tulisan = judul + part dari pengaturan cover
+- Akar masalah ditemukan: buildAutoCoverScene (pemindai adegan v3.7/v3.8) memanggil drawComposition() yang ikut menggambar SEMUA overlay teks video (judul, PART intro/pojok, deskripsi, subtitel, track, watermark, frame neon, transisi) → teks menempel di latar cover + pratinjau
+- Fix COVER BERSIH: drawComposition(x,W,H,t,opts) dgn opsi {noText:true} → semua blok overlay (PART, JUDUL+frame judul, DESKRIPSI, SUBTITEL, TRACK, WATERMARK, NEON, TRANSISI ANTAR BAGIAN) dilewati; latar video murni (blur/frame bergaya/filter/vignette tetap). 4 titik tangkapan cover memakai noText: buildAutoCoverScene (2×: kanvas skor + kandidat terbaik), ncSyncCoverPreview (pratinjau modul 08B), tombol MAINKAN PRATINJAU (latar scene). Jalur video/ekspor konten TIDAK berubah
+- Fix AUTO-FIT JUDUL: ncFitTitle(x,title,fontOf,fs0,maxW,maxLines,minFs) di nccover.js — font mengecil ×0.92 bertahap sampai SEMUA kata tercakup (wrap tanpa batas baris); judul pendek = ukuran dasar PERSIS (lh = fs×rasio langkah lama → posisi baris identik v3.11); minFs H×0.024; bila mentok minFs → baris ekstra diterima (utama: kata tak hilang). Diterapkan di 10 layout fase 'title' (impact/lower/side/sticker/outline: rasio lh 0.125/0.115 dst; BANNER dua tahap: 1 baris besar H×0.1 min H×0.07 → tak muat → 2-3 baris rapat H×0.062)
+- UJI BARU scripts/kinostra-v312-test.mjs (CDP): 23/23 LULUS — smoke v3.12.0; auto-fit 10 layout (judul 12 kata SEMUA masuk + lebar ≤ kotak; 5 layout mengecil, 5 muat di ukuran dasar; judul pendek fs = fs0 persis); NOL-REGRESI piksel (layer judul 'UJI NOVACUT' = replika rumus lama v3.11, diff 0 piksel); cover bersih (drawComposition biasa 769 piksel krem teks vs noText 0; noText ≈ video murni); EKSPOR NYATA 3 part cover ADEGAN otomatis (durasi 5 dtk, 1280×720, latar merah adegan, NOL teks video di band atas & pojok, judul panjang utuh 3 baris tinta ≤79px, badge PART cyan, FLASH luma 252>118, judul video tetap terbakar di konten, adegan hijau/biru per part); gerbang POTONG LANGSUNG
+- Regresi: v3.11 33/34 (1 gagal = asersi label 'v3.11' modul 08B — memang kini v3.12), v3.10 29/30 (1 = asersi header versi) — NOL regresi fungsional
+- Bug test yang dikoreksi saat iterasi: app dipakai test lama diluncurkan sebelum bump selesai (race versi 3.11.0); asersi 'shrunk' terlalu ketat (impact/sticker/boxed memang muat 3 baris di ukuran dasar); tabel CFG banner test masih min1 0.05H (kode sudah 0.07H); batas tinggi baris ekspor salah asumsi (judul 12 kata UTUH 3 baris @ ukuran dasar = benar); .bsub sudah dihapus dari DOM setelah boot → cek .tag
+- Bump 3.12.0 (6 file): package.json, installer.nsi (5 titik), afterpack.js, README (badge + fitur 51), PANDUAN (judul, Setup/Portable, bagian "Yang Baru di v3.12"), index.html (boot+header v3.12.0, label 08B "AUTO-FIT JUDUL & COVER BERSIH"); + scripts/release-v3120.sh
+- Build: dist:full → Portable 3.12.0 126MB (NSIS VIProductVersion konflik = protokol normal); makensis manual → Setup 3.12.0 91.4MB; UTF-16: KINOSTRA.exe 3.12.0.0 ✓, Setup 3.12.0.0 ✓, app 3.12.0 ✓, zip 212 entri ✓
+
+Stage Summary:
+- RELEASE: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.12.0 (2026-11-10)
+- Fitur: (1) AUTO-FIT JUDUL COVER — font otomatis mengecil sampai judul video panjang MASUK SEMUA di 10 layout (judul pendek piksel-identik v3.11); (2) COVER BERSIH — tangkapan adegan utk latar cover tanpa teks overlay video (judul/PART/deskripsi/subtitel/watermark/neon), satu-satunya tulisan di cover = judul + part dari pengaturan cover
+- Keputusan desain: noText sbg parameter opsional drawComposition (perilaku lama utuh utk semua jalur lain); ncFitTitle menjaga rumus posisi lama dgn lh proporsional fs → nol regresi piksel utk judul pendek; baris ekstra > kata hilang

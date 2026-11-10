@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.11.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.12.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.11.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.12.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.11.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.12.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -57,6 +57,19 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.12 — JUDUL COVER MASUK SEMUA + COVER BERSIH
+
+### 1) AUTO-FIT JUDUL COVER — judul panjang MASUK SEMUA
+- Dulu: judul video panjang terpotong karena ukuran font cover sangat besar. Kini **font otomatis mengecil bertahap** di SEMUA 10 layout sampai **seluruh kata judul tercakup** — tulisan di cover sama persis dengan judul videonya
+- Layout BANNER otomatis memakai 2–3 baris rapat bila satu baris tidak muat
+- Judul pendek tidak berubah sedikit pun — ukuran besar persis seperti v3.11
+
+### 2) COVER BERSIH — tangkapan adegan tanpa teks video
+- Frame video yang diambil otomatis untuk latar cover (ADEGAN) kini diambil **tanpa teks overlay video**: judul di layar, label PART/EPISODE, deskripsi, subtitel, watermark, dan frame neon TIDAK ikut tertangkap
+- Jadi satu-satunya tulisan di cover = **judul + part/episode sesuai PENGATURAN COVER** (template NOVACUT) — cover bersih seperti referensi aplikasi pendek
+- Pratinjau cover di modul 08B & tombol MAINKAN PRATINJAU memakai mesin bersih yang sama → pratinjau = hasil ekspor persis
+- Teks overlay di VIDEO (judul, PART, subtitel) tetap tampil seperti biasa di bagian konten — hanya tangkapan cover yang dibersihkan
 
 ## Yang Baru di v3.11 — MESIN COVER NOVACUT (modul 08B & 02)
 

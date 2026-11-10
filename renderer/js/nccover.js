@@ -101,6 +101,28 @@ function ncWrapText(x, text, maxW, maxLines) {
   return maxLines ? out.slice(0, maxLines) : out;
 }
 
+/* ================================================================
+   v3.12 — AUTO-FIT JUDUL COVER: font mengecil bertahap sampai SEMUA
+   kata judul tercakup (tidak ada lagi kata terpotong di judul video
+   panjang — persis permintaan: judul di cover harus sama persis dgn
+   judul video). Judul pendek = tetap ukuran dasar layout → piksel
+   persis perilaku v3.11 (nol regresi). Bila font sudah mentok di
+   minFs dan masih lebih dari maxLines baris → baris ekstra diterima
+   (lebih baik banyak baris kecil daripada kata hilang).
+   fontOf(s) = string font utk ukuran s; minFs = batas keterbacaan.
+   ================================================================ */
+function ncFitTitle(x, title, fontOf, fs0, maxW, maxLines, minFs) {
+  let fs = fs0;
+  x.font = fontOf(fs);
+  let lines = ncWrapText(x, title, maxW, 0);   /* 0 = ukur semua baris */
+  while (lines.length > maxLines && fs > minFs) {
+    fs = Math.max(minFs, fs * 0.92);
+    x.font = fontOf(fs);
+    lines = ncWrapText(x, title, maxW, 0);
+  }
+  return { fs, lines };
+}
+
 /* ---------- LATAR (port drawBackground) ----------
    bgStyle 'hitam' = hitam polos + vignette halus; 'adegan' = gambar
    sumber (frame video / cover manual) cover-fit + gradasi gelap. */
@@ -212,81 +234,90 @@ function ncLayoutPass(lay, phase, x, W, H, o) {
     x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
     if (lay === 'impact') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.115}px ${ncFontStack('impact')}`;
-      const lines = ncWrapText(x, title, W * 0.84, 3);
-      const startY = H / 2 - ((lines.length - 1) * H * 0.125) / 2 + H * 0.03;
-      lines.forEach((ln, i) => {
-        const y = startY + i * H * 0.125;
+      /* v3.12: AUTO-FIT — font mengecil sampai SEMUA kata judul masuk */
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('impact')}`, H * 0.115, W * 0.84, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('impact')}`;
+      const lh = ft.fs * (0.125 / 0.115);
+      const startY = H / 2 - ((ft.lines.length - 1) * lh) / 2 + H * 0.03;
+      ft.lines.forEach((ln, i) => {
+        const y = startY + i * lh;
         x.fillStyle = '#000'; x.fillText(ln, W / 2 + H * 0.006, y + H * 0.006);
         x.fillStyle = fg; x.fillText(ln, W / 2, y);
       });
       x.fillStyle = acc;
-      x.fillRect(W / 2 - W * 0.08, startY + lines.length * H * 0.125 - H * 0.06, W * 0.16, H * 0.012);
+      x.fillRect(W / 2 - W * 0.08, startY + ft.lines.length * lh - lh * 0.48, W * 0.16, H * 0.012);
     } else if (lay === 'lower') {
       x.textAlign = 'left';
-      x.font = `900 ${H * 0.085}px ${ncFontStack('impact')}`;
-      const lines = ncWrapText(x, title, W * 0.64, 2);
-      lines.forEach((ln, i) => {
-        x.fillStyle = '#000'; x.fillText(ln, W * 0.04 + 3, H * 0.79 + i * H * 0.095 + 3);
-        x.fillStyle = fg; x.fillText(ln, W * 0.04, H * 0.79 + i * H * 0.095);
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('impact')}`, H * 0.085, W * 0.64, 2, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('impact')}`;
+      const lh = ft.fs * (0.095 / 0.085);
+      ft.lines.forEach((ln, i) => {
+        x.fillStyle = '#000'; x.fillText(ln, W * 0.04 + 3, H * 0.79 + i * lh + 3);
+        x.fillStyle = fg; x.fillText(ln, W * 0.04, H * 0.79 + i * lh);
       });
     } else if (lay === 'banner') {
       x.textAlign = 'center';
-      let bsz = H * 0.1;
-      x.font = `900 ${bsz}px ${ncFontStack('condensed')}`;
-      let blines = ncWrapText(x, title, W * 0.86, 1);
-      if (blines.length > 1) {
-        bsz = H * 0.062;
-        x.font = `900 ${bsz}px ${ncFontStack('condensed')}`;
-        blines = ncWrapText(x, title, W * 0.86, 2);
-      }
+      /* v3.12: AUTO-FIT — coba 1 baris besar; tak muat → 2-3 baris rapat,
+         font mengecil sampai SEMUA kata judul masuk pita banner */
+      const _bf = s => `900 ${s}px ${ncFontStack('condensed')}`;
+      let ft = ncFitTitle(x, title, _bf, H * 0.1, W * 0.86, 1, H * 0.07);
+      if (ft.lines.length > 1) ft = ncFitTitle(x, title, _bf, H * 0.062, W * 0.86, 3, H * 0.024);
+      x.font = _bf(ft.fs);
       x.fillStyle = fg;
-      if (blines.length > 1) blines.forEach((ln, i) => x.fillText(ln.toUpperCase(), W / 2, H * 0.095 + i * H * 0.08));
-      else x.fillText((blines[0] || '').toUpperCase(), W / 2, H * 0.15);
+      if (ft.lines.length > 1) {
+        const lh = ft.fs * (0.08 / 0.062);
+        ft.lines.forEach((ln, i) => x.fillText(ln.toUpperCase(), W / 2, H * 0.095 + i * lh));
+      } else x.fillText((ft.lines[0] || '').toUpperCase(), W / 2, H * 0.15);
     } else if (lay === 'side') {
       x.textAlign = 'left';
-      x.font = `900 ${H * 0.095}px ${ncFontStack('impact')}`;
-      const lines = ncWrapText(x, title, W * 0.5, 3);
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('impact')}`, H * 0.095, W * 0.5, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('impact')}`;
+      const lh = ft.fs * (0.11 / 0.095);
       x.fillStyle = fg;
-      lines.forEach((ln, i) => x.fillText(ln, W * 0.05, H * 0.42 + i * H * 0.11));
+      ft.lines.forEach((ln, i) => x.fillText(ln, W * 0.05, H * 0.42 + i * lh));
     } else if (lay === 'boxed') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.09}px ${ncFontStack('condensed')}`;
-      const lines = ncWrapText(x, title, W * 0.72, 2);
-      lines.forEach((ln, i) => {
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('condensed')}`, H * 0.09, W * 0.72, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('condensed')}`;
+      const lh = ft.fs * (0.105 / 0.09);
+      ft.lines.forEach((ln, i) => {
         x.fillStyle = fg;
-        x.fillText(ln.toUpperCase(), W / 2, H * 0.47 + (i - (lines.length - 1) / 2) * H * 0.105);
+        x.fillText(ln.toUpperCase(), W / 2, H * 0.47 + (i - (ft.lines.length - 1) / 2) * lh);
       });
     } else if (lay === 'neon') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.1}px ${ncFontStack('display')}`;
-      const lines = ncWrapText(x, title, W * 0.8, 2);
-      lines.forEach((ln, i) => {
-        const y = H * 0.48 + (i - (lines.length - 1) / 2) * H * 0.13;
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('display')}`, H * 0.1, W * 0.8, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('display')}`;
+      const lh = ft.fs * 1.3;
+      ft.lines.forEach((ln, i) => {
+        const y = H * 0.48 + (i - (ft.lines.length - 1) / 2) * lh;
         x.fillStyle = acc; ncGlowText(x, ln.toUpperCase(), W / 2, y, acc);
         x.fillStyle = '#fff'; x.fillText(ln.toUpperCase(), W / 2, y);
       });
     } else if (lay === 'bars') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.075}px ${ncFontStack('condensed')}`;
-      const lines = ncWrapText(x, title, W * 0.8, 2);
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('condensed')}`, H * 0.075, W * 0.8, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('condensed')}`;
+      const lh = ft.fs * (0.085 / 0.075);
       x.fillStyle = fg;
-      lines.forEach((ln, i) => x.fillText(ln.toUpperCase(), W / 2, H * 0.62 + (i - (lines.length - 1) / 2) * H * 0.085));
+      ft.lines.forEach((ln, i) => x.fillText(ln.toUpperCase(), W / 2, H * 0.62 + (i - (ft.lines.length - 1) / 2) * lh));
     } else if (lay === 'sticker') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.105}px ${ncFontStack('impact')}`;
-      const lines = ncWrapText(x, title, W * 0.8, 3);
-      lines.forEach((ln, i) => {
-        const y = H * 0.62 + (i - (lines.length - 1) / 2) * H * 0.115;
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('impact')}`, H * 0.105, W * 0.8, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('impact')}`;
+      const lh = ft.fs * (0.115 / 0.105);
+      ft.lines.forEach((ln, i) => {
+        const y = H * 0.62 + (i - (ft.lines.length - 1) / 2) * lh;
         x.fillStyle = '#000'; x.fillText(ln, W / 2 + 4, y + 4);
         x.fillStyle = fg; x.fillText(ln, W / 2, y);
       });
     } else if (lay === 'outline') {
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.17}px ${ncFontStack('impact')}`;
-      const lines = ncWrapText(x, title.toUpperCase(), W * 0.9, 2);
-      lines.forEach((ln, i) => {
-        const y = H * 0.52 + (i - (lines.length - 1) / 2) * H * 0.17;
+      const ft = ncFitTitle(x, (title || '').toUpperCase(), s => `900 ${s}px ${ncFontStack('impact')}`, H * 0.17, W * 0.9, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('impact')}`;
+      const lh = ft.fs;
+      ft.lines.forEach((ln, i) => {
+        const y = H * 0.52 + (i - (ft.lines.length - 1) / 2) * lh;
         x.strokeStyle = fg; x.lineWidth = H * 0.008;
         x.strokeText(ln, W / 2, y);
         x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillText(ln, W / 2, y);
@@ -294,10 +325,11 @@ function ncLayoutPass(lay, phase, x, W, H, o) {
     } else if (lay === 'band') {
       x.save(); x.translate(W / 2, H / 2); x.rotate(-0.06);
       x.textAlign = 'center';
-      x.font = `900 ${H * 0.085}px ${ncFontStack('condensed')}`;
-      const lines = ncWrapText(x, title, W * 0.84, 2);
+      const ft = ncFitTitle(x, title, s => `900 ${s}px ${ncFontStack('condensed')}`, H * 0.085, W * 0.84, 3, H * 0.024);
+      x.font = `900 ${ft.fs}px ${ncFontStack('condensed')}`;
+      const lh = ft.fs * (0.095 / 0.085);
       x.fillStyle = fg;
-      lines.forEach((ln, i) => x.fillText(ln.toUpperCase(), 0, (i - (lines.length - 1) / 2) * H * 0.095 + H * 0.032));
+      ft.lines.forEach((ln, i) => x.fillText(ln.toUpperCase(), 0, (i - (ft.lines.length - 1) / 2) * lh + H * 0.032));
       x.restore();
     }
     return;

@@ -134,8 +134,14 @@ function buildVignette(W, H) {
   return c;
 }
 
-/* ---------- KOMPONEN KOMPOSISI ---------- */
-function drawComposition(x, W, H, t) {
+/* ---------- KOMPONEN KOMPOSISI ----------
+   v3.12: opts.noText = true → HANYA latar video murni (TANPA judul,
+   PART, deskripsi, subtitel, track, watermark, frame neon, transisi).
+   Dipakai pengambilan frame utk LATAR COVER — supaya cover bersih:
+   satu-satunya tulisan di cover = judul + part dari PENGATURAN COVER,
+   bukan teks overlay video yang ikut tertangkap di screenshot. */
+function drawComposition(x, W, H, t, opts) {
+  const noText = !!(opts && opts.noText);
   const u = H / 1080, F = state.font;
   const FST = (typeof frameDef === 'function') ? frameDef() : null;   /* v2.12 */
   /* --- latar --- */
@@ -214,7 +220,7 @@ function drawComposition(x, W, H, t) {
          masuk file gabungan (judul tiap film tetap tampil)
          v3.9: gaya TANPA LABEL (off) + slider vertikal menjangkau
          PALING ATAS layar (dulu terhenti di ±22% tinggi) --- */
-  if (!state._noPart && state.partShow !== 'off') {
+  if (!noText && !state._noPart && state.partShow !== 'off') {
   const total = segmentsCount();
   const segB = (typeof currentSegBounds === 'function' && currentSegBounds(t))
     || { i: 0, start: rangeInfo().start, end: rangeInfo().end };
@@ -272,7 +278,7 @@ function drawComposition(x, W, H, t) {
          (state.titleFrame, katalog TITLEFRAMES — hiasan DI DALAM VIDEO,
          pratinjau = hasil ekspor persis karena satu mesin gambar) --- */
   let yTitleBase = 0;
-  if (state.titleOn && state.title) {
+  if (!noText && state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
     const txt = state.upper ? state.title.toUpperCase() : state.title;
     const szBase = clamp(state.titleSize || 40, 14, 160);
@@ -344,7 +350,7 @@ function drawComposition(x, W, H, t) {
       x.restore();
     }
   }
-  if (state.descOn && state.desc.trim()) {
+  if (!noText && state.descOn && state.desc.trim()) {
     x.save();
     const fs2 = Math.round(25 * u);
     x.font = `500 ${fs2}px "Chakra Petch"`;
@@ -358,7 +364,7 @@ function drawComposition(x, W, H, t) {
     x.restore();
   }
   /* --- SUBTITEL --- */
-  if (state.subsOn && state.subs.length) {
+  if (!noText && state.subsOn && state.subs.length) {
     const sub = state.subs.find(s => t >= s.s && t < s.e);
     if (sub && sub.text) {
       x.save();
@@ -376,13 +382,13 @@ function drawComposition(x, W, H, t) {
     }
   }
   /* --- TRACK TARGET --- */
-  drawTrack(x, W, H, t, u);
+  if (!noText) drawTrack(x, W, H, t, u);
   /* --- UPGRADE: WATERMARK --- */
-  drawWatermark(x, W, H, u);
+  if (!noText) drawWatermark(x, W, H, u);
   /* --- v2.8: FRAME NEON BERPUTAR (di lapisan paling atas) --- */
-  if (state.neon && state.neon.on) drawNeonFrame(x, W, H, t, u, compSrc() === videoEl);
+  if (!noText && state.neon && state.neon.on) drawNeonFrame(x, W, H, t, u, compSrc() === videoEl);
   /* --- v2.12: TRANSISI ANTAR BAGIAN (paling atas semuanya) --- */
-  applyTransition(x, W, H, t);
+  if (!noText) applyTransition(x, W, H, t);
 }
 
 /* ================================================================

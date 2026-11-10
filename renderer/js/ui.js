@@ -529,7 +529,9 @@ function ncSyncCoverPreview() {
   if (state.cover.auto && videoEl && videoEl.videoWidth) {
     const c = document.createElement('canvas'); c.width = W; c.height = h;
     setCompSrc(videoEl);
-    drawComposition(c.getContext('2d', { alpha: false }), W, h, videoEl.currentTime || 0);
+    /* v3.12: noText — pratinjau cover = frame BERSIH tanpa teks video,
+       persis hasil ekspor (latar cover tak boleh membawa tulisan video) */
+    drawComposition(c.getContext('2d', { alpha: false }), W, h, videoEl.currentTime || 0, { noText: true });
     setCompSrc(null);
     img = c;
   } else if (state.cover.img) img = state.cover.img;
@@ -702,7 +704,7 @@ if ($('#btnCoverPlay')) $('#btnCoverPlay').onclick = () => {
     sceneC.getContext('2d', { alpha: false }).drawImage(state.cover.img, (W - iw * s) / 2, (H - ih * s) / 2, iw * s, ih * s);
   } else {
     setCompSrc(videoEl);
-    drawComposition(sceneC.getContext('2d', { alpha: false }), W, H, videoEl.currentTime || 0);
+    drawComposition(sceneC.getContext('2d', { alpha: false }), W, H, videoEl.currentTime || 0, { noText: true });   /* v3.12: cover bersih */
     setCompSrc(null);
   }
   const L = ncBuildCoverLayers(W, H, {

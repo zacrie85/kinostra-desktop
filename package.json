@@ -1,7 +1,7 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "3.11.0",
+  "version": "3.12.0",
   "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v3.10: 10 FRAME JUDUL DI VIDEO (bukan sampul) + POSISI JUDUL sampai paling bawah & PART sampai paling atas + POTONG LANGSUNG (split MP4 tanpa re-encode, kualitas asli 100%) · v3.9: MODE KILAT + BINGKAI JUDUL SAMPUL + POSISI BEBAS · 1 SAMPUL SEMUA PART · COVER OTOMATIS DARI ADEGAN · RESOLUSI 720p-4K · BACKSOUND MP3 · ZOOM PEMBICARA AI · GABUNG VIDEO · TTS NARASI",
   "main": "main/main.js",
   "author": "KINOSTRA",
