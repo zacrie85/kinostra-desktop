@@ -78,6 +78,42 @@ $('#inPartY').oninput = e => { state.partPosY = clamp(parseFloat(e.target.value)
 $('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.value) || 0, -1, 1); syncTextPosLabels(); };
 $('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
 syncTextPosLabels();
+
+/* ---------- v3.9: 10 FRAME FITURISTIK JUDUL DI VIDEO ---------- */
+(function initTitleFrames() {
+  const box = $('#titleFrameChips');
+  if (!box || typeof TITLEFRAMES === 'undefined') return;
+  box.innerHTML = TITLEFRAMES.map(f =>
+    `<button data-v="${f.k}" class="${state.titleFrame === f.k ? 'on' : ''}" title="${f.d}">${f.n}</button>`).join('');
+  [...box.querySelectorAll('button')].forEach(b => b.onclick = () => {
+    [...box.querySelectorAll('button')].forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    state.titleFrame = b.dataset.v;
+    const cat = TITLEFRAMES.find(f => f.k === state.titleFrame);
+    toast(`Frame judul di video: ${cat ? cat.n : 'TANPA'}`, 'ok');
+  });
+})();
+
+/* ---------- v3.9: MODE PROSES — POTONG LANGSUNG / RENDER PENUH ---------- */
+function syncCutModeStat() {
+  const st = $('#cutModeStat');
+  if (!st) return;
+  if (state.cutMode !== 'fast') {
+    st.textContent = 'RENDER PENUH — semua efek (judul, PART, subtitel, cover, musik…) diterapkan penuh';
+    return;
+  }
+  const blk = (typeof fastCutBlockedReason === 'function') ? fastCutBlockedReason() : null;
+  st.innerHTML = blk
+    ? `<b style="color:var(--warn,#E8A13C)">TAK BISA — masih ada efek aktif: ${blk}</b> → otomatis RENDER PENUH`
+    : '<b>SIAP</b> — MP4 disalin tanpa render: kualitas & resolusi asli, ±10-60× lebih cepat';
+}
+bindSeg('segCutMode', v => {
+  state.cutMode = v;
+  syncCutModeStat();
+  updateExportInfo();
+  toast(v === 'fast' ? 'Mode POTONG LANGSUNG aktif (tanpa efek, kualitas asli)' : 'Mode RENDER PENUH aktif (semua efek diterapkan)', 'ok');
+});
+syncCutModeStat();
 $('#inSplit').oninput = e => {
   /* v3.2: edit durasi manual = matikan JUMLAH PART (nilai hasil hitungan dibekukan jadi manual) */
   if (state.splitParts) { state.splitParts = 0; $('#inSplitParts').value = ''; resetSplitPartsUI(); syncTInfoSplit(); }
@@ -171,8 +207,8 @@ $('#btnRangeApplyReset').onclick = () => {
 };
 syncRangeApplyUI();
 $('#selPrefix').onchange = e => { state.partPrefix = e.target.value; updateAll(); };
-bindSeg('segPartShow', v => { state.partShow = v; });
-$('#titleOn').onchange = e => { state.titleOn = e.target.checked; };
+bindSeg('segPartShow', v => { state.partShow = v; updateExportInfo(); });   /* v3.9: TANPA LABEL mengubah kesiapan POTONG LANGSUNG */
+$('#titleOn').onchange = e => { state.titleOn = e.target.checked; updateExportInfo(); };   /* v3.9: status mode segar */
 /* v2.3: judul otomatis dari nama file + font Bebas Neue + ukuran default 40 */
 $('#titleAuto').onchange = e => {
   state.autoTitle = e.target.checked;
@@ -213,7 +249,7 @@ function syncTitleFontUI() {
 })();
 
 /* ---------- 03 DESKRIPSI ---------- */
-$('#descOn').onchange = e => { state.descOn = e.target.checked; };
+$('#descOn').onchange = e => { state.descOn = e.target.checked; updateExportInfo(); };   /* v3.9: status mode segar */
 $('#inDesc').oninput = e => { state.desc = e.target.value; };
 bindSeg('segDescPos', v => { state.descPos = v; });
 
@@ -223,7 +259,7 @@ $('#asrLang').onchange = e => {
   $('#vmLang').textContent = e.target.value === 'auto' ? 'AUTO'
     : (e.target.value === 'javanese' ? 'JAWA' : 'INDONESIA');
 };
-$('#subsOn').onchange = e => { state.subsOn = e.target.checked; };
+$('#subsOn').onchange = e => { state.subsOn = e.target.checked; updateExportInfo(); };   /* v3.9 */
 /* v2.4: mesin default mengikuti RAM ASLI (bukan estimasi browser) —
    TURBO native butuh ±1.5-2 GB saat inferensi (jauh lebih ringan dari v3) */
 (async function pickEngineByRAM() {

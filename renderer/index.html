@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.8.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.9.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.8.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.9.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -172,13 +172,16 @@
         <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
         <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>
         <input type="range" id="inPartY" min="-1" max="1" step="0.05" value="0">
-        <div class="lbl">POSISI JUDUL — ATAS ⬆ ⬇ BAWAH <b id="titleYV">TENGAH · DEFAULT</b></div>
+        <div class="lbl">POSISI JUDUL — ATAS ⬆ ⬇ BAWAH <b id="titleYV">TENGAH · DEFAULT</b> <span class="beta">v3.9 S/D PALING BAWAH</span></div>
         <input type="range" id="inTitleY" min="-1" max="1" step="0.05" value="0">
+        <div class="lbl">FRAME JUDUL DI VIDEO — 10 GAYA <span class="beta">BARU · v3.9</span></div>
+        <div class="chips" id="titleFrameChips"></div>
+        <div class="note">Hiasan di sekeliling <b>JUDUL DI DALAM VIDEO</b> (bukan di sampul) — terbakar ikut ekspor: GARIS KEMBAR, KOTAK TEGAS, BINGKAI GANDA, SUDUT KAMERA, PITA JUDUL, PITA SINEMA, NEON MENYALA, EMAS KLASIK, PANEL MODERN &amp; GRADASI PANAS. Pratinjau = hasil akhir persis. Kombinasikan dengan slider POSISI JUDUL (kini bisa sampai <b>paling bawah layar</b>) dan slider POSISI PART (kini bisa sampai <b>paling atas layar</b>).</div>
         <div class="row" style="align-items:center">
           <button class="btn sm" id="btnTextPosReset"><i data-lucide="rotate-ccw"></i> RESET POSISI TEKS</button>
         </div>
         <div class="lbl">GAYA TAMPIL PART</div>
-        <div class="seg" id="segPartShow"><button data-v="intro" class="on">BUMPER INTRO</button><button data-v="always">SELALU TAMPIL</button></div>
+        <div class="seg" id="segPartShow"><button data-v="intro" class="on">BUMPER INTRO</button><button data-v="always">SELALU TAMPIL</button><button data-v="off">TANPA LABEL <span class="beta">v3.9</span></button></div>
         <div class="outfile mono" id="outName">—</div>
         <div class="note">Nomor part terisi <b>otomatis berurutan 01 → N</b> mengikuti setiap hasil split, dan ikut tertulis di video.</div>
       </div></div></div>
@@ -504,6 +507,12 @@
           <button data-v="auto" class="on">OTOMATIS</button><button data-v="gpu">GPU</button><button data-v="cpu">CPU</button>
         </div>
         <div class="note"><b>OTOMATIS</b>: aplikasi menguji kecepatan encoder GPU vs CPU sesaat sebelum ekspor lalu memakai yang <b>terbukti lebih kencang</b>. <b>GPU</b>: paksa encoder hardware (NVENC / QuickSync / AMF) — bisa 5-10× lebih cepat dari CPU, ramai CPU tetap lega. <b>CPU</b>: paksa software (paling serasi). Cek hasil deteksi di kotak di atas — bila GPU-mu tampil &amp; encoder GPU aktif, video panjang (mis. 58 menit) bisa selesai <b>jauh lebih cepat</b>. Render paralel otomatis naik sampai 6× saat GPU dipakai.</div>
+        <div class="lbl">MODE PROSES — POTONG LANGSUNG <span class="beta">BARU · v3.9</span></div>
+        <div class="seg wrap" id="segCutMode">
+          <button data-v="render" class="on">RENDER PENUH</button><button data-v="fast">POTONG LANGSUNG</button>
+        </div>
+        <div class="substat" id="cutModeStat">RENDER PENUH — semua efek (judul, PART, subtitel, cover, musik…) diterapkan penuh</div>
+        <div class="note"><b>POTONG LANGSUNG</b> = memecah/memotong MP4 <b>tanpa me-render ulang</b>: byte video asli disalin utuh, batas part menyesuaikan <b>titik keyframe</b>. Hasil: <b>kualitas &amp; resolusi 100% asli</b> (tidak mungkin turun di bawah sumber), kecepatan ±10-60× render — sebatas kecepatan disk. Karena tanpa render, <b>teks/efek tidak ikut terbakar</b>: syaratnya judul, label PART (pilih TANPA LABEL), deskripsi, subtitel, cover, watermark, filter &amp; semua efek MATI — bila ada yang aktif, KINOSTRA otomatis memakai RENDER PENUH agar hasil tidak jebol. Cocok saat kamu cuma mau <b>memecah film jadi part cepat</b>. Berlaku juga utk potongan &amp; rentang waktu (modul 02/02B) serta BATCH EKSPOR; GABUNG VIDEO tetap render penuh.</div>
         <div class="lbl">RENDER PARALEL</div>
         <div class="seg wrap" id="segParallel">
           <button data-v="0" class="on">OTOMATIS</button><button data-v="1">1×</button>
@@ -585,6 +594,7 @@
 <script src="js/subs.js"></script>
 <script src="js/tts.js"></script>
 <script src="js/exporter.js"></script>
+<script src="js/fastcut.js"></script>
 <script src="js/batch.js"></script>
 <script src="js/ui.js"></script>
 </body>

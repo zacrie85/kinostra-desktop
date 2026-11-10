@@ -1488,6 +1488,24 @@ ipcMain.handle('sys:shutdownAbort', async () => {
   } catch (err) { return { ok: false, error: err.message }; }
 });
 
+/* v3.9: POTONG LANGSUNG — baca POTONGAN byte file sumber (untuk mem-parsing
+   box MP4 & menyalin sampel video/audio tanpa re-encode). Batas 32 MB per
+   panggilan → RAM renderer tetap datar walau file sumber gigabyte. */
+ipcMain.handle('fs:readSlice', async (e, { path: p, start, len }) => {
+  try {
+    const L = Math.max(0, Math.min(32 * 1048576, len | 0));
+    const S = Math.max(0, start | 0);
+    const fh = await fsp.open(p, 'r');
+    try {
+      const buf = Buffer.alloc(Math.min(L, Math.max(0, (await fh.stat()).size - S)));
+      if (buf.length) await fh.read(buf, 0, buf.length, S);
+      return { ok: true, data: buf };
+    } finally { await fh.close(); }
+  } catch (err) {
+    return { ok: false, data: null, error: err.message };
+  }
+});
+
 ipcMain.handle('fs:readMediaFiles', async (e, paths) => {
   // Untuk batch: baca file media dari disk jadi ArrayBuffer
   const out = [];

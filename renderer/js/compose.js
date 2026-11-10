@@ -211,8 +211,10 @@ function drawComposition(x, W, H, t) {
   } else { x.fillStyle = '#050608'; x.fillRect(0, 0, W, H); }
   /* --- PART (v2.6 posisi geser · v2.9 sadar-rentang · v2.12 sadar-potong)
          v3.0: state._noPart = true saat GABUNG VIDEO — label part tidak
-         masuk file gabungan (judul tiap film tetap tampil) --- */
-  if (!state._noPart) {
+         masuk file gabungan (judul tiap film tetap tampil)
+         v3.9: gaya TANPA LABEL (off) + slider vertikal menjangkau
+         PALING ATAS layar (dulu terhenti di ±22% tinggi) --- */
+  if (!state._noPart && state.partShow !== 'off') {
   const total = segmentsCount();
   const segB = (typeof currentSegBounds === 'function' && currentSegBounds(t))
     || { i: 0, start: rangeInfo().start, end: rangeInfo().end };
@@ -222,9 +224,10 @@ function drawComposition(x, W, H, t) {
     const tin = t - segB.start, a = clamp(1 - tin / 1.6, 0, 1);
     if (a > 0) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
-      /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal) */
+      /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal)
+         v3.9: vertikal diperluas — slider kiri = PALING ATAS layar */
       const cx = W / 2 + ppx * W * 0.30;
-      const cy = H * clamp(0.42 + ppy * 0.30, 0.10, 0.88);
+      const cy = H * clamp(0.42 + ppy * 0.40, 0.085, 0.90);
       x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy - 84 * u, 120 * u, 3 * u);
       x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u)}px "${F}"`;
       drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, cx, cy + 40 * u, 8 * u, 'center');
@@ -235,9 +238,10 @@ function drawComposition(x, W, H, t) {
     }
   } else {
     x.save();
-    /* label pojok: geser horizontal 5% → ±35% lebar, vertikal 92.5% → ±22% tinggi */
+    /* label pojok: geser horizontal 5% → ±35% lebar
+       v3.9: vertikal — slider ATAS kini sampai PALING ATAS (6% tinggi) */
     const px = W * clamp(0.05 + ppx * 0.35, 0.02, 0.68);
-    const py = H * clamp(0.925 + ppy * 0.22, 0.045, 0.985);
+    const py = H * clamp(0.925 + ppy * 0.88, 0.062, 0.985);
     x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u, 4 * u, 50 * u);
     x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u)}px "${F}"`;
     const w = drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, px + 16 * u, py, 3 * u, 'left');
@@ -246,18 +250,14 @@ function drawComposition(x, W, H, t) {
     x.restore();
   }
   }
-  /* --- JUDUL & DESKRIPSI (v2.3 ukuran · v2.6 posisi bisa digeser atas/bawah) --- */
+  /* --- JUDUL & DESKRIPSI (v2.3 ukuran · v2.6 posisi digeser atas/bawah)
+         v3.9: POSISI PENUH — slider menjangkau PALING BAWAH layar (dulu
+         terhenti di 46% tinggi) + 10 FRAME FITURISTIK di sekeliling judul
+         (state.titleFrame, katalog TITLEFRAMES — hiasan DI DALAM VIDEO,
+         pratinjau = hasil ekspor persis karena satu mesin gambar) --- */
   let yTitleBase = 0;
   if (state.titleOn && state.title) {
     x.save(); x.textAlign = 'center';
-    /* v2.6: geser vertikal ±14% tinggi layar dari posisi default
-       v2.16: frame khusus HOROR/KOPLO punya papan judul tema di ATAS —
-       judul pengguna otomatis digeser ke bawah papan (FST.titlePush) */
-    const tpy = clamp(state.titlePosY || 0, -1, 1);
-    const tPush = (FST && FST.titlePush) || 0;
-    const yLine = H * clamp(0.062 + tPush + tpy * 0.14, 0.012, 0.46);
-    x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yLine, 60 * u, 3 * u);
-    x.fillStyle = '#F2F0EA';
     const txt = state.upper ? state.title.toUpperCase() : state.title;
     const szBase = clamp(state.titleSize || 40, 14, 160);
     let fs = Math.round(szBase * u * state.titleScale);
@@ -273,10 +273,34 @@ function drawComposition(x, W, H, t) {
       guard++;
     }
     lines = lines.slice(0, 4);
-    const lh = fs * 1.18;
-    const ty0 = yLine + fs * 1.15;
+    const lh = fs * 1.18, nL = lines.length;
+    /* v3.9: posisi penuh atas → bawah. Frame HOROR/KOPLO tetap mendorong
+       judul ke bawah papan tematiknya (FST.titlePush). */
+    const tpy = clamp(state.titlePosY || 0, -1, 1);
+    const tPush = (FST && FST.titlePush) || 0;
+    let yLine = H * clamp(0.062 + tPush + tpy * 0.87, 0.012, 0.93);
+    yLine = clamp(yLine, H * 0.012, H * 0.93);
+    let ty0 = yLine + fs * 1.15;
+    /* jaga seluruh blok tetap di dalam layar walau slider mentok bawah */
+    const maxTy0 = H * 0.982 - (nL - 1) * lh - fs * 0.12;
+    if (ty0 > maxTy0) ty0 = maxTy0;
+    const yTop = ty0 - fs * 1.15;   /* titik acuan atas — garis/frame ikut teks */
+    const tfKey = state.titleFrame || 'off';
+    if (tfKey !== 'off') {
+      /* ukur lebar blok judul utk menggambar bingkai yang pas */
+      let blkW = 0;
+      for (const ln of lines) blkW = Math.max(blkW, measureSpaced(x, ln, ls));
+      drawTitleFrame(x, W, H, tfKey, {
+        cx: W / 2, x0: W / 2 - blkW / 2, x1: W / 2 + blkW / 2,
+        top: yTop, bot: ty0 + (nL - 1) * lh + fs * 0.30, fs, u
+      });
+    } else {
+      /* gaya lama: garis amber kecil di atas judul */
+      x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yTop, 60 * u, 3 * u);
+    }
+    x.fillStyle = '#F2F0EA';
     lines.forEach((ln, i) => drawSpaced(x, ln, W / 2, ty0 + i * lh, ls, 'center'));
-    yTitleBase = ty0 + (lines.length - 1) * lh;
+    yTitleBase = ty0 + (nL - 1) * lh;
     x.restore();
   }
   if (state.descOn && state.desc.trim()) {
@@ -318,6 +342,112 @@ function drawComposition(x, W, H, t) {
   if (state.neon && state.neon.on) drawNeonFrame(x, W, H, t, u, compSrc() === videoEl);
   /* --- v2.12: TRANSISI ANTAR BAGIAN (paling atas semuanya) --- */
   applyTransition(x, W, H, t);
+}
+
+/* ================================================================
+   v3.9 — 10 FRAME FITURISTIK JUDUL DI VIDEO (katalog TITLEFRAMES)
+   Hiasan di sekeliling teks judul yang TERBAKAR DI DALAM VIDEO —
+   digambar di drawComposition, jadi pratinjau = hasil ekspor persis.
+   Dipanggil SEBELUM teks judul digambar (teks selalu di lapisan atas).
+   b = { cx, x0, x1 (lebar teks), top, bot (batas blok teks), fs, u }
+   ================================================================ */
+function drawTitleFrame(x, W, H, key, b) {
+  const AMB = '#F7A600', CREAM = 'rgba(242,240,234,', u = b.u, fs = b.fs;
+  const px = fs * 0.55;                     /* ruang napas kiri-kanan */
+  const bx0 = Math.max(4 * u, b.x0 - px), bx1 = Math.min(W - 4 * u, b.x1 + px);
+  const by0 = Math.max(4 * u, b.top - fs * 0.38), by1 = Math.min(H - 4 * u, b.bot + fs * 0.30);
+  const bw = Math.max(10 * u, bx1 - bx0), bh = by1 - by0;
+  const lw = m => Math.max(2, m * fs / 52);
+  x.save(); x.lineJoin = 'round'; x.lineCap = 'round';
+  if (key === 'garis2') {
+    /* GARIS KEMBAR — dua garis emas di atas & bawah judul */
+    x.fillStyle = AMB;
+    x.fillRect(bx0, by0, bw, lw(4.5)); x.fillRect(bx0, by1 - lw(4.5), bw, lw(4.5));
+    x.fillStyle = 'rgba(247,166,0,.45)';
+    x.fillRect(bx0 + bw * 0.08, by0 + lw(4.5) + 2 * u, bw * 0.84, lw(1.8));
+    x.fillRect(bx0 + bw * 0.08, by1 - lw(4.5) - 2 * u - lw(1.8), bw * 0.84, lw(1.8));
+  } else if (key === 'kotak') {
+    /* KOTAK TEGAS — kotak garis lurus mengelilingi judul */
+    x.strokeStyle = AMB; x.lineWidth = lw(5); x.strokeRect(bx0, by0, bw, bh);
+  } else if (key === 'bingkai') {
+    /* BINGKAI GANDA — luar tebal + dalam tipis */
+    x.strokeStyle = AMB; x.lineWidth = lw(6.5); x.strokeRect(bx0, by0, bw, bh);
+    const in1 = fs * 0.26;
+    x.strokeStyle = CREAM + '.5)'; x.lineWidth = lw(2);
+    x.strokeRect(bx0 + in1, by0 + in1, bw - in1 * 2, bh - in1 * 2);
+  } else if (key === 'sudut') {
+    /* SUDUT KAMERA — empat kurungan sudut gaya viewfinder */
+    const L = Math.min(fs * 0.95, bw * 0.3), wl = lw(5);
+    x.strokeStyle = AMB; x.lineWidth = wl;
+    x.beginPath();
+    x.moveTo(bx0, by0 + L); x.lineTo(bx0, by0); x.lineTo(bx0 + L, by0);
+    x.moveTo(bx1 - L, by0); x.lineTo(bx1, by0); x.lineTo(bx1, by0 + L);
+    x.moveTo(bx0, by1 - L); x.lineTo(bx0, by1); x.lineTo(bx0 + L, by1);
+    x.moveTo(bx1 - L, by1); x.lineTo(bx1, by1); x.lineTo(bx1, by1 - L);
+    x.stroke();
+    x.fillStyle = CREAM + '.4)';
+    x.fillRect(b.cx - 8 * u, by0, 16 * u, lw(2));
+    x.fillRect(b.cx - 8 * u, by1 - lw(2), 16 * u, lw(2));
+  } else if (key === 'pita') {
+    /* PITA JUDUL — pita gelap dgn lipatan ujung + tepi emas */
+    const fold = fs * 0.45;
+    x.fillStyle = 'rgba(2,3,6,.55)';
+    x.beginPath(); x.moveTo(bx0 - fold, by0); x.lineTo(bx0, by0); x.lineTo(bx0, by1); x.lineTo(bx0 - fold, by1); x.closePath(); x.fill();
+    x.beginPath(); x.moveTo(bx1 + fold, by0); x.lineTo(bx1, by0); x.lineTo(bx1, by1); x.lineTo(bx1 + fold, by1); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(6,8,13,.85)'; x.fillRect(bx0, by0, bw, bh);
+    x.fillStyle = AMB;
+    x.fillRect(bx0, by0, bw, lw(3)); x.fillRect(bx0, by1 - lw(3), bw, lw(3));
+  } else if (key === 'sinema') {
+    /* PITA SINEMA — pita letterbox gelap selebar layar + garis emas */
+    x.fillStyle = 'rgba(2,3,6,.82)'; x.fillRect(0, by0, W, bh);
+    x.fillStyle = AMB;
+    x.fillRect(0, by0, W, lw(3)); x.fillRect(0, by1 - lw(3), W, lw(3));
+  } else if (key === 'neon') {
+    /* NEON MENYALA — bingkai membulat amber berpendar */
+    const r = fs * 0.34;
+    roundedRectPath(x, bx0, by0, bw, bh, r);
+    x.shadowColor = AMB; x.shadowBlur = fs * 0.55;
+    x.strokeStyle = 'rgba(247,166,0,.9)'; x.lineWidth = lw(5); x.stroke(); x.stroke();
+    x.shadowBlur = fs * 0.9;
+    x.strokeStyle = 'rgba(247,166,0,.35)'; x.lineWidth = lw(9); x.stroke();
+    x.shadowBlur = 0;
+    x.strokeStyle = 'rgba(255,240,214,.9)'; x.lineWidth = Math.max(1, lw(1.6)); x.stroke();
+  } else if (key === 'klasik') {
+    /* EMAS KLASIK — bingkai emas ganda + aksen sudut */
+    x.strokeStyle = '#D9A441'; x.lineWidth = lw(6); x.strokeRect(bx0, by0, bw, bh);
+    const in1 = fs * 0.24;
+    x.strokeStyle = 'rgba(217,164,65,.55)'; x.lineWidth = lw(2);
+    x.strokeRect(bx0 + in1, by0 + in1, bw - in1 * 2, bh - in1 * 2);
+    const L = Math.min(fs * 0.6, bw * 0.2), g = in1;
+    x.strokeStyle = '#D9A441'; x.lineWidth = lw(3);
+    x.beginPath();
+    x.moveTo(bx0 + g, by0 + g + L); x.lineTo(bx0 + g, by0 + g); x.lineTo(bx0 + g + L, by0 + g);
+    x.moveTo(bx1 - g - L, by0 + g); x.lineTo(bx1 - g, by0 + g); x.lineTo(bx1 - g, by0 + g + L);
+    x.moveTo(bx0 + g, by1 - g - L); x.lineTo(bx0 + g, by1 - g); x.lineTo(bx0 + g + L, by1 - g);
+    x.moveTo(bx1 - g - L, by1 - g); x.lineTo(bx1 - g, by1 - g); x.lineTo(bx1 - g, by1 - g - L);
+    x.stroke();
+  } else if (key === 'panel') {
+    /* PANEL MODERN — panel kaca gelap + bar emas kiri-kanan */
+    x.fillStyle = 'rgba(7,9,14,.72)';
+    roundedRectPath(x, bx0, by0, bw, bh, fs * 0.2); x.fill();
+    x.strokeStyle = CREAM + '.18)'; x.lineWidth = lw(2); x.stroke();
+    x.fillStyle = AMB;
+    const bwid = Math.max(4, lw(6));
+    x.fillRect(bx0 + fs * 0.22, by0 + fs * 0.22, bwid, bh - fs * 0.44);
+    x.fillRect(bx1 - fs * 0.22 - bwid, by0 + fs * 0.22, bwid, bh - fs * 0.44);
+  } else if (key === 'gradasi') {
+    /* GRADASI PANAS — latar gelap lembut + pita gradasi amber→merah */
+    x.fillStyle = 'rgba(4,5,9,.62)';
+    roundedRectPath(x, bx0, by0, bw, bh, fs * 0.18); x.fill();
+    const gh = Math.max(3, fs * 0.12);
+    const gd = x.createLinearGradient(b.x0, 0, b.x1, 0);
+    gd.addColorStop(0, '#F7A600'); gd.addColorStop(0.55, '#E85D2A'); gd.addColorStop(1, '#D7372D');
+    x.fillStyle = gd;
+    x.fillRect(b.x0, by1 - gh - fs * 0.06, Math.max(20 * u, b.x1 - b.x0), gh);
+    x.fillStyle = CREAM + '.55)';
+    x.fillRect(b.cx - 26 * u, by0 + fs * 0.16, 52 * u, lw(2));
+  }
+  x.restore();
 }
 
 /* ================================================================

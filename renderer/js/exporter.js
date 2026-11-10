@@ -1107,6 +1107,25 @@ async function exportPartsToDir(dir, ui) {
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();
+  /* v3.9: POTONG LANGSUNG — salin sampel MP4 tanpa re-encode (kualitas
+     asli 100%, resolusi asli). Syarat: SEMUA efek teks/cover/efek mati
+     (fastCutBlockedReason). Bila ada yang aktif / file tak didukung →
+     jatuh otomatis ke RENDER PENUH dengan pesan jelas. */
+  if (state.cutMode === 'fast' && !state.isAudio && state.file) {
+    const blk = (typeof fastCutBlockedReason === 'function') ? fastCutBlockedReason() : 'mode tidak tersedia';
+    if (blk) {
+      toast(`POTONG LANGSUNG butuh semua efek mati (aktif: ${blk}) — memakai RENDER PENUH`, 'warn');
+    } else {
+      try {
+        const res = await fastCutExport(segs, dir, ui);
+        if (ui.prog) ui.prog(1);
+        return res;
+      } catch (e) {
+        if (state.abort || String(e && e.message || e).includes('Dibatalkan')) throw e;
+        toast('POTONG LANGSUNG tidak didukung untuk video ini (' + ((e && e.message) || e) + ') — memakai RENDER PENUH', 'warn');
+      }
+    }
+  }
   const par = pickParallelCount(segs.length, enc.kind === 'hw');
   _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
@@ -1332,6 +1351,8 @@ function updateOutName() {
 }
 function updateExportInfo() {
   if (!state.file) { $('#expSum').textContent = 'Impor media untuk melihat ringkasan.'; return; }
+  /* v3.9: status MODE PROSES selalu segar (efek dinyalakan/dimatikan kapan pun) */
+  try { if (typeof syncCutModeStat === 'function') syncCutModeStat(); } catch (e) { }
   const sc = parseFloat(state.scale), q = QUAL[state.quality];
   /* v3.4: bitrate & dimensi ikut RESOLUSI TETAP bila dipilih (720p/1080p/2K/4K) */
   const br = exportBitrate();
@@ -1358,7 +1379,14 @@ function updateExportInfo() {
   /* v3.6: COVER PEMBUKA tampil di ringkasan — v3.7: + sumber otomatis */
   const covOn = state.cover && state.cover.on && (state.cover.auto || state.cover.img);
   const cvLine = covOn ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.auto ? ` (OTOMATIS DARI ADEGAN${state.cover.scope === 'single' ? ' · 1 SAMPUL' : ''})` : ''}${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}</b>` : '';
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}
+  /* v3.9: MODE PROSES — POTONG LANGSUNG / RENDER PENUH */
+  let modeLine = '';
+  if (state.cutMode === 'fast') {
+    const blk = (typeof fastCutBlockedReason === 'function') ? fastCutBlockedReason() : null;
+    modeLine = blk ? ` · <b>POTONG LANGSUNG</b> TAK BISA (aktif: ${blk} → RENDER PENUH)`
+      : ' · <b>POTONG LANGSUNG</b> — kualitas & resolusi ASLI, ±10-60× lebih cepat';
+  }
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}${modeLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }

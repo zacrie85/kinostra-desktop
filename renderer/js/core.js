@@ -102,6 +102,26 @@ const NEONCOLORS = [
   ['RAINBOW', 'rainbow']
 ];
 
+/* ================================================================
+   v3.9: 10 FRAME FITURISTIK JUDUL DI VIDEO — hiasan di sekeliling
+   teks JUDUL yang terbakar DI DALAM VIDEO (pratinjau = hasil ekspor,
+   karena digambar di drawComposition). BUKAN bingkai sampul 08B.
+   draw = fungsi penggambar (dipanggil compose.js dgn kotak teks).
+   ================================================================ */
+const TITLEFRAMES = [
+  { k: 'off', n: 'TANPA', d: 'Gaya lama: garis amber kecil di atas judul' },
+  { k: 'garis2', n: 'GARIS KEMBAR', d: 'Dua garis emas atas & bawah judul — sinematik minimalis' },
+  { k: 'kotak', n: 'KOTAK TEGAS', d: 'Kotak garis lurus mengelilingi judul' },
+  { k: 'bingkai', n: 'BINGKAI GANDA', d: 'Bingkai luar tebal + dalam tipis, gaya poster' },
+  { k: 'sudut', n: 'SUDUT KAMERA', d: 'Empat kurungan sudut — gaya viewfinder/kamera' },
+  { k: 'pita', n: 'PITA JUDUL', d: 'Pita gelap dgn ujung lipat + tepi emas' },
+  { k: 'sinema', n: 'PITA SINEMA', d: 'Pita letterbox gelap + garis emas atas-bawah' },
+  { k: 'neon', n: 'NEON MENYALA', d: 'Bingkai membulat menyala amber berpendar' },
+  { k: 'klasik', n: 'EMAS KLASIK', d: 'Bingkai emas ganda + aksen sudut, gaya poster lama' },
+  { k: 'panel', n: 'PANEL MODERN', d: 'Panel kaca gelap + bar emas kiri-kanan, gaya streaming' },
+  { k: 'gradasi', n: 'GRADASI PANAS', d: 'Latar gelap lembut + pita gradasi amber→merah di bawah judul' }
+];
+
 const state = {
   file: null, duration: 0, isAudio: false, audioBuffer: null, peaks: null,
   title: '', titleOn: true, autoTitle: true, desc: '', descOn: true, descPos: 'under',
@@ -113,8 +133,16 @@ const state = {
   /* v3.2: JUMLAH PART OTOMATIS — isi N → durasi per part = durasi video / N
      (0 = mati; dihitung ulang otomatis tiap video baru dimuat) */
   splitParts: 0,
-  /* v2.6: posisi teks bisa digeser (−1..1, 0 = posisi default) */
+  /* v2.6: posisi teks bisa digeser (−1..1, 0 = posisi default)
+     v3.9: rentang diperluas — judul bisa sampai PALING BAWAH layar,
+     nomor PART bisa sampai PALING ATAS layar (slider −1..1 penuh) */
   titlePosY: 0, partPosX: 0, partPosY: 0,
+  /* v3.9: FRAME JUDUL DI VIDEO — kunci TITLEFRAMES (default 'off' = gaya lama) */
+  titleFrame: 'off',
+  /* v3.9: MODE PROSES EKSPOR — 'render' (RENDER PENUH, semua efek) |
+     'fast' (POTONG LANGSUNG — salin sampel MP4 tanpa re-encode,
+     tanpa efek teks; otomatis jatuh ke render bila ada efek aktif) */
+  cutMode: 'render',
   font: 'Bebas Neue', titleScale: 1, subScale: 1, upper: true,
   subs: [], subsOn: true, subTarget: 'src',
   /* v2.5: posisi vertikal subtitel (0.45=tengah … 0.97=bawah; default 0.90) */

@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* batch read */
   readMediaFiles: (paths) => ipcRenderer.invoke('fs:readMediaFiles', paths),
   stat: (p) => ipcRenderer.invoke('fs:stat', p),
+  /* v3.9: baca potongan byte file (POTONG LANGSUNG — parsing MP4 & salin sampel) */
+  readSlice: (path, start, len) => ipcRenderer.invoke('fs:readSlice', { path, start, len }),
   /* v3.0: stat folder+nama (LANJUTKAN EKSPOR) */
   statJoin: (dir, name) => ipcRenderer.invoke('fs:statJoin', { dir, name }),
   /* v3.0: BATCH PRO — matikan PC setelah batch (dgn pembatalan) */
