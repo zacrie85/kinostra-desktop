@@ -409,9 +409,11 @@ function coverDurFor(mergeCtx) {
   if (mergeCtx && mergeCtx.off >= 0.001) return 0;   /* bukan bagian pertama gabungan */
   return clamp(C.dur || 2, 0.5, 10);
 }
-/* gambar 1 frame cover penuh layar (crop pas, latar hitam)
-   v3.6.1: partNum > 0 → cetak label nomor part di bawah judul
-   v3.7: mode OTOMATIS → covCv = kanvas sampul hasil pemindaian adegan */
+/* ================================================================
+   v3.11 — LEGACY (v3.6–v3.10): drawCoverFrame lama TIDAK DIPAKAI lagi
+   jalur ekspor (mesin cover kini NOVACUT — renderer/js/nccover.js),
+   tapi fungsi ini dipertahankan utk uji unit pixel lama (v36/v361).
+   ================================================================ */
 function drawCoverFrame(x, W, H, partNum = 0, covCv = null) {
   const C = state.cover;
   x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
@@ -432,7 +434,8 @@ function drawCoverFrame(x, W, H, partNum = 0, covCv = null) {
     drawCoverPartLabel(x, W, H, partNum, tLay);
   }
 }
-/* v3.6.1: teks label part — "PART 3" / "EPISODE 3" / "#3" dst. ('' = mati) */
+/* v3.6.1: teks label part — "PART 3" / "EPISODE 3" / "#3" dst. ('' = mati)
+   v3.11: tetap dipakai — teks badge part pada template NOVACUT */
 function coverPartText(n) {
   const P = state.cover && state.cover.part;
   if (!P || !(n > 0)) return '';
@@ -726,7 +729,10 @@ function drawAutoTitle(x, W, H, txt) {
   });
   x.restore();
 }
-/* susun sampul otomatis lengkap dari frame pilihan ke kanvas W×H */
+/* susun sampul otomatis lengkap dari frame pilihan ke kanvas W×H
+   v3.11: LEGACY — jalur ekspor kini memakai buildAutoCoverScene +
+   template NOVACUT (ncBuildCoverLayers); fungsi ini dipertahankan
+   utk uji unit pixel lama (v37). */
 function drawAutoCoverDesign(x, W, H, frameCv) {
   x.save();
   x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
@@ -740,13 +746,14 @@ function drawAutoCoverDesign(x, W, H, frameCv) {
   drawAutoTitle(x, W, H, coverTitleText());
   x.restore();
 }
-/* ---------- pemindai adegan → kanvas sampul siap pakai ----------
+/* ---------- pemindai adegan → kanvas ADEGAN MENTAH ----------
    v: elemen video sumber part ini (worker punya elemen sendiri → AMAN
    paralel); seg: {start,end} rentang part dalam detik sumber.
    v3.8 scope 'single': semua part memakai window pindai yang sama
-   (menit 5–7 film) → sampul sama persis untuk semua part film itu.
-   Mengembalikan kanvas W×H berisi sampul final (bingkai + judul). */
-async function buildAutoCover(v, seg, W, H) {
+   (menit 5–7 film) → latar sama persis untuk semua part film itu.
+   v3.11: kembalikan ADEGAN MENTAH (tanpa desain) — desain template
+   NOVACUT diterapkan ncBuildCoverLayers di renderPartWorker. */
+async function buildAutoCoverScene(v, seg, W, H) {
   /* v3.8: scope 'single' — SATU sampul untuk SEMUA part film: window
      pindai MENIT 5–7 dari awal video (saran pengguna — adegan cerita,
      aman dari intro/kredit), video pendek proporsional. Semua worker
@@ -789,8 +796,16 @@ async function buildAutoCover(v, seg, W, H) {
   }
   await seekTo(seg.start, v);   /* kembali ke awal part untuk render konten */
   const out = document.createElement('canvas'); out.width = W; out.height = H;
-  drawAutoCoverDesign(out.getContext('2d', { alpha: false }), W, H, keep);
-  console.info(`cover otomatis (v3.8): adegan @ ${fmtT(bestT)} dipilih (skor ${best === -Infinity ? 'n/a' : best.toFixed(2)}, dari ${fr.length} kandidat) · rentang ${fmtT(w0)}–${fmtT(w1)}${(state.cover.auto && state.cover.scope === 'single') ? ' · SATU sampul utk SEMUA part film ini' : ' · per part'}`);
+  out.getContext('2d', { alpha: false }).drawImage(keep, 0, 0);
+  console.info(`cover otomatis (v3.8): adegan @ ${fmtT(bestT)} dipilih (skor ${best === -Infinity ? 'n/a' : best.toFixed(2)}, dari ${fr.length} kandidat) · rentang ${fmtT(w0)}–${fmtT(w1)}${(state.cover.auto && state.cover.scope === 'single') ? ' · SATU latar utk SEMUA part film ini' : ' · per part'}`);
+  return out;
+}
+/* LEGACY v3.7–v3.10: sampul desain lama (adegan + bingkai + judul) —
+   dipertahankan utk uji unit lama; ekspor memakai mesin NOVACUT */
+async function buildAutoCover(v, seg, W, H) {
+  const scene = await buildAutoCoverScene(v, seg, W, H);
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  drawAutoCoverDesign(out.getContext('2d', { alpha: false }), W, H, scene);
   return out;
 }
 
@@ -962,26 +977,37 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     venc.configure({ ...vCfg, latencyMode: 'realtime' });
     const CAP = hw ? 40 : 14;
 
-    /* v3.6: COVER PEMBUKA — encode frame cover statis SEBELUM konten video.
-       PTS cover mulai 0; PTS konten digeser +coverD (lihat outTs di bawah).
-       Frame pertama cover = keyframe agar pemutaran & seek mulus. */
+    /* ================================================================
+       v3.11 — COVER NOVACUT: frame cover ANIMATIF + TRANSISI ke video.
+       Lapisan dibangun SEKALI per part (bg/title/part/frame + final);
+       tiap frame: latar KEN BURNS + judul & badge part dgn animasi
+       masuk (8 gaya) + bingkai statis — persis pratinjau. Setelah
+       cover, frame konten pertama dicampur dgn cover final lewat
+       mesin TRANSISI NOVACUT (28 gaya) di drawAt bawah.
+       ================================================================ */
+    let _covLayers = null, _covTransCv = null;
     if (coverD > 0) {
       const nC = Math.max(1, Math.round(coverD * fps));
-      /* v3.6.1: nomor part utk label sampul — GABUNG polos tanpa nomor */
+      /* v3.6.1: nomor part utk badge sampul — GABUNG polos tanpa nomor */
       const pNo = mergeCtx ? 0 : seg.i + 1;
-      /* v3.7: mode OTOMATIS — pindai adegan part ini (rentang waktunya
-         sendiri) lalu susun sampul bingkai + judul SEBELUM frame cover
-         di-encode; tiap worker punya kanvas sendiri → aman paralel */
-      let covCv = null;
+      /* v3.7/v3.8: mode OTOMATIS — pindai adegan (rentang part ini atau
+         window menit 5–7 utk scope single) → latar template NOVACUT */
+      let sceneCv = null;
       if (state.cover.auto) {
         _stage = 'cover-auto';
-        covCv = await buildAutoCover(v, seg, W, H);
+        sceneCv = await buildAutoCoverScene(v, seg, W, H);
       }
-      const pLbl = coverPartText(pNo);
+      _stage = 'cover-build';
+      _covLayers = ncBuildCoverLayers(W, H, {
+        img: state.cover.auto ? sceneCv : state.cover.img,
+        title: coverTitleText(),
+        part: coverPartText(pNo),
+        nc: state.cover.nc
+      });
       for (let i = 0; i < nC; i++) {
         if (state.abort) throw new Error('Dibatalkan');
         if (state.exportFatal) throw state.exportFatal;
-        drawCoverFrame(ec, W, H, pNo, covCv);
+        ncComposeCoverFrame(ec, W, H, _covLayers, { p: nC > 1 ? i / (nC - 1) : 1, tLocal: i / fps, dur: coverD, animate: true });
         const vf = new VideoFrame(ecv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
         venc.encode(vf, { keyFrame: i === 0 }); vf.close();
         n++; slot.fr = n;
@@ -991,7 +1017,13 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           if (state.exportFatal) throw state.exportFatal;
         }
       }
-      console.info(`part ${seg.i + 1}: cover pembuka ${coverD.toFixed(1)} dtk (${nC} frame)${state.cover.auto ? ' · SUMBER OTOMATIS dari adegan video (v3.7)' : ''}${pLbl ? ` · label sampul "${pLbl}"` : ''} dimasukkan di awal (v3.6)`);
+      /* kanvas sumber transisi = cover FINAL (tanpa animasi) */
+      const _ncS = state.cover.nc || {};
+      if (_ncS.trans && _ncS.trans !== 'off') {
+        _covTransCv = document.createElement('canvas'); _covTransCv.width = W; _covTransCv.height = H;
+        _covTransCv.getContext('2d', { alpha: false }).drawImage(_covLayers.final, 0, 0);
+      }
+      console.info(`part ${seg.i + 1}: cover NOVACUT ${coverD.toFixed(1)} dtk (${nC} frame · ${_covLayers.nc.layout}/${_covLayers.nc.palette} · latar ${_covLayers.nc.bg} · bingkai ${_covLayers.nc.frame} · fx ${_covLayers.nc.fx} · judul ${_covLayers.nc.titleAnim} · part ${_covLayers.nc.partAnim})${_covTransCv ? ` + TRANSISI ${_covLayers.nc.trans} ${((state.cover.nc && state.cover.nc.transDur) || 0.6).toFixed(2)} dtk` : ' · potong langsung'} (v3.11)`);
     }
 
     /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata
@@ -999,10 +1031,25 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
        v3.0: + offset global mergeCtx.off saat GABUNG VIDEO
        v3.9: srcOpsional — jalur KILAT menyusun dari kanvas dekoder,
        bukan elemen video (default = elemen video part ini) */
+    /* v3.11: TRANSISI COVER → VIDEO — frame konten pertama (dalam
+       durasi transisi) digambar dulu ke kanvas bantu lalu dicampur
+       dgn cover final lewat ncApplyTransition (28 gaya NOVACUT).
+       PTS & jumlah frame TIDAK berubah — hanya gambar yang diblend. */
+    const _transDur = _covTransCv ? clamp((state.cover.nc && state.cover.nc.transDur) || 0.6, 0.2, 1.5) : 0;
+    const _vcv = _covTransCv ? (() => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; })() : null;
     const drawAt = (t, ts, srcOpsional = null) => {
-      setCompSrc(srcOpsional || v);
-      drawComposition(ec, W, H, t);
-      setCompSrc(null);
+      const localOut = (t - seg.start) / spd;
+      if (_covTransCv && localOut < _transDur) {
+        setCompSrc(srcOpsional || v);
+        drawComposition(_vcv.getContext('2d', { alpha: false }), W, H, t);
+        setCompSrc(null);
+        const p = clamp(localOut / _transDur, 0, 1);
+        ncApplyTransition(state.cover.nc.trans, ec, _covTransCv, _vcv, p, W, H, (_covLayers && _covLayers.pal) ? _covLayers.pal.acc : '#fff');
+      } else {
+        setCompSrc(srcOpsional || v);
+        drawComposition(ec, W, H, t);
+        setCompSrc(null);
+      }
       const vf = new VideoFrame(ecv, { timestamp: ts, duration: Math.round(1e6 / fps) });
       venc.encode(vf, { keyFrame: n % (fps * 2) === 0 }); vf.close();
       n++; nMain++; slot.fr = n;

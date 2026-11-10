@@ -416,27 +416,28 @@ function mimeCover(nm) {
 function syncCoverUI() {
   const el = $('#coverStat');
   if (!el) return;
-  /* v3.6.1: info label part aktif ikut tampil di status */
-  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b>${(state.cover.partPos == null || state.cover.partPos >= 100) ? ' di bawah judul' : ` (${state.cover.partPos}% · ${posisiLabel(state.cover.partPos)})`}` : '';
-  /* v3.9: info bingkai judul + posisi judul */
-  const tf = state.cover.titleFrame && state.cover.titleFrame !== 'TANPA' ? ` · bingkai judul <b>${state.cover.titleFrame}</b>` : '';
-  const tp = (state.cover.titlePos == null || state.cover.titlePos === 80) ? '' : ` · judul ${state.cover.titlePos}% (${posisiLabel(state.cover.titlePos)})`;
-  /* v3.7: tampilkan sembunyikan panel sesuai sumber cover */
-  const rowM = $('#coverManualRow'), boxA = $('#coverAutoBox'), btnP = $('#btnCoverPrev');
+  /* v3.11: status mesin NOVACUT — layout × palet + bingkai + transisi */
+  const nc = state.cover.nc || {};
+  const partLine = state.cover.part ? ` · label <b>${state.cover.part === '#' ? '#' : state.cover.part}</b>` : '';
+  const layN = (typeof NCLAYOUTS !== 'undefined' && (NCLAYOUTS.find(l => l.k === nc.layout) || {}).n) || nc.layout;
+  const palN = (typeof NCPALETTES !== 'undefined' && (NCPALETTES.find(p => p.k === nc.palette) || {}).n) || nc.palette;
+  const trN = nc.trans && nc.trans !== 'off' ? ` · transisi <b>${(typeof ncTransById === 'function' && (ncTransById(nc.trans) || {}).n) || nc.trans}</b>` : ' · potong langsung';
+  const frN = nc.frame && nc.frame !== 'none' ? ` · bingkai ${nc.frame.toUpperCase()}` : '';
+  const rowM = $('#coverManualRow'), btnP = $('#btnCoverPrev');
   if (rowM) rowM.style.display = state.cover.auto ? 'none' : '';
-  if (boxA) boxA.style.display = state.cover.auto ? '' : 'none';
   if (btnP) btnP.style.display = state.cover.auto ? '' : 'none';
+  ncSyncCoverPreview();
   if (state.cover.auto) {
     const scopeTxt = state.cover.scope === 'single' ? '1 SAMPUL SEMUA PART' : 'OTOMATIS TIAP PART';
     const scopeInfo = state.cover.scope === 'single'
-      ? 'satu sampul untuk SEMUA part film ini (dipindai sekali · nomor part tetap otomatis)'
-      : 'tiap part dapat adegan &amp; cover berbeda';
+      ? 'satu latar untuk SEMUA part film ini (dipindai sekali · nomor part tetap otomatis)'
+      : 'tiap part dapat adegan &amp; latar cover berbeda';
     el.innerHTML = state.cover.on
-      ? `<b style="color:var(--acc)">AKTIF · ${scopeTxt}</b> · bingkai <b>${state.cover.style || 'KLASIK'}</b>${tf} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}${tp} — ${scopeInfo}`
-      : `Mode <b>${scopeTxt}</b> siap — nyalakan <b>AKTIF</b> agar tiap file mendapat sampul otomatis (bingkai ${state.cover.style || 'KLASIK'}${tf}${partLine})`;
+      ? `<b style="color:var(--acc)">AKTIF · ${scopeTxt}</b> · <b>${layN}</b> × <b>${palN}</b>${frN}${trN} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine} — ${scopeInfo}`
+      : `Mode <b>${scopeTxt}</b> siap — nyalakan <b>AKTIF</b> agar tiap file mendapat cover template <b>${layN} × ${palN}</b>${partLine}`;
   } else {
     el.innerHTML = state.cover.img
-      ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
+      ? `<b style="color:${state.cover.on ? 'var(--acc)' : 'var(--tx2)'}">${state.cover.on ? 'AKTIF' : 'SIAP (MATI)'}</b> · ${state.cover.name} · <b>${layN}</b> × <b>${palN}</b>${frN}${trN} · tampil ${state.cover.dur} dtk di awal tiap file ekspor${partLine}`
       : 'Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS (TIAP PART / 1 SAMPUL)';
   }
 }
@@ -512,44 +513,137 @@ bindSeg('segCoverSrc', v => {
       : 'Sumber cover: OTOMATIS TIAP PART — tiap part memindai adegannya sendiri, cover tiap part berbeda-beda', 'ok');
   }
 });
-bindSeg('segCoverStyle', v => {
-  state.cover.style = v || 'KLASIK';
-  syncCoverUI();
-  toast(`Gaya bingkai sampul otomatis: ${state.cover.style}`, 'ok');
-});
 /* ================================================================
-   v3.9 — BINGKAI JUDUL (10 gaya) + POSISI JUDUL & POSISI PART
-   Judul sampul otomatis kini dibungkus bingkai pilihan (TANPA + 10);
-   POSISI JUDUL digeser 0 (paling atas) → 100 (paling bawah);
-   POSISI PART digeser 0 (paling atas) → 100 (paling bawah, default —
-   persis perilaku lama). Label part selalu otomatis menghindari judul.
+   v3.11 — MESIN COVER NOVACUT (modul 08B): handler UI lengkap.
+   LAYOUT × PALET = 100 template, LATAR, BINGKAI, EFEK KEN BURNS,
+   ANIMASI masuk judul/part cover, TRANSISI cover→video (28) +
+   durasi, PRATINJAU langsung + MODAL pemutaran cover+transisi.
    ================================================================ */
-bindSeg('segCoverTitleFrame', v => {
-  state.cover.titleFrame = v || 'TANPA';
-  syncCoverUI();
-  toast(state.cover.titleFrame === 'TANPA'
-    ? 'Bingkai judul: TANPA — judul polos seperti sebelumnya'
-    : `Bingkai judul: ${state.cover.titleFrame} — judul di sampul otomatis kini berbingkai`, 'ok');
-});
+function ncSyncCoverPreview() {
+  const pcv = $('#coverPreviewCv');
+  if (!pcv || typeof ncBuildCoverLayers !== 'function') return;
+  const W = 640, H = state.ratio === '9:16' ? 1138 : 360;   /* 640×360 / 640×1138 */
+  const h = state.ratio === '9:16' ? 1138 : 360;
+  pcv.width = W; pcv.height = h;
+  let img = null;
+  if (state.cover.auto && videoEl && videoEl.videoWidth) {
+    const c = document.createElement('canvas'); c.width = W; c.height = h;
+    setCompSrc(videoEl);
+    drawComposition(c.getContext('2d', { alpha: false }), W, h, videoEl.currentTime || 0);
+    setCompSrc(null);
+    img = c;
+  } else if (state.cover.img) img = state.cover.img;
+  const L = ncBuildCoverLayers(W, h, {
+    img,
+    title: coverTitleText(),
+    part: coverPartText(1),
+    nc: state.cover.nc
+  });
+  pcv.getContext('2d', { alpha: false }).drawImage(L.final, 0, 0);
+}
+if ($('#coverLayoutChips') && typeof NCLAYOUTS !== 'undefined') {
+  const g = $('#coverLayoutChips'); g.innerHTML = '';
+  NCLAYOUTS.forEach(l => {
+    const b = document.createElement('button');
+    b.dataset.v = l.k;
+    b.className = 'fchip' + (state.cover.nc.layout === l.k ? ' on' : '');
+    b.innerHTML = `<span>${l.n}</span>`;
+    b.onclick = () => {
+      state.cover.nc.layout = l.k;
+      [...g.children].forEach(c => c.classList.remove('on')); b.classList.add('on');
+      syncCoverUI();
+      toast(`Layout cover: ${l.n}`, 'ok');
+    };
+    g.appendChild(b);
+  });
+}
+if ($('#coverPaletteChips') && typeof NCPALETTES !== 'undefined') {
+  const g = $('#coverPaletteChips'); g.innerHTML = '';
+  NCPALETTES.forEach(p => {
+    const b = document.createElement('button');
+    b.dataset.v = p.k;
+    b.className = 'fchip' + (state.cover.nc.palette === p.k ? ' on' : '');
+    b.style.background = `linear-gradient(135deg, ${p.bg1} 15%, ${p.acc} 85%)`;
+    b.style.color = p.fg;
+    b.title = `${p.n} — aksen ${p.acc}`;
+    b.innerHTML = `<span>${p.n}</span>`;
+    b.onclick = () => {
+      state.cover.nc.palette = p.k;
+      [...g.children].forEach(c => c.classList.remove('on')); b.classList.add('on');
+      syncCoverUI();
+      toast(`Palet cover: ${p.n}`, 'ok');
+    };
+    g.appendChild(b);
+  });
+}
+bindSeg('segCoverBg', v => { state.cover.nc.bg = v; ncSyncCoverPreview(); toast(v === 'hitam' ? 'Latar cover: HITAM polos + vignette' : 'Latar cover: ADEGAN — frame video / gambar manual', 'ok'); });
+bindSeg('segCoverFrame', v => { state.cover.nc.frame = v; ncSyncCoverPreview(); syncCoverUI(); toast(v === 'none' ? 'Bingkai cover: TANPA' : `Bingkai cover: ${v.toUpperCase()} — transparan 75% di tepi cover`, 'ok'); });
+bindSeg('segCoverFx', v => { state.cover.nc.fx = v; toast(v === 'off' ? 'Efek cover: DIAM — latar statis' : `Efek cover: KEN BURNS ${v === 'in' ? 'ZOOM IN' : v === 'out' ? 'ZOOM OUT' : v === 'panx' ? 'PAN KIRI↔KANAN' : 'PAN ATAS↔BAWAH'}`, 'ok'); });
+/* animasi masuk — cover & video (9 chip: TANPA + 8 gaya NOVACUT) */
+function ncBindAnimSeg(id, key, label, isCover) {
+  const box = $('#' + id);
+  if (!box) return;
+  if (!box.children.length && typeof NCTEXTANIMS !== 'undefined') {
+    NCTEXTANIMS.forEach(a => {
+      const b = document.createElement('button');
+      b.dataset.v = a.k; b.textContent = a.n;
+      if ((isCover ? state.cover.nc[key] : state[key]) === a.k) b.classList.add('on');
+      box.appendChild(b);
+    });
+  }
+  bindSeg(id, v => {
+    if (isCover) state.cover.nc[key] = v; else state[key] = v;
+    setSegOn(id, v);
+    if (isCover) ncSyncCoverPreview();
+    toast(v === 'off' ? `${label}: TANPA — tampil langsung` : `${label}: ${v.toUpperCase()} — masuk dengan animasi NOVACUT`, 'ok');
+  });
+}
+ncBindAnimSeg('segCoverTitleAnim', 'titleAnim', 'Animasi judul cover', true);
+ncBindAnimSeg('segCoverPartAnim', 'partAnim', 'Animasi part cover', true);
+ncBindAnimSeg('segTitleAnim', 'titleAnim', 'Animasi masuk judul', false);
+ncBindAnimSeg('segPartAnim', 'partAnim', 'Animasi masuk part', false);
+/* chips transisi bergrup (4 kategori) — satu state, sinkron antar grup */
+if ($('#coverTransChips') && typeof NCTRANS !== 'undefined') {
+  const g = $('#coverTransChips'); g.innerHTML = '';
+  const allBtns = [];
+  const mkBtn = (val, name, title) => {
+    const b = document.createElement('button');
+    b.className = 'fchip'; b.dataset.v = val; b.title = title || name;
+    b.innerHTML = `<span>${name}</span>`;
+    b.onclick = () => {
+      state.cover.nc.trans = val;
+      allBtns.forEach(x => x.classList.toggle('on', x.dataset.v === val));
+      syncCoverUI();
+      toast(val === 'off' ? 'Transisi: TANPA — potong langsung seperti dulu' : `Transisi cover → video: ${name}`, 'ok');
+    };
+    allBtns.push(b); return b;
+  };
+  const g0 = document.createElement('div'); g0.className = 'seg wrap'; g0.style.marginBottom = '4px';
+  g0.appendChild(mkBtn('off', 'TANPA', 'Potong langsung — tanpa transisi'));
+  g.appendChild(g0);
+  let lastG = null, gBox = null;
+  NCTRANS.forEach(t => {
+    if (t.g !== lastG) {
+      lastG = t.g;
+      const h = document.createElement('div'); h.className = 'fghead'; h.textContent = t.g; g.appendChild(h);
+      gBox = document.createElement('div'); gBox.className = 'seg wrap'; gBox.style.marginBottom = '4px';
+      g.appendChild(gBox);
+    }
+    gBox.appendChild(mkBtn(t.k, t.n, t.d));
+  });
+  allBtns.forEach(x => x.classList.toggle('on', x.dataset.v === state.cover.nc.trans));
+}
+if ($('#inCoverTransDur')) {
+  const lbl = $('#coverTransDurV');
+  $('#inCoverTransDur').oninput = e => {
+    state.cover.nc.transDur = clamp(parseFloat(e.target.value) || 0.6, 0.2, 1.5);
+    if (lbl) lbl.textContent = state.cover.nc.transDur.toFixed(2) + ' dtk';
+  };
+  $('#inCoverTransDur').onchange = () => toast(`Durasi transisi: ${state.cover.nc.transDur.toFixed(2)} detik`, 'ok');
+}
 function posisiLabel(p, elem) { return p <= 4 ? 'paling atas' : p >= 96 ? 'paling bawah' : (p < 40 ? 'atas' : p > 60 ? 'bawah' : 'tengah'); }
-if ($('#inTitlePos')) {
-  const lbl = $('#titlePosV');
-  $('#inTitlePos').oninput = e => {
-    state.cover.titlePos = clamp(parseInt(e.target.value) || 0, 0, 100);
-    if (lbl) lbl.textContent = `${state.cover.titlePos}% · ${posisiLabel(state.cover.titlePos)}`;
-  };
-  $('#inTitlePos').onchange = () => toast(`Posisi judul: ${state.cover.titlePos}% (${posisiLabel(state.cover.titlePos)})`, 'ok');
-}
-if ($('#inPartPos')) {
-  const lbl2 = $('#partPosV');
-  $('#inPartPos').oninput = e => {
-    state.cover.partPos = clamp(parseInt(e.target.value) || 0, 0, 100);
-    if (lbl2) lbl2.textContent = `${state.cover.partPos}% · ${posisiLabel(state.cover.partPos)}`;
-  };
-  $('#inPartPos').onchange = () => toast(`Posisi tulisan part: ${state.cover.partPos}% (${posisiLabel(state.cover.partPos)})${state.cover.partPos <= 4 ? ' — paling atas sesuai permintaanmu kawan!' : ''}`, 'ok');
-}
-if ($('#inCoverTitle')) $('#inCoverTitle').oninput = e => { state.cover.title = e.target.value; };
-/* pratinjau contoh sampul otomatis dari video yang sedang dimuat */
+if ($('#inCoverTitle')) $('#inCoverTitle').oninput = e => { state.cover.title = e.target.value; ncSyncCoverPreview(); };
+/* pratinjau contoh cover otomatis dari video yang sedang dimuat (v3.11: template NOVACUT) */
 if ($('#btnCoverPrev')) $('#btnCoverPrev').onclick = async () => {
   const b = $('#btnCoverPrev');
   if (!state.file || state.isAudio) { toast('Impor video dulu — pratinjau mengambil adegan dari video yang dimuat', 'warn'); return; }
@@ -561,20 +655,83 @@ if ($('#btnCoverPrev')) $('#btnCoverPrev').onclick = async () => {
     try { videoEl.pause(); } catch (e) { }
     const dims = state.ratio === '9:16' ? { W: 720, H: 1280 } : { W: 1280, H: 720 };
     const segEnd = Math.max(0.5, state.duration || videoEl.duration || 5);
-    const cvp = await buildAutoCover(videoEl, { start: 0, end: segEnd }, dims.W, dims.H);
+    const scene = await buildAutoCoverScene(videoEl, { start: 0, end: segEnd }, dims.W, dims.H);
     await seekTo(t0, videoEl);   /* kembalikan playhead seperti semula */
+    const L = ncBuildCoverLayers(dims.W, dims.H, {
+      img: scene, title: coverTitleText(), part: coverPartText(1), nc: state.cover.nc
+    });
     const subPrev = state.cover.scope === 'single'
-      ? 'Contoh dari video yang dimuat — sampul INI akan dipakai SEMUA part film ini (nomor part tetap otomatis)'
+      ? 'Contoh dari video yang dimuat — latar INI dipakai SEMUA part film ini (nomor part tetap otomatis)'
       : 'Contoh dari video yang dimuat — saat ekspor, TIAP PART mengambil adegan dari rentangnya sendiri';
-    showModal({ title: 'PRATINJAU COVER OTOMATIS', sub: subPrev, cancel: false, body: '<canvas id="autoPrevCv" style="width:100%;border-radius:10px;background:#000"></canvas>' });
+    showModal({ title: 'PRATINJAU COVER OTOMATIS — NOVACUT', sub: subPrev, cancel: false, body: '<canvas id="autoPrevCv" style="width:100%;border-radius:10px;background:#000"></canvas>' });
     const pcv = $('#autoPrevCv');
     pcv.width = dims.W; pcv.height = dims.H;
-    pcv.getContext('2d').drawImage(cvp, 0, 0);
+    pcv.getContext('2d').drawImage(L.final, 0, 0);
     M.c.textContent = 'TUTUP'; M.c.style.display = ''; M.c.onclick = hideModal;
     if (M.b) M.b.hidden = true;
   } catch (e) {
     toast('Gagal pratinjau cover: ' + (e.message || e), 'err');
   } finally { b.disabled = false; }
+};
+/* ================================================================
+   v3.11 — MODAL PEMUTARAN PRATINJAU: cover animatif → transisi →
+   video. Menunjukkan persis apa yang terjadi saat ekspor: cover
+   KEN BURNS + judul/badge part masuk dengan animasinya, lalu frame
+   video pertama dicampur lewat transisi pilihan (28 gaya).
+   ================================================================ */
+if ($('#btnCoverPlay')) $('#btnCoverPlay').onclick = () => {
+  if (!state.file || state.isAudio) { toast('Impor video dulu — pratinjau memakai frame video', 'warn'); return; }
+  const dims = state.ratio === '9:16' ? { W: 720, H: 1280 } : { W: 1280, H: 720 };
+  showModal({
+    title: 'PRATINJAU COVER + TRANSISI — NOVACUT',
+    sub: `${(NCLAYOUTS.find(l => l.k === state.cover.nc.layout) || {}).n || ''} × ${(NCPALETTES.find(p => p.k === state.cover.nc.palette) || {}).n || ''} · transisi ${state.cover.nc.trans === 'off' ? 'TANPA (potong langsung)' : (ncTransById(state.cover.nc.trans) || {}).n || state.cover.nc.trans}`,
+    cancel: false,
+    body: `<canvas id="ncPlayCv" style="width:100%;border-radius:10px;background:#000"></canvas><div class="note">Fase 1: cover tampil ${state.cover.dur} dtk (KEN BURNS + animasi judul &amp; part) → Fase 2: transisi cover → video → Fase 3: video berjalan. Berulang otomatis.</div>`
+  });
+  M.c.textContent = 'TUTUP'; M.c.style.display = ''; M.c.onclick = hideModal;
+  if (M.b) M.b.hidden = true;
+  const pcv = $('#ncPlayCv'); pcv.width = dims.W; pcv.height = dims.H;
+  const pg = pcv.getContext('2d', { alpha: false });
+  try { videoEl.pause(); } catch (e) { }
+  const W = dims.W, H = dims.H;
+  /* latar cover = frame video saat ini (atau gambar manual) */
+  const sceneC = document.createElement('canvas'); sceneC.width = W; sceneC.height = H;
+  if (state.cover.img && !state.cover.auto) {
+    const iw = state.cover.img.naturalWidth || state.cover.img.width, ih = state.cover.img.naturalHeight || state.cover.img.height;
+    const s = Math.max(W / iw, H / ih) * 1.02;
+    sceneC.getContext('2d', { alpha: false }).drawImage(state.cover.img, (W - iw * s) / 2, (H - ih * s) / 2, iw * s, ih * s);
+  } else {
+    setCompSrc(videoEl);
+    drawComposition(sceneC.getContext('2d', { alpha: false }), W, H, videoEl.currentTime || 0);
+    setCompSrc(null);
+  }
+  const L = ncBuildCoverLayers(W, H, {
+    img: sceneC, title: coverTitleText(), part: coverPartText(1), nc: state.cover.nc
+  });
+  const vcCv = document.createElement('canvas'); vcCv.width = W; vcCv.height = H;
+  const vcx = vcCv.getContext('2d', { alpha: false });
+  const covD = clamp(state.cover.dur || 2, 1, 5);
+  const trD = state.cover.nc.trans && state.cover.nc.trans !== 'off' ? clamp(state.cover.nc.transDur || 0.6, 0.2, 1.5) : 0;
+  const total = covD + trD + 1.2;
+  let raf = null, t0 = performance.now();
+  const loop = () => {
+    if (M.el.classList.contains('hidden') || !document.getElementById('ncPlayCv')) { cancelAnimationFrame(raf); return; }
+    const tl = ((performance.now() - t0) / 1000) % total;
+    if (tl < covD) {
+      ncComposeCoverFrame(pg, W, H, L, { p: tl / covD, tLocal: tl, dur: covD, animate: true });
+    } else if (tl < covD + trD) {
+      setCompSrc(videoEl);
+      drawComposition(vcx, W, H, videoEl.currentTime || 0);
+      setCompSrc(null);
+      ncApplyTransition(state.cover.nc.trans, pg, L.final, vcCv, clamp((tl - covD) / trD, 0, 1), W, H, L.pal.acc);
+    } else {
+      setCompSrc(videoEl);
+      drawComposition(pg, W, H, videoEl.currentTime || 0);
+      setCompSrc(null);
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
 };
 syncCoverUI();
 

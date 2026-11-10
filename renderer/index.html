@@ -177,6 +177,15 @@
         <div class="lbl">FRAME JUDUL DI VIDEO — 10 GAYA <span class="beta">BARU · v3.9</span></div>
         <div class="chips" id="titleFrameChips"></div>
         <div class="note">Hiasan di sekeliling <b>JUDUL DI DALAM VIDEO</b> (bukan di sampul) — terbakar ikut ekspor: GARIS KEMBAR, KOTAK TEGAS, BINGKAI GANDA, SUDUT KAMERA, PITA JUDUL, PITA SINEMA, NEON MENYALA, EMAS KLASIK, PANEL MODERN &amp; GRADASI PANAS. Pratinjau = hasil akhir persis. Kombinasikan dengan slider POSISI JUDUL (kini bisa sampai <b>paling bawah layar</b>) dan slider POSISI PART (kini bisa sampai <b>paling atas layar</b>).</div>
+        <div class="lbl">ANIMASI MASUK JUDUL <span class="beta">BARU · v3.11 — 8 GAYA NOVACUT</span></div>
+        <div class="seg wrap" id="segTitleAnim">
+          <button data-v="off" class="on">TANPA</button><button data-v="fade">FADE</button><button data-v="rise">RISE UP</button><button data-v="typewriter">TYPEWRITER</button><button data-v="slam">TITLE SLAM</button><button data-v="neon">NEON FLICKER</button><button data-v="tracking">TRACKING</button><button data-v="glitch">GLITCH</button><button data-v="wipe">WIPE</button>
+        </div>
+        <div class="lbl">ANIMASI MASUK PART <span class="beta">BARU · v3.11 — 8 GAYA NOVACUT</span></div>
+        <div class="seg wrap" id="segPartAnim">
+          <button data-v="off" class="on">TANPA</button><button data-v="fade">FADE</button><button data-v="rise">RISE UP</button><button data-v="typewriter">TYPEWRITER</button><button data-v="slam">TITLE SLAM</button><button data-v="neon">NEON FLICKER</button><button data-v="tracking">TRACKING</button><button data-v="glitch">GLITCH</button><button data-v="wipe">WIPE</button>
+        </div>
+        <div class="note">Judul &amp; tulisan PART <b>masuk dengan animasi</b> di awal tiap part — port dari NOVACUT Studio: TITLE SLAM (menghantam dari besar), TYPEWRITER (mesin ketik + kursor), TRACKING (huruf merapat), GLITCH (bayangan RGB), WIPE (sapuan), RISE UP (naik), NEON FLICKER (berkelip) &amp; FADE.</div>
         <div class="row" style="align-items:center">
           <button class="btn sm" id="btnTextPosReset"><i data-lucide="rotate-ccw"></i> RESET POSISI TEKS</button>
         </div>
@@ -436,9 +445,9 @@
     </div>
 
     <div class="mod" id="m8b">
-      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.9.0</span></span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA · MESIN NOVACUT <span class="beta">BARU · v3.11</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
-        <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Tiga sumber: <b>MANUAL</b> (impor PNG/JPG/WebP / STUDIO SAMPUL), <b>OTOMATIS TIAP PART</b> (v3.7 — cover tiap part beda dari adegannya), atau <b>1 SAMPUL SEMUA PART</b> (v3.8 — pindai sekali per film, dipakai semua part-nya).</div>
+        <div class="note">Mesin cover kini <b>NOVACUT</b> — port penuh dari NOVACUT Studio: <b>100 template</b> (10 layout × 10 palet), latar <b>ADEGAN</b> video / gambar manual / <b>HITAM</b>, bingkai cover, efek <b>KEN BURNS</b>, <b>28 TRANSISI</b> cover → video (Trailer Hollywood · Iklan · Sinematik · Trend Viral) dan <b>animasi masuk</b> judul + tulisan part. Tampil di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR</b> &amp; <b>GABUNG VIDEO</b>.</div>
         <div class="seg" id="segCover">
           <button data-v="off" class="on">MATI</button><button data-v="on">AKTIF</button>
         </div>
@@ -451,37 +460,40 @@
           <button class="btn" id="btnCoverStudio"><i data-lucide="wand-2"></i> BUAT DI STUDIO SAMPUL</button>
         </div>
         <button class="btn wide" id="btnCoverPrev" style="display:none"><i data-lucide="eye"></i> PRATINJAU CONTOH COVER OTOMATIS</button>
-        <div id="coverAutoBox" style="display:none">
-          <div class="lbl">GAYA BINGKAI SAMPUL OTOMATIS</div>
-          <div class="seg" id="segCoverStyle">
-            <button data-v="KLASIK" class="on">KLASIK</button><button data-v="GARIS">GARIS</button><button data-v="SINEMA">SINEMA</button><button data-v="TANPA">TANPA</button>
-          </div>
-          <input class="in" id="inCoverTitle" placeholder="Judul di sampul otomatis — kosongkan = judul video" maxlength="80">
-          <div class="lbl">BINGKAI JUDUL <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— 10 gaya di sekeliling judul</span></div>
-          <div class="seg wrap" id="segCoverTitleFrame">
-            <button data-v="TANPA" class="on">TANPA</button><button data-v="KOTAK">KOTAK</button><button data-v="GANDA">GANDA</button><button data-v="PITA">PITA</button><button data-v="SUDUT">SUDUT EMAS</button><button data-v="NEON">NEON</button><button data-v="STRIP">FILM STRIP</button><button data-v="EMAS">GARIS EMAS</button><button data-v="KACA">KACA</button><button data-v="GRADIEN">GRADIEN</button><button data-v="PUTUS">GARIS PUTUS</button>
-          </div>
-          <div class="lbl">POSISI JUDUL <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— geser sampai paling bawah</span></div>
-          <div class="row" style="align-items:center">
-            <input type="range" id="inTitlePos" min="0" max="100" step="1" value="80" style="flex:1">
-            <span class="mono" id="titlePosV" style="font-size:10px;width:88px;text-align:right">80% · bawah</span>
-          </div>
-        </div>
+        <button class="btn wide acc" id="btnCoverPlay"><i data-lucide="clapperboard"></i> MAINKAN PRATINJAU COVER + TRANSISI</button>
+        <canvas id="coverPreviewCv" style="width:100%;border-radius:10px;background:#000"></canvas>
+        <input class="in" id="inCoverTitle" placeholder="Judul di cover — kosongkan = judul video" maxlength="80">
+        <div class="lbl">LAYOUT COVER — 10 GAYA</div>
+        <div class="chips" id="coverLayoutChips"></div>
+        <div class="lbl">PALET WARNA — 10 NUANSA</div>
+        <div class="chips" id="coverPaletteChips"></div>
+        <div class="lbl">LATAR COVER</div>
+        <div class="seg" id="segCoverBg"><button data-v="adegan" class="on">ADEGAN VIDEO</button><button data-v="hitam">HITAM</button></div>
+        <div class="lbl">BINGKAI COVER <span style="opacity:.65;font-weight:500">— digambar transparan 75% di tepi</span></div>
+        <div class="seg" id="segCoverFrame"><button data-v="none" class="on">TANPA</button><button data-v="klasik">KLASIK</button><button data-v="modern">MODERN</button><button data-v="futuristik">FUTURISTIK</button></div>
+        <div class="lbl">EFEK COVER — GERAK LATAR</div>
+        <div class="seg" id="segCoverFx"><button data-v="in" class="on">ZOOM IN</button><button data-v="out">ZOOM OUT</button><button data-v="panx">PAN X</button><button data-v="pany">PAN Y</button><button data-v="off">DIAM</button></div>
+        <div class="lbl">ANIMASI MASUK JUDUL COVER</div>
+        <div class="seg wrap" id="segCoverTitleAnim"></div>
+        <div class="lbl">ANIMASI MASUK TULISAN PART COVER</div>
+        <div class="seg wrap" id="segCoverPartAnim"></div>
         <div class="substat" id="coverStat">Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS DARI VIDEO</div>
         <div class="lbl">DURASI COVER TAMPIL</div>
         <div class="seg" id="segCoverDur">
           <button data-v="1">1 DETIK</button><button data-v="2" class="on">2 DETIK</button><button data-v="3">3 DETIK</button><button data-v="5">5 DETIK</button>
         </div>
-        <div class="lbl">TULISAN PART DI SAMPUL <span style="opacity:.65;font-weight:500">— nomor otomatis tiap file, di bawah judul</span></div>
+        <div class="lbl">TULISAN PART DI SAMPUL <span style="opacity:.65;font-weight:500">— nomor otomatis tiap file</span></div>
         <div class="seg" id="segCoverPart">
           <button data-v="">TANPA</button><button data-v="PART" class="on">PART</button><button data-v="EPISODE">EPISODE</button><button data-v="EPS">EPS</button><button data-v="BAGIAN">BAGIAN</button><button data-v="#">#</button>
         </div>
-        <div class="lbl">POSISI TULISAN PART <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— geser sampai paling atas</span></div>
+        <div class="lbl">TRANSISI COVER → VIDEO <span class="beta">28 GAYA NOVACUT</span></div>
+        <div id="coverTransChips"></div>
+        <div class="lbl">DURASI TRANSISI</div>
         <div class="row" style="align-items:center">
-          <input type="range" id="inPartPos" min="0" max="100" step="1" value="100" style="flex:1">
-          <span class="mono" id="partPosV" style="font-size:10px;width:88px;text-align:right">100% · bawah</span>
+          <input type="range" id="inCoverTransDur" min="0.2" max="1.5" step="0.05" value="0.6" style="flex:1">
+          <span class="mono" id="coverTransDurV" style="font-size:10px;width:80px;text-align:right">0.60 dtk</span>
         </div>
-        <div class="note" id="coverNote"><b>OTOMATIS TIAP PART (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri → <b>cover tiap part berbeda-beda</b>. <b>1 SAMPUL SEMUA PART (v3.8):</b> cukup <b>SATU cover per film</b> — adegan terbaik dipindai SEKALI di sekitar <b>menit 5–7</b> film (video pendek: proporsional), lalu sampul yang sama dipakai <b>SEMUA part</b> film itu — film 60 menit → 10 part pakai 1 cover, film 15 menit → 5 part pakai 1 cover-nya sendiri; <b>nomor part tetap tercetak otomatis</b> (PART 1, PART 2, …). <b>v3.9:</b> judul kini bisa <b>diberi bingkai</b> (10 gaya: KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS), <b>posisi judul bisa digeser</b> sampai paling bawah, dan <b>posisi tulisan part bisa digeser</b> sampai paling atas — label part selalu otomatis menghindari judul. Keduanya menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + judul. <b>MANUAL:</b> impor gambar / Studio Sampul. Cover tampil <b>diam-diam</b>; GABUNG VIDEO dapat cover sekali di pembuka, polos tanpa nomor.</div>
+        <div class="note" id="coverNote"><b>PEMBUATAN COVER:</b> 100 template = 10 LAYOUT (IMPACT TENGAH, LOWER THIRD, BANNER ATAS, GRADIEN SISI, KOTAK JUDUL, NEON GLOW, BAR SINEMA, STICKER, OUTLINE RAKSASA, PITA DIAGONAL) × 10 PALET (Cyber, Sunset, Gold, Ice, Toxic, Royal, Blood, Mono, Candy, Ocean). Latar <b>ADEGAN</b> = frame video (sumber OTOMATIS) atau gambar impor (MANUAL); <b>HITAM</b> = polos + vignette. <b>EFEK:</b> latar cover bergerak KEN BURNS (zoom/pan). <b>TRANSISI:</b> setelah cover selesai, video masuk dgn salah satu dari <b>28 transisi</b> NOVACUT — Flash Snap, Whip Pan, Zoom Punch, Zoom Blast, RGB Glitch, Impact Shake, Cinematic Bars, Film Burn, Slide, Push Parallax, Diagonal Wipe, Iris, Blinds, Split Reveal, Bounce Pop, Flare Sweep, Cross Dissolve, Dip Hitam/Putih, Blur Dissolve, Spin Swap, Pixelate, TV Static, Chromatic Slide, Mosaic. <b>ANIMASI TEKS:</b> judul &amp; tulisan part masuk dengan FADE, RISE UP, TYPEWRITER, TITLE SLAM, NEON FLICKER, TRACKING, GLITCH atau WIPE — di cover DAN di video (modul 02). <b>SUMBER OTOMATIS:</b> OTOMATIS TIAP PART (v3.7 — cover tiap part beda dari adegannya) atau 1 SAMPUL SEMUA PART (v3.8 — pindai sekali di menit 5–7, dipakai semua part). GABUNG VIDEO dapat cover sekali di pembuka, polos tanpa nomor.</div>
       </div></div></div>
     </div>
 
@@ -602,6 +614,7 @@
 <script src="vendor/mp4-muxer.min.js"></script>
 <script type="module" src="vendor/transformers-loader.js"></script>
 <script src="js/core.js"></script>
+<script src="js/nccover.js"></script>
 <script src="js/media.js"></script>
 <script src="js/compose.js"></script>
 <script src="js/demux.js"></script>

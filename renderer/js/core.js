@@ -139,6 +139,12 @@ const state = {
   titlePosY: 0, partPosX: 0, partPosY: 0,
   /* v3.9: FRAME JUDUL DI VIDEO — kunci TITLEFRAMES (default 'off' = gaya lama) */
   titleFrame: 'off',
+  /* v3.11: ANIMASI MASUK JUDUL & PART DI VIDEO — katalog NCTEXTANIMS
+     (fade, rise, typewriter, slam, neon, tracking, glitch, wipe)
+     port dari NOVACUT Studio — judul/label masuk dengan animasi di
+     awal tiap part; 'off' = tampil langsung (perilaku lama) */
+  titleAnim: 'off',
+  partAnim: 'off',
   /* v3.9: MODE PROSES EKSPOR — 'render' (RENDER PENUH, semua efek) |
      'fast' (POTONG LANGSUNG — salin sampel MP4 tanpa re-encode,
      tanpa efek teks; otomatis jatuh ke render bila ada efek aktif) */
@@ -171,12 +177,14 @@ const state = {
      v3.8: scope = 'part' (tiap part adegan sendiri, cover beda-beda) |
      'single' (SATU sampul dipindai sekali per film — window menit 5–7 —
      lalu dipakai SEMUA part film itu; nomor part tetap otomatis) */
-  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, scope: 'part', style: 'KLASIK', title: '',
-    /* v3.9: titleFrame = bingkai judul (kunci TITLEFRAMES — TANPA + 10 gaya);
-       titlePos = posisi vertikal judul 0 (paling atas) … 100 (paling bawah),
-       default 80 ≈ posisi lama; partPos = posisi tulisan part 0 (paling atas)
-       … 100 (paling bawah), default 100 = persis posisi lama (di bawah judul) */
-    titleFrame: 'TANPA', titlePos: 80, partPos: 100 },
+  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, scope: 'part', title: '',
+    /* v3.11: MESIN COVER NOVACUT — pengganti penuh mesin cover lama:
+       layout (10) × palette (10) = 100 template, latar adegan/hitam,
+       bingkai cover klasik/modern/futuristik, efek KEN BURNS,
+       TRANSISI cover→video (28 gaya) + animasi masuk judul & part
+       (8 gaya) — semua port dari NOVACUT Studio v1.0.23 */
+    nc: { layout: 'impact', palette: 'cyber', bg: 'adegan', frame: 'none',
+      fx: 'in', trans: 'flash', transDur: 0.6, titleAnim: 'slam', partAnim: 'slam' } },
   /* v3.9: MODE KILAT — 'on' = ekspor memotong langsung dari wadah MP4 +
      VideoDecoder (hardware bila ada), TANPA memutar video (kecepatan tak
      lagi dibatasi waktu nyata; hasil minimal 720p). 'off' = jalur TURBO lama

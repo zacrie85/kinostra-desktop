@@ -220,17 +220,29 @@ function drawComposition(x, W, H, t) {
     || { i: 0, start: rangeInfo().start, end: rangeInfo().end };
   const seg = clamp(segB.i, 0, Math.max(0, total - 1));
   const ppx = clamp(state.partPosX || 0, -1, 1), ppy = clamp(state.partPosY || 0, -1, 1);
+  /* v3.11: ANIMASI MASUK PART (NCTEXTANIMS — NOVACUT) — bumper intro &
+     label pojok masuk dengan animasi pilihan di awal tiap part; waktu
+     lokal = detik OUTPUT sejak awal part (ikut kecepatan) */
+  const _spdP = clamp(state.speed || 1, 0.25, 4);
+  const _tinP = (t - segB.start) / _spdP;
+  const _pA = (state.partAnim && state.partAnim !== 'off' && _tinP < 1.6)
+    ? ncTextState(state.partAnim, _tinP, 1e9, seg * 131 + 7 + Math.floor(t * 30)) : null;
   if (state.partShow === 'intro') {
-    const tin = t - segB.start, a = clamp(1 - tin / 1.6, 0, 1);
-    if (a > 0) {
+    let a = clamp(1 - _tinP / 1.6, 0, 1);
+    if (_pA) a = Math.min(a, _pA.alpha);
+    if (a > 0.004) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
-      /* geser: ±30% tinggi layar (vertikal), ±30% lebar (horizontal)
-         v3.9: vertikal diperluas — slider kiri = PALING ATAS layar */
       const cx = W / 2 + ppx * W * 0.30;
       const cy = H * clamp(0.42 + ppy * 0.40, 0.085, 0.90);
+      if (_pA) {
+        if (_pA.scale !== 1) { x.translate(cx, cy); x.scale(_pA.scale, _pA.scale); x.translate(-cx, -cy); }
+        if (_pA.dy) x.translate(0, _pA.dy * H);
+      }
       x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy - 84 * u, 120 * u, 3 * u);
       x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u)}px "${F}"`;
-      drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, cx, cy + 40 * u, 8 * u, 'center');
+      const _pTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
+      ncAnimSpacedLine(x, _pA, _pTxt, cx, cy + 40 * u, 8 * u, 112 * u,
+        (t2, ls2, dx) => drawSpaced(x, t2, cx + dx, cy + 40 * u, ls2, 'center'), W);
       x.fillStyle = 'rgba(239,237,231,.55)'; x.font = `500 ${Math.round(24 * u)}px "JetBrains Mono"`;
       x.fillText(`SEGMEN ${seg + 1} / ${total} · ${Math.round(state.splitSec)} DTK`, cx, cy + 92 * u);
       x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u, cy + 116 * u, 120 * u, 3 * u);
@@ -238,13 +250,17 @@ function drawComposition(x, W, H, t) {
     }
   } else {
     x.save();
-    /* label pojok: geser horizontal 5% → ±35% lebar
-       v3.9: vertikal — slider ATAS kini sampai PALING ATAS (6% tinggi) */
     const px = W * clamp(0.05 + ppx * 0.35, 0.02, 0.68);
     const py = H * clamp(0.925 + ppy * 0.88, 0.062, 0.985);
+    if (_pA) {
+      x.globalAlpha = _pA.alpha;
+      if (_pA.scale !== 1) { x.translate(px, py); x.scale(_pA.scale, _pA.scale); x.translate(-px, -py); }
+      if (_pA.dy) x.translate(0, _pA.dy * H);
+    }
     x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u, 4 * u, 50 * u);
     x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u)}px "${F}"`;
-    const w = drawSpaced(x, `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`, px + 16 * u, py, 3 * u, 'left');
+    const _cTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
+    const w = drawSpaced(x, ncAnimSpacedTxt(x, _pA, _cTxt), px + 16 * u, py, 3 * u + (_pA && _pA.kind === 'tracking' ? (1 - ncEaseOut(_pA.inP || 0)) * 46 * u * 0.5 : 0), 'left');
     x.fillStyle = 'rgba(239,237,231,.5)'; x.font = `500 ${Math.round(20 * u)}px "JetBrains Mono"`;
     x.fillText(`/${String(total).padStart(2, '0')}`, px + 16 * u + w + 10 * u, py);
     x.restore();
@@ -285,23 +301,48 @@ function drawComposition(x, W, H, t) {
     const maxTy0 = H * 0.982 - (nL - 1) * lh - fs * 0.12;
     if (ty0 > maxTy0) ty0 = maxTy0;
     const yTop = ty0 - fs * 1.15;   /* titik acuan atas — garis/frame ikut teks */
-    const tfKey = state.titleFrame || 'off';
-    if (tfKey !== 'off') {
-      /* ukur lebar blok judul utk menggambar bingkai yang pas */
-      let blkW = 0;
-      for (const ln of lines) blkW = Math.max(blkW, measureSpaced(x, ln, ls));
-      drawTitleFrame(x, W, H, tfKey, {
-        cx: W / 2, x0: W / 2 - blkW / 2, x1: W / 2 + blkW / 2,
-        top: yTop, bot: ty0 + (nL - 1) * lh + fs * 0.30, fs, u
-      });
-    } else {
-      /* gaya lama: garis amber kecil di atas judul */
-      x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yTop, 60 * u, 3 * u);
-    }
-    x.fillStyle = '#F2F0EA';
-    lines.forEach((ln, i) => drawSpaced(x, ln, W / 2, ty0 + i * lh, ls, 'center'));
     yTitleBase = ty0 + (nL - 1) * lh;
-    x.restore();
+    /* v3.11: ANIMASI MASUK JUDUL (NCTEXTANIMS — NOVACUT) — judul di video
+       masuk dengan animasi di awal tiap part; waktu lokal = detik OUTPUT
+       sejak awal part; NEON = efek berkelap-kelip terus-menerus */
+    const _spdA = clamp(state.speed || 1, 0.25, 4);
+    const _sbA = (typeof currentSegBounds === 'function' && currentSegBounds(t)) || null;
+    const _tlA = _sbA ? (t - _sbA.start) / _spdA : 1e9;
+    const _aKey = state.titleAnim && state.titleAnim !== 'off' ? state.titleAnim : null;
+    const tA = (_aKey && (_aKey === 'neon' || _tlA < 1.6))
+      ? ncTextState(_aKey, _tlA, 1e9, 700 + Math.floor(t * 30)) : null;
+    if (tA && tA.alpha <= 0.004 && tA.kind !== 'wipe') {
+      x.restore();   /* belum waktunya muncul — blok judul disembunyikan */
+    } else {
+      if (tA) {
+        x.globalAlpha = tA.alpha;
+        const _blkCy = (yTop + yTitleBase) / 2;
+        if (tA.scale !== 1) { x.translate(W / 2, _blkCy); x.scale(tA.scale, tA.scale); x.translate(-W / 2, -_blkCy); }
+        if (tA.dy) x.translate(0, tA.dy * H);
+      }
+      const tfKey = state.titleFrame || 'off';
+      if (tfKey !== 'off') {
+        /* ukur lebar blok judul utk menggambar bingkai yang pas */
+        let blkW = 0;
+        for (const ln of lines) blkW = Math.max(blkW, measureSpaced(x, ln, ls));
+        drawTitleFrame(x, W, H, tfKey, {
+          cx: W / 2, x0: W / 2 - blkW / 2, x1: W / 2 + blkW / 2,
+          top: yTop, bot: ty0 + (nL - 1) * lh + fs * 0.30, fs, u
+        });
+      } else {
+        /* gaya lama: garis amber kecil di atas judul */
+        x.fillStyle = '#F7A600'; x.fillRect(W / 2 - 30 * u, yTop, 60 * u, 3 * u);
+      }
+      /* v3.11: NEON — pendar amber di sekeliling huruf (port anim neon) */
+      if (_aKey === 'neon') { x.shadowColor = 'rgba(247,166,0,.95)'; x.shadowBlur = fs * 0.45; }
+      lines.forEach((ln, i) => {
+        x.fillStyle = '#F2F0EA';
+        ncAnimSpacedLine(x, tA, ln, W / 2, ty0 + i * lh, ls, fs,
+          (t2, ls2, dx) => drawSpaced(x, t2, W / 2 + dx, ty0 + i * lh, ls2, 'center'), W);
+      });
+      x.shadowBlur = 0;
+      x.restore();
+    }
   }
   if (state.descOn && state.desc.trim()) {
     x.save();
