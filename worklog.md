@@ -427,3 +427,5 @@ Work Log:
 Stage Summary:
 - Fitur: SLIDER UKURAN TULISAN PART COVER 50%–250% — memenuhi permintaan user utk mengatur besar-kecil tulisan PART/EPISODE/EPS/BAGIAN/# di semua template cover NOVACUT; pratinjau = ekspor persis; ps=1 piksel-identik versi lama
 - Keputusan desain: ps sebagai parameter opsional ncLayoutPass (default 1 → nol perubahan); kotak/strip adaptif max(dasar, teks+padding) agar teks besar tetap muat; hanya fase 'part' tersentuh — judul/latar/bingkai/transisi tak berubah
+- Rilis: scripts/release-v3130.sh → release ID 440228795; 3 aset 201 (Setup 91.4MB, Portable 126.0MB, PANDUAN); API final: draft False, prerelease False, semua uploaded
+- URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.13.0
