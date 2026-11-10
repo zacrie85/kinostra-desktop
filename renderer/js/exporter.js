@@ -425,7 +425,12 @@ function drawCoverFrame(x, W, H, partNum = 0, covCv = null) {
       x.drawImage(im, r.x, r.y, r.w, r.h);
     }
   }
-  if (partNum > 0) drawCoverPartLabel(x, W, H, partNum);
+  if (partNum > 0) {
+    /* v3.9: bila sampul otomatis → judul ada di sampul; layout-nya
+       dihitung ulang (murni dari setelan) agar label PART menghindar */
+    const tLay = (C.auto && covCv) ? coverTitleLayout(W, H, coverTitleText()) : null;
+    drawCoverPartLabel(x, W, H, partNum, tLay);
+  }
 }
 /* v3.6.1: teks label part — "PART 3" / "EPISODE 3" / "#3" dst. ('' = mati) */
 function coverPartText(n) {
@@ -433,10 +438,31 @@ function coverPartText(n) {
   if (!P || !(n > 0)) return '';
   return P === '#' ? `#${n}` : `${P} ${n}`;
 }
-/* v3.6.1: cetak tulisan part DI BAWAH JUDUL (tepi bawah, tengah) —
-   gaya serasi Studio Sampul: krem + garis hitam + glow merah lembut,
-   huruf renggang, auto-kecil bila label panjang → terbaca di cover apa pun */
-function drawCoverPartLabel(x, W, H, n) {
+/* v3.9: POSISI TULISAN PART — bisa digeser sampai PALING ATAS (0%) atau
+   ke bawah (100%). Default 100 → cy = 0.945H persis perilaku v3.6.1–v3.8
+   (di bawah judul) supaya nol regresi tampilan. Bila bersama sampul
+   otomatis (judul ada), label otomatis MENGHINDARI kotak judul —
+   digeser ke sisi terdekat yang lega, tidak pernah menimpa judul. */
+function partLabelCy(H, titleLay) {
+  const u = H / 1080;
+  const p = clamp(state.cover.partPos == null ? 100 : state.cover.partPos, 0, 100);
+  let cy = H * (0.095 + 0.85 * p / 100);
+  if (titleLay) {
+    const fsL = Math.round(46 * u);
+    const half = fsL * 0.66, gap = 14 * u;
+    const tLo = titleLay.top - gap, tHi = titleLay.bot + gap;
+    if (cy > tLo - half && cy < tHi + half) {
+      const belowRoom = H - tHi, aboveRoom = tLo;
+      cy = belowRoom >= aboveRoom
+        ? clamp(tHi + half + 2, H * 0.06, H * 0.985)
+        : clamp(tLo - half - 2, H * 0.06, H * 0.985);
+    }
+  }
+  return cy;
+}
+/* v3.6.1: cetak tulisan part — gaya serasi Studio Sampul: krem + garis
+   hitam + glow merah lembut, huruf renggang, auto-kecil bila panjang */
+function drawCoverPartLabel(x, W, H, n, titleLay = null) {
   const label = coverPartText(n);
   if (!label) return;
   const u = H / 1080;
@@ -450,7 +476,7 @@ function drawCoverPartLabel(x, W, H, n) {
   while (x.measureText(label).width > maxW && fs > 20 * u) { fs = Math.round(fs * 0.92); setFont(fs); }
   /* letterSpacing menambah ruang sesudah huruf terakhir → geser kanan sedikit
      agar tetap tampak tengah sempurna */
-  const cx = W / 2 + fs * 0.09, cy = H * 0.945;
+  const cx = W / 2 + fs * 0.09, cy = partLabelCy(H, titleLay);
   x.strokeStyle = 'rgba(0,0,0,.85)'; x.lineWidth = Math.max(4, 9 * u);
   x.strokeText(label, cx, cy);
   x.shadowColor = 'rgba(215,55,45,.55)'; x.shadowBlur = 20 * u;
@@ -533,27 +559,170 @@ function drawAutoFrameStyle(x, W, H, st) {
   }
   x.restore();
 }
-/* judul besar sampul otomatis — serasi label part (krem + hitam + glow merah) */
-function drawAutoTitle(x, W, H, txt) {
-  if (!txt) return;
+/* ================================================================
+   v3.9 — BINGKAI JUDUL (10 gaya) + POSISI JUDUL BISA DIGESER
+   Judul sampul otomatis kini punya KOTAK/BINGKAI sendiri (dipilih
+   pengguna) dan POSISINYA bisa digeser dari paling atas sampai
+   paling bawah. Layout judul dihitung murni dari setelan
+   (coverTitleLayout) → dipakai bersama oleh penggambar judul DAN
+   label part (agar label menghindar, tidak pernah menimpa).
+   ================================================================ */
+const COVERTITLEFRAMES = [
+  { k: 'TANPA', n: 'TANPA' },
+  { k: 'KOTAK', n: 'KOTAK' },
+  { k: 'GANDA', n: 'GANDA' },
+  { k: 'PITA', n: 'PITA' },
+  { k: 'SUDUT', n: 'SUDUT EMAS' },
+  { k: 'NEON', n: 'NEON' },
+  { k: 'STRIP', n: 'FILM STRIP' },
+  { k: 'EMAS', n: 'GARIS EMAS' },
+  { k: 'KACA', n: 'KACA' },
+  { k: 'GRADIEN', n: 'GRADIEN' },
+  { k: 'PUTUS', n: 'GARIS PUTUS' }
+];
+/* layout judul: posisi vertikal dari slider POSISI JUDUL (0=atas …
+   100=bawah). Default 80 → pusat blok ≈ 0.784H ≈ posisi lama
+   (nol regresi tampilan v3.6–v3.8). */
+function coverTitleLayout(W, H, txt) {
+  if (!txt) return null;
   const u = H / 1080;
   let fs = Math.round(96 * u);
   const fontOf = s => `800 ${s}px "Chakra Petch", "Segoe UI", sans-serif`;
+  const meas = document.createElement('canvas').getContext('2d');
+  const setM = s => { meas.font = fontOf(s); try { meas.letterSpacing = Math.round(s * 0.05) + 'px'; } catch (e) { } };
+  setM(fs);
+  const maxW = W * 0.84;
+  let lines = wrapLines(meas, txt.toUpperCase(), maxW);
+  while (lines.length > 2 && fs > 42 * u) { fs = Math.round(fs * 0.84); setM(fs); lines = wrapLines(meas, txt.toUpperCase(), maxW); }
+  lines = lines.slice(0, 2);
+  const lh = fs * 1.16;
+  const p = clamp(state.cover.titlePos == null ? 80 : state.cover.titlePos, 0, 100);
+  const cy = H * (0.16 + 0.78 * p / 100);
+  const capH = fs * 0.72;
+  const totalH = (lines.length - 1) * lh + capH;
+  const top = cy - totalH / 2;
+  const baselines = lines.map((_, i) => top + capH + i * lh);
+  let w = 0;
+  lines.forEach(ln => { w = Math.max(w, meas.measureText(ln).width); });
+  return { lines, fs, lh, cy, top, bot: top + totalH, h: totalH, w, baselines };
+}
+/* gambar bingkai di sekeliling blok judul (SEBELUM teks digambar) */
+function drawTitleFrameStyle(x, W, H, st, L) {
+  if (!st || st === 'TANPA' || !L) return;
+  const u = H / 1080, AMB = '#D9A441', CREAM = '#F2E8D5';
+  const px = 30 * u, py = 18 * u;
+  const bx = W / 2 - L.w / 2 - px, by = L.top - py;
+  const bw = L.w + px * 2, bh = L.h + py * 2;
+  const rr = (inset = 0, r = 12 * u) => {
+    x.beginPath();
+    try { x.roundRect(bx + inset, by + inset, bw - inset * 2, bh - inset * 2, r); }
+    catch (e) { x.rect(bx + inset, by + inset, bw - inset * 2, bh - inset * 2); }
+  };
+  x.save();
+  if (st === 'KOTAK') {
+    rr(); x.fillStyle = 'rgba(0,0,0,.45)'; x.fill();
+    x.strokeStyle = AMB; x.lineWidth = Math.max(2, 3.5 * u); x.stroke();
+  } else if (st === 'GANDA') {
+    rr(); x.fillStyle = 'rgba(0,0,0,.5)'; x.fill();
+    x.strokeStyle = AMB; x.lineWidth = Math.max(3, 5 * u); x.stroke();
+    rr(8 * u, 8 * u); x.strokeStyle = 'rgba(242,232,213,.85)'; x.lineWidth = Math.max(1.5, 2 * u); x.stroke();
+  } else if (st === 'PITA') {
+    /* pita banner: ekor kiri-kanan terpotong V + badan gradien merah gelap */
+    const tw = 30 * u;
+    x.beginPath();
+    x.moveTo(bx, by); x.lineTo(bx + bw, by); x.lineTo(bx + bw, by + bh); x.lineTo(bx, by + bh); x.closePath();
+    const gd = x.createLinearGradient(0, by, 0, by + bh);
+    gd.addColorStop(0, '#8a2620'); gd.addColorStop(1, '#3a0d0b');
+    x.fillStyle = gd; x.fill();
+    x.strokeStyle = AMB; x.lineWidth = Math.max(2, 3 * u); x.stroke();
+    x.fillStyle = '#5e1613';
+    x.beginPath(); x.moveTo(bx, by + 6 * u); x.lineTo(bx - tw, by + bh * 0.5); x.lineTo(bx, by + bh - 6 * u); x.closePath(); x.fill();
+    x.beginPath(); x.moveTo(bx + bw, by + 6 * u); x.lineTo(bx + bw + tw, by + bh * 0.5); x.lineTo(bx + bw, by + bh - 6 * u); x.closePath(); x.fill();
+    x.strokeStyle = 'rgba(217,164,65,.9)'; x.lineWidth = Math.max(1.5, 2 * u);
+    x.beginPath(); x.moveTo(bx - tw * 0.55, by + 8 * u); x.lineTo(bx - tw * 0.55, by + bh - 8 * u); x.stroke();
+    x.beginPath(); x.moveTo(bx + bw + tw * 0.55, by + 8 * u); x.lineTo(bx + bw + tw * 0.55, by + bh - 8 * u); x.stroke();
+  } else if (st === 'SUDUT') {
+    /* 4 siku emas di sudut blok + bayangan lembut */
+    x.fillStyle = 'rgba(0,0,0,.32)'; rr(0, 10 * u); x.fill();
+    x.strokeStyle = AMB; x.lineWidth = Math.max(3, 6 * u); x.lineCap = 'round';
+    const Lg = Math.min(70 * u, bw * 0.3);
+    const cor = [[bx, by, 1, 1], [bx + bw, by, -1, 1], [bx, by + bh, 1, -1], [bx + bw, by + bh, -1, -1]];
+    cor.forEach(k => {
+      x.beginPath(); x.moveTo(k[0], k[1] + k[3] * Lg); x.lineTo(k[0], k[1]); x.lineTo(k[0] + k[2] * Lg, k[1]); x.stroke();
+    });
+  } else if (st === 'NEON') {
+    rr(); x.fillStyle = 'rgba(4,10,20,.55)'; x.fill();
+    x.shadowColor = 'rgba(46,230,255,.9)'; x.shadowBlur = 18 * u;
+    x.strokeStyle = '#2EE6FF'; x.lineWidth = Math.max(2, 3 * u); x.stroke(); x.stroke();
+    x.shadowColor = 'rgba(255,79,163,.8)';
+    rr(6 * u, 8 * u); x.strokeStyle = 'rgba(255,79,163,.75)'; x.lineWidth = Math.max(1.5, 2 * u); x.stroke();
+    x.shadowBlur = 0;
+  } else if (st === 'STRIP') {
+    /* pita film: lubang sprocket atas & bawah — gaya gulungan bioskop */
+    rr(0, 6 * u); x.fillStyle = 'rgba(8,10,14,.82)'; x.fill();
+    x.strokeStyle = 'rgba(217,164,65,.9)'; x.lineWidth = Math.max(1.5, 2 * u); x.stroke();
+    x.fillStyle = 'rgba(242,232,213,.8)';
+    const hw = 13 * u, hh = 9 * u, step = 26 * u;
+    for (let hx = bx + 14 * u; hx + hw < bx + bw - 8 * u; hx += step) {
+      try { x.beginPath(); x.roundRect(hx, by + 5 * u, hw, hh, 2 * u); x.fill(); } catch (e) { x.fillRect(hx, by + 5 * u, hw, hh); }
+      try { x.beginPath(); x.roundRect(hx, by + bh - hh - 5 * u, hw, hh, 2 * u); x.fill(); } catch (e) { x.fillRect(hx, by + bh - hh - 5 * u, hw, hh); }
+    }
+  } else if (st === 'EMAS') {
+    /* garis emas atas & bawah + berlian kecil di tengah tiap garis */
+    const gd = x.createLinearGradient(0, by, 0, by + bh);
+    gd.addColorStop(0, 'rgba(217,164,65,.30)'); gd.addColorStop(0.5, 'rgba(0,0,0,.38)'); gd.addColorStop(1, 'rgba(217,164,65,.30)');
+    x.fillStyle = gd; x.fillRect(bx, by, bw, bh);
+    x.strokeStyle = AMB; x.lineWidth = Math.max(2, 3 * u);
+    x.beginPath(); x.moveTo(bx + 6 * u, by + 3 * u); x.lineTo(bx + bw - 6 * u, by + 3 * u); x.stroke();
+    x.beginPath(); x.moveTo(bx + 6 * u, by + bh - 3 * u); x.lineTo(bx + bw - 6 * u, by + bh - 3 * u); x.stroke();
+    const dm = 8 * u;
+    const diamond = (dx, dy) => { x.beginPath(); x.moveTo(dx, dy - dm); x.lineTo(dx + dm, dy); x.lineTo(dx, dy + dm); x.lineTo(dx - dm, dy); x.closePath(); x.fill(); };
+    x.fillStyle = AMB;
+    diamond(W / 2, by + 3 * u); diamond(W / 2, by + bh - 3 * u);
+  } else if (st === 'KACA') {
+    /* panel kaca buram: isi gelap lembut, bibir cahaya atas, kilau diagonal */
+    x.save();
+    x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 16 * u;
+    rr(); x.fillStyle = 'rgba(16,21,28,.55)'; x.fill();
+    x.restore();
+    rr(); x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = Math.max(1, 1.6 * u); x.stroke();
+    x.beginPath(); x.moveTo(bx + 2, by + 3 * u); x.lineTo(bx + bw - 2, by + 3 * u);
+    x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = Math.max(1.5, 2.2 * u); x.stroke();
+    x.beginPath();
+    x.moveTo(bx + bw * 0.62, by); x.lineTo(bx + bw * 0.78, by);
+    x.lineTo(bx + bw * 0.5, by + bh); x.lineTo(bx + bw * 0.34, by + bh);
+    x.closePath(); x.fillStyle = 'rgba(255,255,255,.07)'; x.fill();
+  } else if (st === 'GRADIEN') {
+    const gd = x.createLinearGradient(0, by, 0, by + bh);
+    gd.addColorStop(0, 'rgba(217,164,65,.34)'); gd.addColorStop(1, 'rgba(0,0,0,.62)');
+    rr(0, 8 * u); x.fillStyle = gd; x.fill();
+    x.strokeStyle = 'rgba(217,164,65,.65)'; x.lineWidth = Math.max(1.5, 2 * u); x.stroke();
+  } else if (st === 'PUTUS') {
+    rr(); x.fillStyle = 'rgba(0,0,0,.4)'; x.fill();
+    x.setLineDash([15 * u, 11 * u]);
+    x.strokeStyle = CREAM; x.lineWidth = Math.max(2, 3 * u); x.stroke();
+    x.setLineDash([]);
+  }
+  x.restore();
+}
+/* judul besar sampul otomatis — serasi label part (krem + hitam + glow merah)
+   v3.9: bingkai judul (pilihan pengguna) + posisi bisa digeser atas↔bawah */
+function drawAutoTitle(x, W, H, txt) {
+  if (!txt) return;
+  const u = H / 1080;
+  const L = coverTitleLayout(W, H, txt);
+  if (!L) return;
+  drawTitleFrameStyle(x, W, H, state.cover.titleFrame || 'TANPA', L);
   x.save();
   x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.lineJoin = 'round';
-  const setFont = s => { x.font = fontOf(s); try { x.letterSpacing = Math.round(s * 0.05) + 'px'; } catch (e) { } };
-  setFont(fs);
-  const maxW = W * 0.84;
-  let lines = wrapLines(x, txt.toUpperCase(), maxW);
-  while (lines.length > 2 && fs > 42 * u) { fs = Math.round(fs * 0.84); setFont(fs); lines = wrapLines(x, txt.toUpperCase(), maxW); }
-  lines = lines.slice(0, 2);
-  const lh = fs * 1.16, y0 = H * (lines.length > 1 ? 0.745 : 0.8);
+  const fontOf = s => `800 ${s}px "Chakra Petch", "Segoe UI", sans-serif`;
+  x.font = fontOf(L.fs); try { x.letterSpacing = Math.round(L.fs * 0.05) + 'px'; } catch (e) { }
   x.shadowColor = 'rgba(215,55,45,.55)'; x.shadowBlur = 24 * u;
   x.fillStyle = '#F2E8D5';
-  lines.forEach((ln, i) => {
+  L.lines.forEach((ln, i) => {
     x.strokeStyle = 'rgba(0,0,0,.85)'; x.lineWidth = Math.max(5, 11 * u);
-    x.strokeText(ln, W / 2, y0 + i * lh);
-    x.fillText(ln, W / 2, y0 + i * lh);
+    x.strokeText(ln, W / 2, L.baselines[i]);
+    x.fillText(ln, W / 2, L.baselines[i]);
   });
   x.restore();
 }
@@ -783,7 +952,10 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           return; /* jangan masukkan chunk rusak/nol-durasi ke muxer */
         }
         lastVts = ts; vChunks++;
-        muxer.addVideoChunk(c, m);
+        /* v3.9: galat muxer JANGAN diam — dulu lemparan di dalam callback
+           output tenggelam tanpa jejak (vChunks tetap 0, pesan hilang) */
+        try { muxer.addVideoChunk(c, m); }
+        catch (me) { vencErrMsg = vencErrMsg || ('muxer: ' + ((me && me.message) || me)); console.error('venc-mux', vencErrMsg); return; }
       },
       error: e => { vencErrMsg = (e && e.message) || String(e); console.error('venc', vencErrMsg); }
     });
@@ -824,9 +996,11 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
 
     /* gambar 1 frame pada waktu media m → encode dengan timestamp nyata
        v2.12: PTS = waktu OUTPUT = (m − mulai part) ÷ kecepatan
-       v3.0: + offset global mergeCtx.off saat GABUNG VIDEO */
-    const drawAt = (t, ts) => {
-      setCompSrc(v);
+       v3.0: + offset global mergeCtx.off saat GABUNG VIDEO
+       v3.9: srcOpsional — jalur KILAT menyusun dari kanvas dekoder,
+       bukan elemen video (default = elemen video part ini) */
+    const drawAt = (t, ts, srcOpsional = null) => {
+      setCompSrc(srcOpsional || v);
       drawComposition(ec, W, H, t);
       setCompSrc(null);
       const vf = new VideoFrame(ecv, { timestamp: ts, duration: Math.round(1e6 / fps) });
@@ -836,7 +1010,64 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
     /* v3.6: PTS output = cover + offset gabung + waktu relatif part */
     const outTs = (m) => Math.max(0, Math.round((((mergeCtx ? mergeCtx.off : 0) + coverD + (m - seg.start) / spd) * 1e6)));
 
-    if (RVFC_OK && !state.isAudio) {
+    /* ================================================================
+       v3.9 — MODE KILAT: DEKODE LANGSUNG (tanpa memutar video)
+       Sampel H.264 diambil langsung dari wadah MP4 (demux.js) lalu
+       didekode VideoDecoder (GPU bila ada) — kecepatan tidak lagi
+       dibatasi waktu pemutaran. Semua efek tetap identik karena
+       komposisi tetap lewat drawComposition. Gagal apa pun → jatuh
+       ke jalur TURBO (capture-playback) secara otomatis.
+       ================================================================ */
+    const kilatOn = state._kilat && !slot.retried && !state.isAudio;
+    let kilatDone = false, kilN = 0, _kTs = -1;
+    if (kilatOn) {
+      _stage = 'kilat';
+      try {
+        const K = await createKilatRender(state._kilat);
+        _stage = 'kilat-stream';
+        /* v3.9: bila cover ikut, ts terakhir yang sudah terpakai = frame
+           cover terakhir → bingkai konten pertama wajib melewatinya */
+        if (coverD > 0) _kTs = Math.round((coverD - 1 / fps) * 1e6);
+        for await (const it of K.range(seg.start, seg.end)) {
+          if (state.abort) { try { it.frame.close(); } catch (e) { } throw new Error('Dibatalkan'); }
+          if (state.exportFatal) { try { it.frame.close(); } catch (e) { } throw state.exportFatal; }
+          /* v3.9 PENTING: bingkai yang stempel waktunya TIDAK MAJU (mis.
+             bingkai "sedikit sebelum awal part" yang ts-nya sama dgn frame
+             cover terakhir) WAJIB dibuang — bila di-encode, shield akan
+             membuang chunk-nya dan bila bingkai itu KEYFRAME, seluruh
+             P-frame berikutnya tak ter-dekode → gambar menahan cover. */
+          const _ts = outTs(it.pts);
+          if (_ts <= _kTs) { try { it.frame.close(); } catch (e) { } continue; }
+          K.blit(it.frame);
+          try { it.frame.close(); } catch (e) { }
+          /* drawAt menggambar + encode + menaikkan n/nMain/slot.fr (cukup
+             sekali — dulu pernah dobel hitung → verifikasi gagal) */
+          drawAt(it.pts, _ts, K.cv);
+          _kTs = _ts;
+          kilN++;
+          doneCb && doneCb();
+          while (venc.encodeQueueSize > CAP) {
+            await sleep(2);
+            if (state.abort) throw new Error('Dibatalkan');
+            if (state.exportFatal) throw state.exportFatal;
+          }
+        }
+        await K.close();
+        if (kilN === 0) throw new Error('tidak ada sampel dalam rentang part');
+        kilatDone = true;
+        console.info(`part ${seg.i + 1}: MODE KILAT — ${kilN} frame didekode langsung dari MP4 (tanpa pemutaran, v3.9)`);
+      } catch (ke) {
+        if (state.abort || state.exportFatal) throw ke;   /* batal/fatal jangan disamarkan */
+        /* v3.9 AMAN-DUPLIKAT: bila kilat gagal SETELAH sebagian frame
+           ter-encode, worker ini tidak boleh dilanjutkan (PTS dobel di
+           muxer yang sama) → lempar; exportPartsToDir mengulang part ini
+           dari nol dengan muxer baru (jalur TURBO, slot.retried=true).
+           Gagal SEBELUM ada frame (kilN=0) → langsung lanjut TURBO. */
+        if (kilN > 0) throw ke;
+        console.warn(`part ${seg.i + 1}: kilat gagal (${ke && ke.message || ke}) — lanjut jalur TURBO`);
+      }
+    }
+    if (!kilatDone && RVFC_OK && !state.isAudio) {
       /* ============ v2.2: CAPTURE PLAYBACK (tanpa seek per frame) ============
          v2.5: + WATCHDOG ANTI-MACET. Penyebab lama ekspor "macet di bagian
          akhir tanpa pesan": frame callback (rVFC) berhenti memicu di frame
@@ -996,8 +1227,11 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, false, spd, (mergeCtx ? mergeCtx.off : 0) + coverD);
         nMain = slot.fr; n = nCov + nMain;
       }
-    } else {
-      /* audio-only / tanpa rVFC: jalur frame loop (tanpa seek utk audio) */
+    } else if (!kilatDone) {
+      /* audio-only / tanpa rVFC: jalur frame loop (tanpa seek utk audio)
+         v3.9: TIDAK berjalan bila kilat sudah sukses (kilatDone) — dulu
+         else ini ikut meng-encode seluruh part LAGI setelah kilat → PTS
+         dobel → shield membuang → verifikasi gagal → retry sia-sia. */
       _stage = 'frames';
       const nCov = n - nMain;
       await renderFramesBySeek(v, ecv, ec, venc, seg, fps, slot, doneCb, !!state.isAudio, spd, (mergeCtx ? mergeCtx.off : 0) + coverD);
@@ -1091,7 +1325,24 @@ async function exportPartsToDir(dir, ui) {
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
   /* v2.12: kecepatan video global — durasi output = sumber ÷ spd */
   const spd = clamp(state.speed || 1, 0.25, 4);
-  const dims = outDims(sc), { W, H } = dims;
+  const dims0 = outDims(sc);
+  let { W, H } = dims0;
+  /* ================================================================
+     v3.9: MODE KILAT — probe wadah sekali per video (demux.js). Layak
+     kilat bila MP4 avc1/avc3 tanpa B-frame & decoder tersedia. Bila
+     resolusi output < 720p, DINA IKKAN ke 720p — jaminan pengguna:
+     hasil kilat minimal 720p.
+     ================================================================ */
+  let kilatInfo = null;
+  if (state.kilat !== 'off' && !state.isAudio && typeof probeKilat === 'function') {
+    kilatInfo = await probeKilat(state.file);
+    if (kilatInfo && W * H < 1280 * 720) {
+      const d2 = state.ratio === '9:16' ? { W: 720, H: 1280 } : { W: 1280, H: 720 };
+      W = d2.W; H = d2.H;
+      toast('MODE KILAT: resolusi output dinaikkan ke 720p minimal', 'info');
+    }
+  }
+  state._kilat = kilatInfo;
   /* v3.4: bitrate ikut resolusi tetap bila dipilih (720p/1080p/2K/4K) */
   const br = exportBitrate();
   /* v2.14: pilih encoder sesuai AKSELERASI (auto = uji kecepatan GPU vs CPU) */
@@ -1107,10 +1358,10 @@ async function exportPartsToDir(dir, ui) {
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();
-  /* v3.9: POTONG LANGSUNG — salin sampel MP4 tanpa re-encode (kualitas
+  /* v3.10: POTONG LANGSUNG — salin sampel MP4 tanpa re-encode (kualitas
      asli 100%, resolusi asli). Syarat: SEMUA efek teks/cover/efek mati
      (fastCutBlockedReason). Bila ada yang aktif / file tak didukung →
-     jatuh otomatis ke RENDER PENUH dengan pesan jelas. */
+     jatuh otomatis ke RENDER PENUH (bisa MODE KILAT) dengan pesan jelas. */
   if (state.cutMode === 'fast' && !state.isAudio && state.file) {
     const blk = (typeof fastCutBlockedReason === 'function') ? fastCutBlockedReason() : 'mode tidak tersedia';
     if (blk) {
@@ -1126,7 +1377,11 @@ async function exportPartsToDir(dir, ui) {
       }
     }
   }
-  const par = pickParallelCount(segs.length, enc.kind === 'hw');
+  let par = pickParallelCount(segs.length, enc.kind === 'hw');
+  /* v3.9: KILAT + encoder SOFTWARE = dekode+encode sama-sama makan CPU —
+     paralel tinggi justru saling rem (CI/VPS tanpa GPU). Batasi 2×.
+     Dengan encoder hardware (mesin pengguna), paralel penuh tetap dipakai. */
+  if (kilatInfo && enc.kind !== 'hw') par = Math.min(par, 2);
   _xPar = par;   /* v2.11: langit-langit playbackRate capture menyesuaikan beban paralel */
   const hw = vCfg.hardwareAcceleration === 'prefer-hardware';
 
@@ -1170,7 +1425,7 @@ async function exportPartsToDir(dir, ui) {
   try {
     if (ui.title) ui.title(segs);
     if (ui.prog) ui.prog(0);
-    if (ui.sub) ui.sub(`encoder ${enc.kind === 'hw' ? `GPU ${enc.fps}fps` : `CPU ${enc.fps}fps`} · ${par} render paralel${RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}${spd !== 1 ? ` · kecepatan ${spd}×` : ''}…`);
+    if (ui.sub) ui.sub(`encoder ${enc.kind === 'hw' ? `GPU ${enc.fps}fps` : `CPU ${enc.fps}fps`} · ${par} render paralel${kilatInfo ? ' · MODE KILAT (dekode langsung v3.9)' : RVFC_OK && !state.isAudio ? ' · turbo stream' : ''}${spd !== 1 ? ` · kecepatan ${spd}×` : ''}…`);
 
     /* jalankan worker dengan batas `par` sekaligus (antrean)
        v2.10: kegagalan part TIDAK lagi men-set state.abort (flag batal
@@ -1278,6 +1533,7 @@ async function exportPartsToDir(dir, ui) {
     return results;
   } finally {
     state.exportFatal = null;   /* v2.10: jangan bocor ke ekspor/video berikutnya */
+    state._kilat = null;        /* v3.9: probe kilat tidak bocor ke video berikutnya */
     if (_srcUrl != null && !state.file.virtual) try { URL.revokeObjectURL(_srcUrl); } catch (e) { }
   }
 }
@@ -1378,15 +1634,17 @@ function updateExportInfo() {
   const spkLine = state.spk.on ? ` · <b>ZOOM PEMBICARA${state.spk.ready ? ' SIAP (' + state.spk.nSpeak + ' ORANG)' : ' (ANALISIS OTOMATIS)'}</b>` : '';
   /* v3.6: COVER PEMBUKA tampil di ringkasan — v3.7: + sumber otomatis */
   const covOn = state.cover && state.cover.on && (state.cover.auto || state.cover.img);
-  const cvLine = covOn ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.auto ? ` (OTOMATIS DARI ADEGAN${state.cover.scope === 'single' ? ' · 1 SAMPUL' : ''})` : ''}${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}</b>` : '';
-  /* v3.9: MODE PROSES — POTONG LANGSUNG / RENDER PENUH */
+  const cvLine = covOn ? ` · <b>COVER ${clamp(state.cover.dur || 2, 0.5, 10)} DTK DI AWAL${state.cover.auto ? ` (OTOMATIS DARI ADEGAN${state.cover.scope === 'single' ? ' · 1 SAMPUL' : ''})` : ''}${state.cover.part ? ' + LABEL ' + (state.cover.part === '#' ? '#' : state.cover.part) : ''}${state.cover.titleFrame && state.cover.titleFrame !== 'TANPA' ? ' · BINGKAI JUDUL ' + state.cover.titleFrame : ''}</b>` : '';
+  /* v3.9: MODE KILAT tampil di ringkasan */
+  const kilatLine = state.kilat !== 'off' ? ' · <b style="color:var(--acc)">MODE KILAT</b>' : '';
+  /* v3.10: MODE PROSES — POTONG LANGSUNG / RENDER PENUH */
   let modeLine = '';
   if (state.cutMode === 'fast') {
     const blk = (typeof fastCutBlockedReason === 'function') ? fastCutBlockedReason() : null;
     modeLine = blk ? ` · <b>POTONG LANGSUNG</b> TAK BISA (aktif: ${blk} → RENDER PENUH)`
       : ' · <b>POTONG LANGSUNG</b> — kualitas & resolusi ASLI, ±10-60× lebih cepat';
   }
-  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}${modeLine}
+  $('#expSum').innerHTML = `<b>${segmentsCount()} PART</b> · ${dims.W}×${dims.H} · ${state.fps}fps · ${q.label} · PARALEL ${par}×${kilatLine}${resLine}${rangeLine}${cutLine}${spdLine}${tgtLine}${afixLine}${spkLine}${cvLine}${modeLine}
     <br>Estimasi total ± <b>${fmtMB(est)}</b><br><span class="mono">${slug(state.title)}_…_01.mp4</span>`;
 }
 function updateAll() { updateOutName(); updateExportInfo(); renderTimeline(); }
@@ -1406,7 +1664,15 @@ async function exportMergeToDir(paths, dir, ui) {
   if (!paths || paths.length < 2) throw new Error('Pilih minimal 2 video di Kotak Video untuk digabung');
   const fps = state.fps, sc = parseFloat(state.scale), q = QUAL[state.quality];
   const spd = clamp(state.speed || 1, 0.25, 4);
-  const dims = outDims(sc), { W, H } = dims;
+  const dims0 = outDims(sc);
+  let { W, H } = dims0;
+  /* v3.9: jaminan 720p minimal saat MODE KILAT aktif (walau probe per-film
+     baru bisa jalan setelah tiap film dimuat) */
+  const wantKilat = state.kilat !== 'off' && !state.isAudio && typeof probeKilat === 'function';
+  if (wantKilat && W * H < 1280 * 720) {
+    const d2 = state.ratio === '9:16' ? { W: 720, H: 1280 } : { W: 1280, H: 720 };
+    W = d2.W; H = d2.H;
+  }
   /* v3.4: bitrate ikut resolusi tetap bila dipilih (720p/1080p/2K/4K) */
   const br = exportBitrate();
   const vCfg = await pickVCodecCfg(W, H, br, fps);
@@ -1417,7 +1683,9 @@ async function exportMergeToDir(paths, dir, ui) {
   const nm = `GABUNGAN_${paths.length}_VIDEO_${slug(state.batch.find(b => b.path === paths[0])?.name || 'FILM').slice(0, 24)}.mp4`;
   /* mulai file gabungan (streaming disk — RAM datar) */
   const w = await window.kinostra.beginWrite(dir, nm);
-  const mergeCtx = { muxer: null, off: 0, outName: nm, outPath: w.path, wsId: w.id, chain: Promise.resolve(), sent: 0, wsErr: null };
+  /* v3.9: watermark stempel waktu terakhir yang BENAR-BENAR masuk muxer —
+     dipakai agar percobaan ulang part gabungan TIDAK meracuni muxer */
+  const mergeCtx = { muxer: null, off: 0, outName: nm, outPath: w.path, wsId: w.id, chain: Promise.resolve(), sent: 0, wsErr: null, lastVideoTs: -1, lastAudioTs: -1 };
   mergeCtx.muxer = new Mp4Muxer.Muxer({
     target: new Mp4Muxer.StreamTarget({
       chunked: true, chunkSize: 8 * 1024 * 1024,
@@ -1431,6 +1699,13 @@ async function exportMergeToDir(paths, dir, ui) {
     video: { codec: 'avc', width: W, height: H, frameRate: fps },
     audio: { codec: aCodec === 'mp4a.40.2' ? 'aac' : 'opus', numberOfChannels: 2, sampleRate: 48000 }
   });
+  /* v3.9: bungkus pencatat chunk utk melacak watermark (percobaan ulang aman) */
+  {
+    const _av = mergeCtx.muxer.addVideoChunk.bind(mergeCtx.muxer);
+    mergeCtx.muxer.addVideoChunk = (c, m) => { mergeCtx.lastVideoTs = Math.max(mergeCtx.lastVideoTs, c && c.timestamp || 0); _av(c, m); };
+    const _aa = mergeCtx.muxer.addAudioChunk.bind(mergeCtx.muxer);
+    mergeCtx.muxer.addAudioChunk = (c, m) => { mergeCtx.lastAudioTs = Math.max(mergeCtx.lastAudioTs, c && c.timestamp || 0); _aa(c, m); };
+  }
   state._noPart = true;          /* label PART tidak masuk file gabungan */
   /* v3.6: frame cover utk slot progres (cover hanya di bagian pertama) */
   const cvFrM = coverActive() ? Math.max(1, Math.round(clamp(state.cover.dur || 2, 0.5, 10) * fps)) : 0;
@@ -1467,6 +1742,9 @@ async function exportMergeToDir(paths, dir, ui) {
       }
       if (state.music.buffer) await composeMusic(false, true, true);
       const srcUrl = state.file.virtual ? state.file.kurl : URL.createObjectURL(state.file);
+      /* v3.9: MODE KILAT — probe film yang baru dimuat (MP4 avc1 tanpa B-frame)
+         → semua part film ini didekode langsung; gagal probe → TURBO otomatis */
+      state._kilat = wantKilat ? await probeKilat(state.file) : null;
       try {
         const segs = segments();
         for (const seg of segs) {
@@ -1482,9 +1760,19 @@ async function exportMergeToDir(paths, dir, ui) {
               if (ui.prog) ui.prog(clamp((mergeCtx.off + (seg.end - seg.start)) / Math.max(0.1, expLen() || 1) * 0, 0, 1)); /* prog pakai fr di bawah */
             }, mergeCtx);
           } catch (e) {
-            if (state.acc === 'gpu' && swCfg && !xAborted()) {
-              console.warn(`merge part gagal (${e && e.message || e}) — ulangi dengan encoder software`);
+            /* v3.9: ulang HANYA bila muxer masih BERSIH untuk part ini
+               (tak ada chunk video/audio part ini yang masuk) — mencoba
+               ulang di atas muxer yang sudah berisi sebagian data akan
+               membuat stempel waktu tidak monoton → file rusak (moov
+               tak pernah selesai). */
+            const t0Part = offBefore * 1e6 - 1000;   /* < t0 = milik part sebelumnya */
+            const bersih = mergeCtx.lastVideoTs < t0Part && mergeCtx.lastAudioTs < t0Part;
+            if (bersih && (state.acc === 'gpu' || state._kilat) && swCfg && !xAborted()) {
+              console.warn(`merge part gagal (${e && e.message || e}) — muxer masih bersih, ulangi dengan encoder software`);
+              slot.retried = true;   /* percobaan ulang TANPA kilat (muxer sama, aman) */
               await renderPartWorker(seg, srcUrl, W, H, fps, br, swCfg, aCodec, slot, null, mergeCtx);
+            } else if (!bersih && !xAborted()) {
+              throw new Error(`part gabungan gagal di tengah jalan (${e && e.message || e}) — muxer sudah berisi sebagian part ini, penggabungan dihentikan agar file tidak rusak`);
             } else throw e;
           }
           mergeCtx.off += (seg.end - seg.start) / spd
@@ -1512,6 +1800,7 @@ async function exportMergeToDir(paths, dir, ui) {
     throw e;
   } finally {
     state._noPart = false;
+    state._kilat = null;   /* v3.9 */
     state.exportFatal = prevFatal;
   }
 }

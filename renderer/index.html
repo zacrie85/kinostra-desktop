@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.9.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.10.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.9.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.10.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -436,7 +436,7 @@
     </div>
 
     <div class="mod" id="m8b">
-      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.8.0</span></span><i data-lucide="chevron-down"></i></button>
+      <button class="mod-h"><span class="no">08B</span><span class="t">COVER VIDEO PEMBUKA <span class="beta">DIPERBARUI · v3.9.0</span></span><i data-lucide="chevron-down"></i></button>
       <div class="mod-b"><div class="mod-i"><div class="mod-c">
         <div class="note">Pasang <b>cover pembuka</b> untuk semua hasil ekspor: tampil <b>2 detik</b> di awal <b>SETIAP file</b> hasil <b>EKSPORT &amp; SPLIT MP4</b>, <b>BATCH EKSPOR — semua video di kotak</b> &amp; <b>GABUNG VIDEO</b>. Tiga sumber: <b>MANUAL</b> (impor PNG/JPG/WebP / STUDIO SAMPUL), <b>OTOMATIS TIAP PART</b> (v3.7 — cover tiap part beda dari adegannya), atau <b>1 SAMPUL SEMUA PART</b> (v3.8 — pindai sekali per film, dipakai semua part-nya).</div>
         <div class="seg" id="segCover">
@@ -457,6 +457,15 @@
             <button data-v="KLASIK" class="on">KLASIK</button><button data-v="GARIS">GARIS</button><button data-v="SINEMA">SINEMA</button><button data-v="TANPA">TANPA</button>
           </div>
           <input class="in" id="inCoverTitle" placeholder="Judul di sampul otomatis — kosongkan = judul video" maxlength="80">
+          <div class="lbl">BINGKAI JUDUL <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— 10 gaya di sekeliling judul</span></div>
+          <div class="seg wrap" id="segCoverTitleFrame">
+            <button data-v="TANPA" class="on">TANPA</button><button data-v="KOTAK">KOTAK</button><button data-v="GANDA">GANDA</button><button data-v="PITA">PITA</button><button data-v="SUDUT">SUDUT EMAS</button><button data-v="NEON">NEON</button><button data-v="STRIP">FILM STRIP</button><button data-v="EMAS">GARIS EMAS</button><button data-v="KACA">KACA</button><button data-v="GRADIEN">GRADIEN</button><button data-v="PUTUS">GARIS PUTUS</button>
+          </div>
+          <div class="lbl">POSISI JUDUL <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— geser sampai paling bawah</span></div>
+          <div class="row" style="align-items:center">
+            <input type="range" id="inTitlePos" min="0" max="100" step="1" value="80" style="flex:1">
+            <span class="mono" id="titlePosV" style="font-size:10px;width:88px;text-align:right">80% · bawah</span>
+          </div>
         </div>
         <div class="substat" id="coverStat">Belum ada cover — impor gambar, buat di Studio Sampul, atau pilih sumber OTOMATIS DARI VIDEO</div>
         <div class="lbl">DURASI COVER TAMPIL</div>
@@ -467,7 +476,12 @@
         <div class="seg" id="segCoverPart">
           <button data-v="">TANPA</button><button data-v="PART" class="on">PART</button><button data-v="EPISODE">EPISODE</button><button data-v="EPS">EPS</button><button data-v="BAGIAN">BAGIAN</button><button data-v="#">#</button>
         </div>
-        <div class="note" id="coverNote"><b>OTOMATIS TIAP PART (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri → <b>cover tiap part berbeda-beda</b>. <b>1 SAMPUL SEMUA PART (v3.8):</b> cukup <b>SATU cover per film</b> — adegan terbaik dipindai SEKALI di sekitar <b>menit 5–7</b> film (video pendek: proporsional), lalu sampul yang sama dipakai <b>SEMUA part</b> film itu — film 60 menit → 10 part pakai 1 cover, film 15 menit → 5 part pakai 1 cover-nya sendiri; <b>nomor part tetap tercetak otomatis</b> (PART 1, PART 2, …) di bawah judul. Keduanya menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + judul. <b>MANUAL:</b> impor gambar / Studio Sampul. Cover tampil <b>diam-diam</b>; GABUNG VIDEO dapat cover sekali di pembuka, polos tanpa nomor.</div>
+        <div class="lbl">POSISI TULISAN PART <span class="beta">BARU · v3.9</span> <span style="opacity:.65;font-weight:500">— geser sampai paling atas</span></div>
+        <div class="row" style="align-items:center">
+          <input type="range" id="inPartPos" min="0" max="100" step="1" value="100" style="flex:1">
+          <span class="mono" id="partPosV" style="font-size:10px;width:88px;text-align:right">100% · bawah</span>
+        </div>
+        <div class="note" id="coverNote"><b>OTOMATIS TIAP PART (v3.7):</b> setiap part memindai adegan di rentang waktunya sendiri → <b>cover tiap part berbeda-beda</b>. <b>1 SAMPUL SEMUA PART (v3.8):</b> cukup <b>SATU cover per film</b> — adegan terbaik dipindai SEKALI di sekitar <b>menit 5–7</b> film (video pendek: proporsional), lalu sampul yang sama dipakai <b>SEMUA part</b> film itu — film 60 menit → 10 part pakai 1 cover, film 15 menit → 5 part pakai 1 cover-nya sendiri; <b>nomor part tetap tercetak otomatis</b> (PART 1, PART 2, …). <b>v3.9:</b> judul kini bisa <b>diberi bingkai</b> (10 gaya: KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS), <b>posisi judul bisa digeser</b> sampai paling bawah, dan <b>posisi tulisan part bisa digeser</b> sampai paling atas — label part selalu otomatis menghindari judul. Keduanya menyusun sampul lengkap: gambar video + peredup sinematik + <b>bingkai menarik</b> + judul. <b>MANUAL:</b> impor gambar / Studio Sampul. Cover tampil <b>diam-diam</b>; GABUNG VIDEO dapat cover sekali di pembuka, polos tanpa nomor.</div>
       </div></div></div>
     </div>
 
@@ -507,12 +521,17 @@
           <button data-v="auto" class="on">OTOMATIS</button><button data-v="gpu">GPU</button><button data-v="cpu">CPU</button>
         </div>
         <div class="note"><b>OTOMATIS</b>: aplikasi menguji kecepatan encoder GPU vs CPU sesaat sebelum ekspor lalu memakai yang <b>terbukti lebih kencang</b>. <b>GPU</b>: paksa encoder hardware (NVENC / QuickSync / AMF) — bisa 5-10× lebih cepat dari CPU, ramai CPU tetap lega. <b>CPU</b>: paksa software (paling serasi). Cek hasil deteksi di kotak di atas — bila GPU-mu tampil &amp; encoder GPU aktif, video panjang (mis. 58 menit) bisa selesai <b>jauh lebih cepat</b>. Render paralel otomatis naik sampai 6× saat GPU dipakai.</div>
-        <div class="lbl">MODE PROSES — POTONG LANGSUNG <span class="beta">BARU · v3.9</span></div>
+        <div class="lbl">MODE KILAT — POTONG LANGSUNG, TANPA PEMUTARAN <span class="beta">BARU · v3.9</span></div>
+        <div class="seg wrap" id="segKilat">
+          <button data-v="on" class="on">KILAT</button><button data-v="off">TURBO (LAMA)</button>
+        </div>
+        <div class="note" id="kilatNote"><b>KILAT (v3.9 — cara EXTREME baru):</b> video <b>tidak diputar sama sekali</b> saat ekspor — potongan H.264 diambil <b>langsung dari wadah MP4</b> lalu didekode oleh <b>VideoDecoder hardware</b> (GPU), frame disusun &amp; di-encode secepat mesin sanggup → kecepatan tidak lagi dibatasi waktu pemutaran; film panjang bisa selesai <b>banyak kali lipat lebih cepat</b>. Semua efek tetap jalan (cover, zoom pembicara, frame, subtitel, musik, TTS). <b>Jaminan kualitas:</b> hasil kilat minimal <b>720p HD</b> — bila resolusi output lebih kecil, otomatis dinaikkan. <b>AMAN:</b> bila sumber bukan MP4/H.264, memakai B-frame, atau decoder tak tersedia → otomatis kembali ke jalur <b>TURBO</b> lama (mengambil frame sambil memutar video). <b>TURBO (LAMA)</b>: pilih bila ingin perilaku lama persis.</div>
+        <div class="lbl">MODE PROSES — POTONG LANGSUNG TANPA RENDER <span class="beta">BARU · v3.10</span></div>
         <div class="seg wrap" id="segCutMode">
           <button data-v="render" class="on">RENDER PENUH</button><button data-v="fast">POTONG LANGSUNG</button>
         </div>
         <div class="substat" id="cutModeStat">RENDER PENUH — semua efek (judul, PART, subtitel, cover, musik…) diterapkan penuh</div>
-        <div class="note"><b>POTONG LANGSUNG</b> = memecah/memotong MP4 <b>tanpa me-render ulang</b>: byte video asli disalin utuh, batas part menyesuaikan <b>titik keyframe</b>. Hasil: <b>kualitas &amp; resolusi 100% asli</b> (tidak mungkin turun di bawah sumber), kecepatan ±10-60× render — sebatas kecepatan disk. Karena tanpa render, <b>teks/efek tidak ikut terbakar</b>: syaratnya judul, label PART (pilih TANPA LABEL), deskripsi, subtitel, cover, watermark, filter &amp; semua efek MATI — bila ada yang aktif, KINOSTRA otomatis memakai RENDER PENUH agar hasil tidak jebol. Cocok saat kamu cuma mau <b>memecah film jadi part cepat</b>. Berlaku juga utk potongan &amp; rentang waktu (modul 02/02B) serta BATCH EKSPOR; GABUNG VIDEO tetap render penuh.</div>
+        <div class="note"><b>POTONG LANGSUNG (v3.10)</b> = memecah/memotong MP4 <b>tanpa me-render ulang sama sekali</b>: byte video asli disalin utuh, batas part menyesuaikan <b>titik keyframe</b>. Hasil: <b>kualitas &amp; resolusi 100% asli</b> (tidak mungkin turun di bawah sumber — jauh di atas 720p bila sumbernya HD), kecepatan ±10-60× render — sebatas kecepatan disk. Karena tanpa render, <b>teks/efek tidak ikut terbakar</b>: syaratnya judul, label PART (pilih TANPA LABEL), deskripsi, subtitel, cover, watermark, filter &amp; semua efek MATI — bila ada yang aktif, KINOSTRA otomatis memakai RENDER PENUH (bisa MODE KILAT) agar hasil tidak jebol. Cocok saat kamu cuma mau <b>memecah film jadi part cepat</b>. Berlaku juga utk potongan &amp; rentang waktu (modul 02/02B) serta BATCH EKSPOR; GABUNG VIDEO tetap render penuh.</div>
         <div class="lbl">RENDER PARALEL</div>
         <div class="seg wrap" id="segParallel">
           <button data-v="0" class="on">OTOMATIS</button><button data-v="1">1×</button>
@@ -585,6 +604,7 @@
 <script src="js/core.js"></script>
 <script src="js/media.js"></script>
 <script src="js/compose.js"></script>
+<script src="js/demux.js"></script>
 <script src="js/frames.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/speaker.js"></script>

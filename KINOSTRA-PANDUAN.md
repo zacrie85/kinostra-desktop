@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.9.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.10.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.9.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.10.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.9.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.10.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -23,22 +23,46 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 |----|-------|--------|
 | 00 | **Kotak Video · Urutan** ⭐v2.2 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH FILE batch. Berurutan dari atas ke bawah. Thumbnail otomatis, tombol naik/turun urutan, hapus & pratinjau |
 | 01 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16. **v2.6: geser KIRI/KANAN/ATAS/BAWAH selalu berfungsi** (termasuk zoom 1× — memindahkan posisi video di dalam frame 9:16), Zoom Fokus 1–4×, latar BLUR SINEMATIK tampil otomatis (tidak hitam lagi) |
-| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v3.9: 10 FRAME FITURISTIK JUDUL DI VIDEO + posisi JUDUL sampai PALING BAWAH & posisi PART sampai PALING ATAS + gaya TANPA LABEL**. v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
+| 02 | Judul & Part Otomatis | Split video per 20–60 dtk, nomor part otomatis 01→N. **v3.2: JUMLAH PART OTOMATIS — isi angka berapa part yang dimau (mis. 10), durasi per part dihitung & dipotong otomatis merata** (video 60 mnt → 10 part × 6 mnt), hitungan ikut menyesuaikan setiap video. Judul otomatis dari nama file (Bebas Neue 40, bisa diganti). **v3.10: 10 FRAME FITURISTIK JUDUL DI VIDEO + posisi JUDUL sampai PALING BAWAH & posisi PART sampai PALING ATAS + gaya TANPA LABEL**. v2.6: posisi PART bisa digeser kiri/kanan & atas/bawah, posisi JUDUL bisa digeser atas/bawah — judul juga muncul **instan** saat file diimpor (tidak menunggu lagi) |
 | 03 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 04 | Subtitel AI | **BARU v2.4: MESIN VOCALIS v4 NATIVE (whisper.cpp) — fokus Bahasa Jawa & Bahasa Indonesia** — proses native stabil (tidak gagal lagi), unduhan model resume otomatis, teks dibuat dalam bahasa yang diucapkan/dinyanyikan (Jawa tetap Jawa), Mode Lagu/Vokal, filter halusinasi, ekspor SRT. **v2.5: posisi subtitel bisa digeser atas/bawah + ukuran** |
 | 05 | Tracking Objek | **v2.6 TRACKER PINTAR**: prediksi arah gerak + pencarian multi-skala + pencarian ulang otomatis pakai kemiripan template asli — objek yang berpindah posisi tetap dikejar. Kotak target ikut zoom/pan |
 | 06 | Skor Musik AI | Komposisi prosedural EPIC/NEON DRIVE/LO-FI/TENSION. **v3.3: BACKSOUND MP3 SENDIRI — pakai MP3/WAV pilihanmu sebagai musik latar, volume diatur sendiri, loop otomatis, ikut ekspor/split/gabung/batch** |
 | 07 | Tipografi Sinematik | 10 font Hollywood (Cinzel, Bebas Neue, Anton, dst) |
 | 08 | Efek Visual & Watermark | Brightness/kontras/saturasi, vignette, film grain, watermark teks/logo. **BARU v2.8: FRAME NEON BERPUTAR** — garis neon keliling pinggir video, berputar otomatis (9:16 & 16:9) |
-| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.8: 1 SAMPUL SEMUA PART** — cukup SATU cover per film: adegan terbaik dipindai SEKALI di sekitar **menit 5–7** film (video pendek proporsional), sampul yang sama dipakai SEMUA part film itu — film 60 mnt → 10 part = 1 cover; **nomor part tetap tercetak otomatis** di bawah judul. **v3.7: OTOMATIS TIAP PART** — cover tiap part beda dari adegannya sendiri + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis + PRATINJAU. **v3.6: cover tampil di awal SETIAP file** (default 2 dtk, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, BATCH EKSPOR & pembuka GABUNG; MANUAL: impor PNG/JPG/WebP / STUDIO SAMPUL |
-| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR — semua video di kotak diekspor berurutan dari menu ekspor**. **v3.4: RESOLUSI OUTPUT — pilih 720p / 1080p / 2K / 4K UHD untuk hasil ekspor, split, batch & gabung**. **BARU v3.9: MODE PROSES POTONG LANGSUNG — pecah/split MP4 tanpa re-encode, kualitas & resolusi asli 100%, ±10-60× lebih cepat** |
+| 08B | **Cover Video Pembuka** ⭐v3.6 | **BARU v3.9: BINGKAI JUDUL (10 gaya) + POSISI JUDUL & POSISI PART bisa digeser** — judul sampul dibungkus bingkai pilihan (KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS), judul bisa digeser sampai paling bawah, tulisan part bisa digeser sampai paling atas (otomatis menghindari judul). **v3.8: 1 SAMPUL SEMUA PART** — cukup SATU cover per film: adegan terbaik dipindai SEKALI di sekitar **menit 5–7** film (video pendek proporsional), sampul yang sama dipakai SEMUA part film itu — film 60 mnt → 10 part = 1 cover; **nomor part tetap tercetak otomatis** di bawah judul. **v3.7: OTOMATIS TIAP PART** — cover tiap part beda dari adegannya sendiri + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis + PRATINJAU. **v3.6: cover tampil di awal SETIAP file** (default 2 dtk, bisa 1/2/3/5) — semua part EKSPORT & SPLIT, BATCH EKSPOR & pembuka GABUNG; MANUAL: impor PNG/JPG/WebP / STUDIO SAMPUL |
+| 09 | Ekspor & Kompresi | MP4 H.264 + AAC. **BARU v3.10: MODE PROSES POTONG LANGSUNG — pecah/split MP4 tanpa re-encode sama sekali (byte asli disalin), kualitas & resolusi 100% asli, ±10-60× lebih cepat; tanpa efek teks (otomatis jatuh ke RENDER PENUH/KILAT bila ada efek aktif)**. **v3.9: MODE KILAT — potong langsung dari wadah MP4 + dekode hardware (tanpa memutar video), kecepatan tak lagi dibatasi waktu nyata; hasil minimal 720p; gagal otomatis kembali TURBO**. **v2.2 TURBO STREAM** — frame diambil sambil video diputar cepat (tanpa seek per frame) + encoder GPU + render paralel. **BARU v2.8: BATCH EKSPOR**. **v3.4: RESOLUSI OUTPUT 720p/1080p/2K/4K** |
 | 10 | Batch Proses | **BARU v2.3: impor massal sampai 100 video sekaligus** — semua masuk Kotak Video lalu diproses **berurutan otomatis** satu per satu |
 
-## Yang Baru di v3.9 — 10 Frame Judul di Video + POTONG LANGSUNG (modul 02 & 09)
+## Yang Baru di v3.9 — BINGKAI JUDUL · POSISI BEBAS · MODE KILAT
+
+Tiga permintaan sekaligus:
+
+### 1. BINGKAI JUDUL — 10 gaya fituristik (modul 08B)
+- **Cara pakai**: modul **08B** → sumber **OTOMATIS TIAP PART / 1 SAMPUL SEMUA PART** → **BINGKAI JUDUL** → pilih salah satu dari 10 gaya: **KOTAK** (bingkai bulat amber), **GANDA** (bingkai ganda emas-krem), **PITA** (pita banner merah gelap bersayap), **SUDUT EMAS** (4 siku emas klasik), **NEON** (glow sian-pink menyala), **FILM STRIP** (pita gulungan bioskop berlubang), **GARIS EMAS** (garis emas + berlian), **KACA** (panel kaca buram berkilau), **GRADIEN** (kaca warna emas-tua), **GARIS PUTUS** (bingkai putus-putus krem) — plus **TANPA** bila ingin judul polos
+- Bingkai digambar **otomatis pas ukuran judul** (1–2 baris) dan ikut semua sumber cover otomatis: ekspor tunggal, split, batch & gabung
+- **PRATINJAU CONTOH COVER** ikut menampilkan bingkai pilihanmu
+
+### 2. POSISI JUDUL & POSISI PART BISA DIGESER
+- **POSISI JUDUL** (slider di modul 08B): geser judul dari **paling atas (0%)** sampai **paling bawah (100%)** — default 80% ≈ posisi lama, nol perubahan bagi yang tidak mengutak-atik
+- **POSISI TULISAN PART** (slider): geser label PART/EPISODE/EPS/BAGIAN/# dari **paling atas (0%)** sampai paling bawah (100%) — default 100% = persis posisi lama (di bawah judul)
+- **Anti-tabrakan cerdas**: bila judul dan label part bertemu di posisi yang sama, label part **otomatis menghindar** — digeser ke sisi terdekat yang lega, tidak pernah menimpa judul
+- Berlaku untuk semua sumber cover (otomatis & manual) dan semua jalur (ekspor/split/batch/gabung)
+
+### 3. MODE KILAT — POTONG LANGSUNG, JAUH LEBIH CEPAT (modul 09)
+- **Cara EXTREME-nya**: selama ini ekspor mengambil frame **sambil memutar video** (dibatasi waktu nyata). Kini video **TIDAK DIPUTAR SAMA SEKALI** — potongan H.264 diambil **langsung dari wadah MP4** (demuxer sendiri, parsing box moov/stbl, termasuk dukungan B-frame & rotasi metadata), didekode **VideoDecoder hardware** (GPU bila ada), lalu disusun & di-encode secepat mesin sanggup
+- **Hasil**: kecepatan tidak lagi dibatasi waktu pemutaran — pada uji otomatis (tanpa GPU): **KILAT 2,6 dtk vs TURBO 12,3 dtk untuk film 12 detik (±4,7× lebih cepat)**; dengan encoder GPU (NVENC/QuickSync/AMF) selisihnya jauh lebih besar lagi
+- **Semua efek tetap jalan persis sama**: cover pembuka, zoom pembicara, frame, subtitel, musik, backsound, TTS, kecepatan, potong bagian — komposisi memakai mesin yang sama
+- **Jaminan kualitas**: hasil kilat **minimal 720p HD** — bila resolusi output lebih kecil, otomatis dinaikkan ke 1280×720 (9:16: 720×1280)
+- **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
+- **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
+- Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.10 — 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG (modul 02 & 09)
 
 ### 1) 10 FRAME FITURISTIK untuk JUDUL DI DALAM VIDEO (modul 02)
 
-Frame hias kini untuk **judul yang terbakar di dalam video** — bukan bingkai sampul 08B:
+**Koreksi dari v3.9** — frame hias kini untuk **judul yang terbakar di dalam video** (bingkai judul sampul 08B tetap tersedia):
 
 - **GARIS KEMBAR** — dua garis emas atas & bawah judul (sinematik minimalis)
 - **KOTAK TEGAS** — kotak lurus mengelilingi judul
@@ -60,9 +84,9 @@ Frame hias kini untuk **judul yang terbakar di dalam video** — bukan bingkai s
 - **GAYA TAMPIL PART** punya pilihan baru **TANPA LABEL** — video bersih tanpa nomor part (nomor tetap ada di nama file).
 - Kombinasikan: judul + frame di bawah, label PART di atas, subtitel di tengah — rapi tanpa bertumpuk.
 
-### 3) POTONG LANGSUNG — Ekspor & Split tanpa re-encode (modul 09)
+### 3) POTONG LANGSUNG — Ekspor & Split tanpa re-encode (modul 09, v3.10)
 
-- **Cara pakai**: modul **09 EKSPOR & KOMPRESI** → **MODE PROSES — POTONG LANGSUNG** → pilih **POTONG LANGSUNG** → **EKSPOR & SPLIT MP4** seperti biasa.
+- **Cara pakai**: modul **09 EKSPOR & KOMPRESI** → **MODE PROSES — POTONG LANGSUNG TANPA RENDER** → pilih **POTONG LANGSUNG** → **EKSPOR & SPLIT MP4** seperti biasa.
 - Yang terjadi: MP4 dipecah di **titik keyframe** dengan menyalin byte video **utuh tanpa decode/encode** — kualitas piksel & resolusi **100% sama dengan sumber** (tidak mungkin turun), kecepatan **±10-60× render** (sebatas kecepatan disk).
 - **Syarat**: semua efek teks/cover/efek visual harus MATI — mode ini tidak membakar teks. Bila judul/PART/subtitel/cover/musik/efek masih aktif, KINOSTRA **otomatis memakai RENDER PENUH** dan menampilkan alasannya (status mode & ringkasan selalu menunjukkan kesiapan).
 - Trik: pilih **GAYA TAMPIL PART → TANPA LABEL** + matikan **TAMPILKAN JUDUL DI VIDEO** + auto-subtitel → status menjadi **SIAP** → pecah film 60 menit jadi part dalam hitungan detik-menit.
@@ -327,6 +351,7 @@ sendiri bila encoder CPU yang bekerja. Kini modul **EKSPOR & KOMPRESI** punya:
   Intel UHD-Iris-Arc) + status dukungan encoder hardware + **hasil uji
   kecepatan nyata** "GPU xx fps vs CPU xx fps" — berjalan otomatis saat
   aplikasi dibuka, tanpa menahan apa pun.
+- **MODE KILAT (v3.9)**: **KILAT** (default) — potongan H.264 diambil langsung dari wadah MP4 lalu didekode VideoDecoder (GPU bila ada) **tanpa memutar video** → kecepatan tak lagi dibatasi waktu nyata; hasil minimal 720p; semua efek tetap jalan; gagal apa pun otomatis kembali TURBO. **TURBO (LAMA)** — jalur capture-playback lama
 - **Pilihan AKSELERASI**: **OTOMATIS** (default — sebelum ekspor, encoder GPU
   dan CPU diuji sebentar, yang terbukti lebih kencang yang dipakai; GPU harus
   menang minimal 15% untuk mengalahkan CPU agar tetap stabil), **GPU**

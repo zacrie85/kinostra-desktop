@@ -171,7 +171,17 @@ const state = {
      v3.8: scope = 'part' (tiap part adegan sendiri, cover beda-beda) |
      'single' (SATU sampul dipindai sekali per film — window menit 5–7 —
      lalu dipakai SEMUA part film itu; nomor part tetap otomatis) */
-  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, scope: 'part', style: 'KLASIK', title: '' },
+  cover: { on: false, dataUrl: null, name: '', img: null, dur: 2, part: 'PART', auto: false, scope: 'part', style: 'KLASIK', title: '',
+    /* v3.9: titleFrame = bingkai judul (kunci TITLEFRAMES — TANPA + 10 gaya);
+       titlePos = posisi vertikal judul 0 (paling atas) … 100 (paling bawah),
+       default 80 ≈ posisi lama; partPos = posisi tulisan part 0 (paling atas)
+       … 100 (paling bawah), default 100 = persis posisi lama (di bawah judul) */
+    titleFrame: 'TANPA', titlePos: 80, partPos: 100 },
+  /* v3.9: MODE KILAT — 'on' = ekspor memotong langsung dari wadah MP4 +
+     VideoDecoder (hardware bila ada), TANPA memutar video (kecepatan tak
+     lagi dibatasi waktu nyata; hasil minimal 720p). 'off' = jalur TURBO lama
+     (capture playback). Non-MP4/B-frame/codec lain otomatis TURBO. */
+  kilat: 'on',
   /* v3.4: RESOLUSI OUTPUT TETAP — '720' | '1080' | '1440' | '2160' (kunci
      RESOUTS) | '' = AUTO (mengikuti SKALA RESOLUSI 100/75/50%, perilaku lama).
      Setelan GLOBAL: berlaku untuk EKSPORT & SPLIT MP4, BATCH EKSPOR (semua
