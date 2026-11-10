@@ -581,8 +581,11 @@ function ncComposeCoverFrame(x, W, H, L, o) {
   /* 1) latar + KEN BURNS */
   const kr = ncKenburnsRect(ncClamp01(o.p), W, H, nc.fx || 'in');
   x.drawImage(L.bg, kr.x, kr.y, kr.w, kr.h);
-  /* 2) judul dgn animasi masuk */
-  const st = o.animate === false ? { alpha: 1, dy: 0, scale: 1, kind: null } : ncTextState(nc.titleAnim, o.tLocal, o.dur, 11);
+  /* 2) judul dgn animasi masuk — TANPA outro-fade: judul & badge part
+     menahan posisi sampai cover berakhir (transisi/potong mengambil
+     alih), dulu outP memudarkan teks di 0.3 dtk terakhir → bentrok
+     dgn kanvas transisi (judul mendadak muncul lagi) */
+  const st = o.animate === false ? { alpha: 1, dy: 0, scale: 1, kind: null } : ncTextState(nc.titleAnim, o.tLocal, 1e9, 11);
   if (st.alpha > 0.004) {
     x.save();
     x.globalAlpha = st.alpha;
@@ -592,8 +595,8 @@ function ncComposeCoverFrame(x, W, H, L, o) {
     x.drawImage(L.title, 0, 0);
     x.restore();
   }
-  /* 3) badge part dgn animasinya sendiri */
-  const sp = o.animate === false ? { alpha: 1, dy: 0, scale: 1, kind: null } : ncTextState(nc.partAnim, Math.max(0, o.tLocal - 0.25), o.dur, 77);
+  /* 3) badge part dgn animasinya sendiri (juga tanpa outro-fade) */
+  const sp = o.animate === false ? { alpha: 1, dy: 0, scale: 1, kind: null } : ncTextState(nc.partAnim, Math.max(0, o.tLocal - 0.25), 1e9, 77);
   if (sp.alpha > 0.004) {
     x.save();
     x.globalAlpha = sp.alpha;
@@ -671,9 +674,14 @@ function ncDrawCoverFit(x, src, W, H, opt = {}) {
   const sw = src.width || 2, sh = src.height || 2;
   const s = Math.max(W / sw, H / sh) * (opt.scale || 1);
   const dw = sw * s, dh = sh * s;
-  x.globalAlpha = opt.alpha ?? 1;
+  /* v3.11 FIX: alpha DIKALIKAN dgn alpha ambien (ncWithAlpha) — dulu
+     diganti total (opt.alpha ?? 1) sehingga lapisan dgn withAlpha
+     (crossfade/dip/zoom/bounce/dst.) tergambar OPAQUE → transisi
+     kehilangan lebur & ujung p=0/p=1 tidak persis cover/video */
+  const ga = x.globalAlpha;
+  x.globalAlpha = ga * (opt.alpha ?? 1);
   x.drawImage(src, (W - dw) / 2 + (opt.dx || 0), (H - dh) / 2 + (opt.dy || 0), dw, dh);
-  x.globalAlpha = 1;
+  x.globalAlpha = ga;
 }
 function ncWithAlpha(x, a, fn) { const old = x.globalAlpha; x.globalAlpha = a; fn(); x.globalAlpha = old; }
 
@@ -778,14 +786,18 @@ function ncApplyTransition(id, x, a, b, p, W, H, accent = '#fff') {
       ncDrawCoverFit(x, b, W, H, { dx: (1 - e) * W });
       break;
     case 'wipe-diag': {
+      /* v3.11 FIX ARAH: dulu diagonal mulai di KIRI (B tampil penuh di
+         p=0) & berakhir di KANAN (A tampil di p=1) — TERBALIK. Kini
+         sapuan benar: p=0 = cover penuh → p=1 = video penuh, garis
+         cahaya memimpin tepi sapuan. */
       A();
       x.save();
       x.beginPath();
-      const xTop = W * (2 * e - 1) + W * 0.3, xBot = W * (2 * e - 1) - W * 0.1;
+      const xTop = W * 1.55 - e * W * 2.3, xBot = xTop - W * 0.4;
       x.moveTo(xBot, H); x.lineTo(xTop, 0); x.lineTo(W + 2, 0); x.lineTo(W + 2, H);
       x.closePath(); x.clip();
       B(); x.restore();
-      const lx = e * (W * 1.4);
+      const lx = (1 - e) * (W * 1.4);
       const grad = x.createLinearGradient(lx - 60, 0, lx + 60, 0);
       grad.addColorStop(0, 'rgba(255,255,255,0)');
       grad.addColorStop(0.5, `rgba(255,255,255,${Math.sin(p * Math.PI) * 0.7})`);

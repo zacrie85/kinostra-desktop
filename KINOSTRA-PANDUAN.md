@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.10.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.11.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.10.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.11.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.10.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.11.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -57,6 +57,33 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.11 — MESIN COVER NOVACUT (modul 08B & 02)
+
+Fitur cover KINOSTRA **diganti total** dengan sistem cover milik **NOVACUT Studio** (port penuh, 100% offline) — cara pembuatan cover, efek cover, transisi cover, transisi masuk ke video, dan animasi masuk judul & tulisan PART/EPISODE/BAGIAN.
+
+### 1) PEMBUATAN COVER — 100 TEMPLATE (modul 08B)
+- **10 LAYOUT × 10 PALET**: IMPACT TENGAH, LOWER THIRD, BANNER ATAS, GRADIEN SISI, KOTAK JUDUL, NEON GLOW, BAR SINEMA, STICKER BADGE, OUTLINE RAKSASA, PITA DIAGONAL × CYBER NEON, SUNSET FIRE, GOLD LUXURY, ICE COOL, TOXIC GREEN, ROYAL PURPLE, BLOOD RED, MONOCHROME, CANDY POP, OCEAN DEEP
+- Pilih layout & palet → pratinjau template langsung tampil di panel; tombol **MAINKAN PRATINJAU COVER + TRANSISI** memutarkan cover → transisi → video berulang
+- Latar: **ADEGAN VIDEO** (frame video / gambar manual) atau **HITAM** polos + vignette
+- **Bingkai cover**: TANPA / KLASIK (emas ganda + hiasan sudut) / MODERN (garis bersih + aksen) / FUTURISTIK (sudut HUD menyala) — digambar transparan 75% di tepi
+- Sumber lama tetap jalan: MANUAL (impor / Studio Sampul), OTOMATIS TIAP PART (v3.7), 1 SAMPUL SEMUA PART (v3.8); tulisan part (PART/EPISODE/EPS/BAGIAN/#) tetap otomatis per file
+
+### 2) EFEK COVER — KEN BURNS (modul 08B)
+Latar cover bergerak perlahan seperti klip cover NOVACUT: **ZOOM IN / ZOOM OUT / PAN KIRI↔KANAN / PAN ATAS↔BAWAH / DIAM**.
+
+### 3) TRANSISI COVER → VIDEO — 28 GAYA (modul 08B)
+Setelah cover selesai, video masuk dengan transisi pilihan (durasi 0.2–1.5 dtk bisa diatur):
+- **Trailer Hollywood**: FLASH SNAP, WHIP PAN, ZOOM PUNCH, ZOOM BLAST, RGB GLITCH, IMPACT SHAKE, CINEMATIC BARS, FILM BURN
+- **Iklan Produk**: SLIDE KIRI/KANAN/ATAS/BAWAH, PUSH PARALLAX, DIAGONAL WIPE, IRIS CIRCLE, WINDOW BLINDS, SPLIT REVEAL, BOUNCE POP, FLARE SWEEP
+- **Sinematik**: CROSS DISSOLVE, DIP KE HITAM, DIP KE PUTIH, BLUR DISSOLVE
+- **Trend Viral**: SPIN SWAP, PIXELATE, TV STATIC, CHROMATIC SLIDE, MOSAIC REVEAL
+- **TANPA** = potong langsung seperti sebelumnya. Berlaku untuk EKSPORT & SPLIT MP4, BATCH EKSPOR & GABUNG VIDEO (cover + transisi sekali di pembuka gabungan).
+
+### 4) ANIMASI MASUK TEKS — 8 GAYA (cover di modul 08B, video di modul 02)
+Judul & tulisan part kini bisa **masuk dengan animasi**: FADE, RISE UP, TYPEWRITER (dengan kursor kedip), TITLE SLAM (menghantam dari besar), NEON FLICKER (berkelip), TRACKING (huruf merapat), GLITCH (bayangan RGB), WIPE (sapuan).
+- **Modul 08B**: animasi JUDUL COVER & animasi TULISAN PART COVER (default TITLE SLAM — persis NOVACUT)
+- **Modul 02**: ANIMASI MASUK JUDUL & ANIMASI MASUK PART untuk judul/label yang terbakar di dalam video — masuk dengan animasi di awal tiap part, setelah itu tampilan persis perilaku lama
 
 ## Yang Baru di v3.10 — 10 FRAME JUDUL DI VIDEO + POTONG LANGSUNG (modul 02 & 09)
 

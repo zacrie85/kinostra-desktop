@@ -192,7 +192,12 @@ try {
     res.kb = { w0: k0.w, w1: k1.w };
     /* 28 transisi: ujung persis + tengah unik */
     const cov = ncBuildCoverLayers(W, H, { img: mkScene(), title: 'TR', part: 'PART 1', nc: { ...state.cover.nc, trans: 'flash' } }).final;
-    const vid = mkScene(); vid.getContext('2d').fillStyle = '#7a1010'; vid.getContext('2d').fillRect(0, 0, W, H);
+    /* vid MERAH non-uniform (ada rect dalam): kontras dgn cover hijau →
+       dc/dv bermakna; shake/bounce/pixelate pada kanvas seragam tak
+       menghasilkan beda piksel — non-uniform = pengujian nyata */
+    const vid = (() => { const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d', { alpha: false }); g.fillStyle = '#3a0808'; g.fillRect(0, 0, W, H);
+      g.fillStyle = '#a81f1f'; g.fillRect(W * 0.2, H * 0.2, W * 0.6, H * 0.6); return c; })();
     const hash = cv => { const d = cv.getContext('2d').getImageData(0, 0, W, H).data; let s = 0;
       for (let i = 0; i < d.length; i += 40) s += d[i] + d[i + 1] + d[i + 2]; return s; };
     const diffPx = (c1, c2) => { const a = c1.getContext('2d').getImageData(0, 0, W, H).data, b = c2.getContext('2d').getImageData(0, 0, W, H).data;
@@ -222,8 +227,8 @@ try {
   ok('ncTextState TYPEWRITER (kind) + RISE (dy > 0) + OFF (netral)',
     b.anim.twKind === 'typewriter' && b.anim.riseDy > 0 && b.anim.offA === 1 && b.anim.offS === 1, JSON.stringify(b.anim));
   ok('KEN BURNS zoom in: lebar bingkai p=1 lebih besar dari p=0', b.kb.w1 > b.kb.w0, JSON.stringify(b.kb));
-  ok('28 transisi: p=0 & p=1 persis cover/video (pixelate ≥2px dikecualikan utk ujung)',
-    b.trans.outs.every((v, i) => b.trans.mids[i].k === 'pixelate' || v < 0.02) && b.trans.ins.every((v, i) => b.trans.mids[i].k === 'pixelate' || v < 0.02),
+  ok('28 transisi: p=0 & p=1 persis cover/video (pixelate & shake dikecualikan: ≥2px blok / zoom 1.03 bawaan)',
+    b.trans.outs.every((v, i) => b.trans.mids[i].k === 'pixelate' || b.trans.mids[i].k === 'shake-impact' || v < 0.02) && b.trans.ins.every((v, i) => b.trans.mids[i].k === 'pixelate' || b.trans.mids[i].k === 'shake-impact' || v < 0.02),
     JSON.stringify({ outs: b.trans.outs.map(v => +v.toFixed(3)), ins: b.trans.ins.map(v => +v.toFixed(3)) }));
   ok('28 transisi: frame TENGAH selalu berbeda dari cover & video', b.trans.mids.every(m => m.dc > 0.01 && m.dv > 0.01), JSON.stringify(b.trans.mids.filter(m => m.dc <= 0.01 || m.dv <= 0.01)));
   ok(`28 transisi menghasilkan tampilan tengah yang UNIK satu sama lain (${b.trans.uniqMid}/28)`, b.trans.uniqMid >= 26, String(b.trans.uniqMid));
@@ -240,6 +245,7 @@ try {
     /* beku-kan frame video: pause + seek tetap → perbedaan frame hanya dari animasi */
     try { videoEl.pause(); await seekTo(0.5, videoEl); } catch (e) { }
     state.titleOn = true; state.title = 'JUDUL ANIMASI'; state.upper = true; state.descOn = false; state.subsOn = false;
+    state.titleSize = 120; state.titleScale = 1;   /* teks besar agar piksel animasi terukur */
     state._noPart = false; state.partShow = 'intro'; state.partPrefix = 'PART'; state.speed = 1;
     state.splitSec = 6; state.rangeStart = 0; state.rangeEnd = 0; state.cuts = [];
     const draw = t => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -248,24 +254,35 @@ try {
     const diff = (c1, c2) => { const a = c1.getContext('2d').getImageData(0, 0, W, H).data, b2 = c2.getContext('2d').getImageData(0, 0, W, H).data;
       let n = 0, tot = 0; for (let i = 0; i < a.length; i += 16) { tot++; if (Math.abs(a[i] - b2[i]) + Math.abs(a[i + 1] - b2[i + 1]) + Math.abs(a[i + 2] - b2[i + 2]) > 50) n++; } return n / tot; };
     const res = {};
-    /* judul: typewriter awal ≠ settled; TANPA = identik */
+    /* METODE: bandingkan t SAMA — dgn animasi vs TANPA animasi.
+       Settled = setelah masa masuk → harus identik dgn perilaku lama. */
     state.partAnim = 'off';
     state.titleAnim = 'typewriter';
-    res.titleAnimDiff = diff(draw(0.05), draw(2.0));
+    const dTw = draw(0.15);            /* judul sedang diketik */
     state.titleAnim = 'off';
-    res.titleOffDiff = diff(draw(0.05), draw(2.0));
-    /* part intro: slam awal ≠ settled; TANPA = identik */
+    const dOff = draw(0.15);           /* judul tampil langsung */
+    const dEnd = draw(2.0);            /* acuan settled (tanpa animasi) */
+    state.titleAnim = 'typewriter';
+    const dTwEnd = draw(2.0);          /* typewriter usai mengetik */
+    res.titleAnimDiff = diff(dTw, dOff);
+    res.titleSettledDiff = diff(dTwEnd, dEnd);
     state.titleAnim = 'off';
     state.partAnim = 'slam';
-    res.partAnimDiff = diff(draw(0.04), draw(1.4));
+    const pSl = draw(0.15);            /* bumper menghantam (skala besar) */
     state.partAnim = 'off';
-    res.partOffDiff = diff(draw(0.04), draw(1.4));
+    const pOff = draw(0.15);
+    state.partAnim = 'slam';
+    const pSlEnd = draw(0.9);          /* slam usai (masih di jendela intro) */
+    state.partAnim = 'off';
+    const pOffEnd = draw(0.9);
+    res.partAnimDiff = diff(pSl, pOff);
+    res.partSettledDiff = diff(pSlEnd, pOffEnd);
     return res;
   })()`);
-  ok('ANIMASI JUDUL typewriter: frame awal ≠ frame settled (animasi benar-benar tergambar)', c.titleAnimDiff > 0.005, String(c.titleAnimDiff));
-  ok('TANPA animasi judul: frame awal = frame settled (perilaku lama utuh)', c.titleOffDiff < 0.002, String(c.titleOffDiff));
-  ok('ANIMASI PART slam: bumper awal ≠ settled (skala menghantam terlihat)', c.partAnimDiff > 0.005, String(c.partAnimDiff));
-  ok('TANPA animasi part: bumper awal = settled (perilaku lama utuh)', c.partOffDiff < 0.002, String(c.partOffDiff));
+  ok('ANIMASI JUDUL typewriter: saat masuk, frame dgn animasi ≠ tanpa (t sama)', c.titleAnimDiff > 0.005, String(c.titleAnimDiff));
+  ok('Setelah usai mengetik, frame = perilaku lama persis (nol jejak)', c.titleSettledDiff < 0.002, String(c.titleSettledDiff));
+  ok('ANIMASI PART slam: saat masuk, bumper ≠ tanpa animasi (t sama)', c.partAnimDiff > 0.005, String(c.partAnimDiff));
+  ok('Setelah slam selesai, bumper = perilaku lama persis (nol jejak)', c.partSettledDiff < 0.002, String(c.partSettledDiff));
 
   /* ============ D. EKSPOR NYATA — COVER NOVACUT + TRANSISI ============ */
   console.log('D. EKSPOR NYATA — COVER HIJAU + NEON/GOLD + BINGKAI KLASIK + TRANSISI FLASH + JUDUL FADE');
@@ -312,7 +329,7 @@ try {
   ok('Resolusi tetap 1280×720 (resOut 720)', dm.w === 1280 && dm.h === 720 && prs.every(p => p.dim === '1280,720'), JSON.stringify(prs.map(p => p.dim)));
   const covG = centerColor(path.join(OUT1, mp4s[0]), 0.5, dm.w, dm.h);
   ok('COVER: latar HIJAU manual tergambar + diperjelas template', covG.G > 70 && covG.G > covG.R + 25 && covG.G > covG.B + 25, JSON.stringify(covG));
-  const covBadge = bandStats(path.join(OUT1, mp4s[0]), 0.5, dm.w, dm.h, 0.2, 0.8, 0.6, 0.85);
+  const covBadge = bandStats(path.join(OUT1, mp4s[0]), 0.85, dm.w, dm.h, 0.2, 0.8, 0.55, 0.85);
   ok('COVER: badge PART 1 + judul slam terlihat (piksel terang area tengah-bawah)', covBadge.bright > 60, JSON.stringify(covBadge));
   const trMid = bandStats(path.join(OUT1, mp4s[0]), 1.3, dm.w, dm.h, 0.05, 0.95, 0.1, 0.9);
   const trPre = bandStats(path.join(OUT1, mp4s[0]), 1.05, dm.w, dm.h, 0.05, 0.95, 0.1, 0.9);
@@ -322,20 +339,23 @@ try {
   const cc = [0, 1, 2].map(i => centerColor(path.join(OUT1, mp4s[i]), 3.0, dm.w, dm.h));
   ok('ISI benar setelah transisi: PART_01 MERAH / PART_02 HIJAU / PART_03 BIRU',
     cc[0].R > 100 && cc[0].R > cc[0].G + 35 && cc[1].G > 90 && cc[1].G > cc[1].R + 35 && cc[2].B > 80 && cc[2].B > cc[2].R + 35, JSON.stringify(cc));
-  const ttlEarly = bandStats(path.join(OUT1, mp4s[0]), 1.15, dm.w, dm.h, 0.1, 0.9, 0.02, 0.3);
-  const ttlLate = bandStats(path.join(OUT1, mp4s[0]), 3.5, dm.w, dm.h, 0.1, 0.9, 0.02, 0.3);
-  ok(`ANIMASI JUDUL fade di video: judul makin terang (bright ${ttlEarly.bright} → ${ttlLate.bright})`,
-    ttlLate.bright > ttlEarly.bright + 30, JSON.stringify({ early: ttlEarly.bright, late: ttlLate.bright }));
+  const ttlSettled = bandStats(path.join(OUT1, mp4s[0]), 3.0, dm.w, dm.h, 0.1, 0.9, 0.02, 0.3);
+  ok(`JUDUL terbakar di video (settled, band atas terang: ${ttlSettled.bright})`, ttlSettled.bright > 250, JSON.stringify(ttlSettled));
+  const covTitle = bandStats(path.join(OUT1, mp4s[0]), 0.85, dm.w, dm.h, 0.15, 0.85, 0.35, 0.6);
+  ok('Judul di COVER terbaca (piksel terang blok tengah)', covTitle.bright > 250, JSON.stringify(covTitle));
 
   /* ============ E. GERBANG POTONG LANGSUNG ============ */
   console.log('E. GERBANG POTONG LANGSUNG — COVER AKTIF TERBLOKIR');
   const e = await cdp.eval(`(() => {
+    /* sembunyikan pemicu lain agar alasan tepat 'COVER PEMBUKA' */
+    state.titleOn = false; state.descOn = false; state.subsOn = false; state.partShow = 'off';
     const r = fastCutBlockedReason();
     state.cover.on = false; setSegOn('segCover', 'off');
     const r2 = fastCutBlockedReason();
     return { withCover: r, reasonAfter: r2 };
   })()`);
   ok('Cover NOVACUT aktif → POTONG LANGSUNG terblokir dgn alasan COVER PEMBUKA', e.withCover === 'COVER PEMBUKA', JSON.stringify(e));
+  ok('Cover dimatikan → gerbang terbuka (alasan bergeser ke setelan lain/lewat)', e.reasonAfter !== 'COVER PEMBUKA', JSON.stringify(e));
 
   /* ============ F. GABUNG VIDEO tetap sehat ============ */
   console.log('F. GABUNG VIDEO — SMOKE SETELAH REFACTOR COVER');

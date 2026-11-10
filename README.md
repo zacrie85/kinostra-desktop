@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.10.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.11.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -67,6 +67,8 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 46 | **Cover Video Pembuka + Mode Otomatis** ⭐v3.9 | **Satu cover tampil di awal SETIAP file** hasil ekspor & split (1/2/3/5 detik). **v3.8: 1 SAMPUL SEMUA PART** — cukup pindai SEKALI per film (sekitar menit 5–7), sampul yang sama dipakai semua part-nya (film 60 mnt → 10 part = 1 cover); nomor part tetap otomatis (posisinya bisa digeser sampai paling atas). **v3.9: BINGKAI JUDUL 10 gaya** (KOTAK, GANDA, PITA, SUDUT EMAS, NEON, FILM STRIP, GARIS EMAS, KACA, GRADIEN, GARIS PUTUS) + **posisi judul bisa digeser** sampai paling bawah. v3.7: OTOMATIS TIAP PART (cover tiap part beda dari adegannya) + bingkai **KLASIK/GARIS/SINEMA** + judul otomatis. MANUAL (impor/Studio) tetap ada |
 | 47 | **10 Frame Fituristik Judul di Video** ⭐v3.10 | **KOREKSI dari v3.9** — bingkai hias kini di sekeliling **JUDUL YANG TERBAKAR DI DALAM VIDEO** (bingkai judul sampul 08B tetap ada): GARIS KEMBAR · KOTAK TEGAS · BINGKAI GANDA · SUDUT KAMERA · PITA JUDUL · PITA SINEMA · NEON MENYALA · EMAS KLASIK · PANEL MODERN · GRADASI PANAS. Pratinjau = hasil ekspor persis. **Posisi judul kini menjangkau PALING BAWAH layar** & **posisi nomor PART menjangkau PALING ATAS layar** + gaya PART **TANPA LABEL** |
 | 48 | **POTONG LANGSUNG (Ekspor & Split Tanpa Render)** ⭐v3.10 | Mode proses baru: MP4 dipecah **tanpa re-encode sama sekali** — byte video asli disalin utuh, batas part menyesuaikan keyframe. **Kualitas & resolusi 100% asli**, kecepatan ±10-60× render (sebatas disk), hasil tetap fastStart. Ada efek aktif? Otomatis jatuh ke RENDER PENUH (bisa MODE KILAT) dengan pesan jelas. Berlaku untuk EKSPOR & SPLIT, rentang waktu, potongan & BATCH EKSPOR |
+| 49 | **MESIN COVER NOVACUT — 100 Template** ⭐v3.11 | Fitur cover **diganti total** dengan sistem NOVACUT Studio: **10 LAYOUT × 10 PALET** (Impact, Lower Third, Banner, Gradien Sisi, Kotak, Neon Glow, Bar Sinema, Sticker, Outline, Pita Diagonal × Cyber, Sunset, Gold, Ice, Toxic, Royal, Blood, Mono, Candy, Ocean), latar **ADEGAN/HITAM**, bingkai cover **KLASIK/MODERN/FUTURISTIK**, efek **KEN BURNS** (zoom/pan) |
+| 50 | **28 Transisi Cover → Video + 8 Animasi Teks** ⭐v3.11 | Transisi NOVACUT penuh: FLASH SNAP, WHIP PAN, ZOOM PUNCH/BLAST, RGB GLITCH, IMPACT SHAKE, CINEMATIC BARS, FILM BURN, SLIDE, PUSH PARALLAX, DIAGONAL WIPE, IRIS, BLINDS, SPLIT, BOUNCE, FLARE SWEEP, CROSS DISSOLVE, DIP HITAM/PUTIH, BLUR DISSOLVE, SPIN SWAP, PIXELATE, TV STATIC, CHROMATIC SLIDE, MOSAIC + **animasi masuk** judul & PART (FADE, RISE UP, TYPEWRITER, TITLE SLAM, NEON FLICKER, TRACKING, GLITCH, WIPE) di cover DAN di video |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
@@ -81,8 +83,8 @@ Pilih salah satu:
 
 | Paket | Ukuran | Cocok untuk |
 |-------|--------|-------------|
-| `KINOSTRA-Setup-3.10.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
-| `KINOSTRA-Portable-3.10.0-win64.zip` | ±126 MB | Jalan tanpa install, bisa dibawa di flashdisk |
+| `KINOSTRA-Setup-3.11.0.exe` | ±91 MB | Install permanen (Start Menu + shortcut desktop + uninstaller) |
+| `KINOSTRA-Portable-3.11.0-win64.zip` | ±126 MB | Jalan tanpa install, bisa dibawa di flashdisk |
 
 Ambil di tab **[Releases](../../releases)** → unduh → jalankan.
 
