@@ -269,12 +269,30 @@ async function renderMix(start, durOut, spd = 1) {
      (loop) sehingga durasi buffer berapa pun tidak pernah crash.
      v2.12: kecepatan → audio asli diputar lebih cepat/lambat memakai
      playbackRate (pitch ikut naik/turun seperti efek fast-forward klasik). */
-  if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
-    const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
-    s.playbackRate.value = spd;
-    const g = oc.createGain(); g.gain.value = state.audioGain;
-    s.connect(g); connectSrc(g);
-    s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
+  /* v3.17.1: sumber audio asli — buffer penuh (media pendek) ATAU decode
+     per jendela lewat demux AAC + AudioDecoder (media panjang; RAM selalu
+     sekecil jendela). Media non-MP4/AAC tanpa buffer → tanpa suara asli. */
+  let AB = state.audioBuffer;
+  let ABwin = false;
+  if (!AB && state._audioDemux && !state.isAudio && typeof decodeAudioWindow === 'function') {
+    state._audioExporting = true;   /* analisis latar tunda diri selama ekspor */
+    try {
+      for (let i = 0; i < 50 && state._audioWinBusy; i++) await new Promise(r => setTimeout(r, 100));
+      const dNeed = Math.min(durOut, Math.max(0.01, (state.duration || (start + durOut)) - start));
+      AB = await decodeAudioWindow(state._audioDemux, start, dNeed + 0.5);
+      ABwin = !!AB;
+    } catch (e) { console.warn('audio jendela gagal —', e && e.message); }
+    state._audioExporting = false;
+  }
+  if (AB && AB.duration > 0.01) {
+    const off0 = ABwin ? Math.max(0, start - (AB.kWin ? AB.kWin.t : start)) : start;
+    if (off0 < AB.duration - 0.01) {
+      const s = oc.createBufferSource(); s.buffer = AB;
+      s.playbackRate.value = spd;
+      const g = oc.createGain(); g.gain.value = state.audioGain;
+      s.connect(g); connectSrc(g);
+      s.start(0, off0, Math.max(0.01, Math.min(durOut, (AB.duration - off0) / spd)));
+    }
   }
   if (state.music.buffer && state.music.buffer.duration > 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.music.buffer;
@@ -1403,7 +1421,7 @@ async function exportPartsToDir(dir, ui) {
   const swCfg = await pickSWCfg(W, H, br, fps);
   /* v3.3: backsound MP3 user ikut membuat jalur audio aktif (video tanpa
      suara asli + backsound tetap diekspor DENGAN audio) */
-  const wantAudio = !!(state.audioBuffer || state.music.buffer
+  const wantAudio = !!(state.audioBuffer || state._audioDemux || state.music.buffer
     || (state.bsound && state.bsound.on && state.bsound.buffer));
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');

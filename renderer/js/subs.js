@@ -56,8 +56,19 @@ async function getMono16k() {
   /* v2.6: decode audio kini berjalan di belakang saat loading —
      tunggu promise-nya, jangan decode dua kali */
   if (!state.audioBuffer) await (state.audioReady || decodeFileAudio());
-  if (!state.audioBuffer) throw new Error('Audio tidak terbaca');
-  const sr = 16000, len = Math.ceil((state.duration || state.audioBuffer.duration) * sr);
+  if (!state.audioBuffer) {
+    /* v3.17.1: media panjang tidak di-decode utuh demi kestabilan */
+    throw new Error(state._audioDemux
+      ? 'Subtitel AI butuh audio penuh — untuk video panjang audio hanya dianalisis bertahap. Gunakan video ≤15 mnt untuk subtitel AI.'
+      : 'Audio tidak terbaca');
+  }
+  const sr = 16000;
+  /* v3.17.1: buffer versi hemat (16 kHz mono, video panjang) sudah pas —
+     pakai langsung TANPA render ulang (hemat salinan ±700 MB/film 3 jam) */
+  if (state.audioBuffer.kLite && state.audioBuffer.sampleRate === sr) {
+    return state.audioBuffer.getChannelData(0);
+  }
+  const len = Math.ceil((state.duration || state.audioBuffer.duration) * sr);
   const oc = new OfflineAudioContext(1, len, sr);
   const s = oc.createBufferSource(); s.buffer = state.audioBuffer; s.connect(oc.destination); s.start(0);
   return (await oc.startRendering()).getChannelData(0);

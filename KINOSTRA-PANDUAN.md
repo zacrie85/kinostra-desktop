@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.1
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,20 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.17.1 — AUDIO FILM PANJANG ANTI-CRASH
+
+Perbaikan akar untuk keluhan: *"setiap masuk ke menu JUDUL & PART OTOMATIS aplikasi selalu blank lalu restart"* — dan sebelumnya *"jalan beberapa menit lalu layar hitam"*. Akar masalahnya sama dan **bukan batas pemakaian**: saat film panjang diimpor, aplikasi mendekode **seluruh trek audionya sekaligus** — AudioBuffer float ±21 MB per menit film (film 2 jam ≈ 2,5 GB, film 188 menit ≈ 4 GB) di dalam satu proses tampilan. Ketika alokasi itu gagal (RAM/commit habis — tergantung isi PC), proses tampilan mati (exitCode 133): di v3.16 layar langsung hitam permanen, di v3.17 pulih otomatis lalu bisa terulang. Di PC lain dengan RAM lebih lega decode-nya sempat berhasil — karena itu gejalanya "hanya di PC tertentu".
+
+**Solusi v3.17.1 — audio film panjang tidak pernah di-decode utuh lagi:**
+
+1. **Film ≤±15 menit** — perilaku lama: audio di-decode penuh berkualitas penuh (tidak ada perubahan).
+2. **Film >±15 menit (MP4/AAC)** — audio dianalisis **bertahap per jendela 45 detik** lewat demux MP4 (parser box yang sama dengan MODE KILAT) + **WebCodecs AudioDecoder**; RAM puncak selalu sekecil satu jendela (±10-20 MB). Hasilnya tetap lengkap: **peaks** (garis gelombang & sinkron musik/backsound), **RMS** (normalizer AUDIO SEHAT), **envelope 0,5 dtk** (ZOOM PEMBICARA).
+3. **Ekspor tetap bersuara asli** — RENDER PENUH mengambil audio per part lewat jendela yang sama (part 30-60 dtk = ±5-10 MB); POTONG LANGSUNG tidak tersentuh (audio asli disalin langsung dari file).
+4. **Sopan** — analisis otomatis **menunggu** saat video sedang diputar atau diekspor, lanjut sendiri saat idle; film 2 jam selesai dianalisis ±1-2 menit saat Anda menata setelan.
+5. **Subtitel AI** untuk film >±15 menit dinonaktifkan demi kestabilan (butuh decode penuh); gunakan video pendek untuk subtitel.
+
+- Diuji otomatis baru **lulus semua** — alur terberat (impor film 120 menit → putar → semua modul dibuka → scroll panel & timeline cepat 60 detik) **nol crash**; decode audio per jendela di detik 30/3600/7000 semuanya bersuara; POTONG LANGSUNG tetap salin stream.
 
 ## Yang Baru di v3.17 — PELINDUNG LAYAR HITAM (Pemulihan Otomatis)
 

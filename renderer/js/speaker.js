@@ -65,7 +65,26 @@ async function ensureSpeakerModel(stat) {
 /* ---------- 2. ENVELOPE AUDIO PER LANGKAH (ternormalisasi 0..1) ---------- */
 function spkAudioEnvelope(step) {
   const b = state.audioBuffer;
-  if (!b || !b.duration || !b.getChannelData) return null;
+  /* v3.17.1: media panjang tanpa buffer utuh — pakai envelope 0,5 dtk
+     hasil analisis bertahap demux (state._audioEnv), diregangkan ke step */
+  if (!b || !b.duration || !b.getChannelData) {
+    const env = state._audioEnv;
+    if (!env || !env.length) return null;
+    const dur = state.duration || env.length * 0.5;
+    const n = Math.max(1, Math.floor(dur / step));
+    const out = new Float32Array(n);
+    for (let k = 0; k < n; k++) {
+      const a0 = Math.floor(k * step / 0.5);
+      const a1 = Math.min(env.length, Math.max(a0 + 1, Math.ceil((k + 1) * step / 0.5)));
+      let s = 0, c = 0;
+      for (let i = a0; i < a1; i++) { s += env[i] * env[i]; c++; }
+      out[k] = Math.sqrt(s / Math.max(1, c));
+    }
+    let mx0 = 0; for (let k = 0; k < n; k++) if (out[k] > mx0) mx0 = out[k];
+    if (mx0 < 1e-4) return null;
+    for (let k = 0; k < n; k++) out[k] = out[k] / mx0;
+    return out;
+  }
   const n = Math.max(1, Math.floor(b.duration / step));
   const out = new Float32Array(n);
   const c0 = b.getChannelData(0), c1 = b.numberOfChannels > 1 ? b.getChannelData(1) : null;

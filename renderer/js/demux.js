@@ -41,10 +41,20 @@ function kilatReaderFor(f) {
     : async (off, len) => new Uint8Array(await f.slice(off, off + len).arrayBuffer());
   const WIN = 4 * 1024 * 1024;
   let bLo = -1, buf = null;
-  return async (off, len) => {
-    if (buf && off >= bLo && off + len <= bLo + buf.length) return buf.subarray(off - bLo, off - bLo + len);
-    bLo = off; buf = await raw(off, Math.max(len, WIN));
-    return buf.subarray(0, Math.min(len, buf.length));
+  /* v3.17.1: ANTREAN SERIAL — dulu dua pembacaan beririsan (analisis latar
+     + ekspor/preview) bisa saling menimpa pasangan bLo↔buf → data paket
+     korup → dekoder error 'closed codec' → jendela nol/null. Sekarang
+     tiap pembacaan dieksekusi satu per satu; cache-hit tetap cepat. */
+  let chain = Promise.resolve();
+  return (off, len) => {
+    const run = async () => {
+      if (buf && off >= bLo && off + len <= bLo + buf.length) return buf.subarray(off - bLo, off - bLo + len);
+      bLo = off; buf = await raw(off, Math.max(len, WIN));
+      return buf.subarray(0, Math.min(len, buf.length));
+    };
+    const p = chain.then(run, run);
+    chain = p.then(() => { }, () => { });
+    return p;
   };
 }
 
@@ -422,4 +432,197 @@ async function probeKilat(fileLike) {
     console.warn('kilat: probe gagal —', e && e.message);
     return null;
   }
+}
+
+/* ================================================================
+   v3.17.1 — DEMUX & DEKODE AUDIO PER JENDELA (AAC-LC)
+   ================================================================
+   AKAR MASALAH: decodeAudioData penuh film panjang menghasilkan
+   AudioBuffer float stereo ±21 MB/menit — film 2 jam ≈ 2,5 GB di
+   SATU proses render → alokasi memori gagal → proses render mati
+   (exitCode 133) → layar hitam (v3.16) / blank + pulih (v3.17).
+   Terbukti lewat uji terpandu: alur terberat yang selalu crash
+   menjadi NOL crash ketika decode penuh dilewati; decode lewat
+   OfflineAudioContext 16 kHz pun tetap crash (buffer laju penuh
+   tetap terwujud di dalam sebelum di-resample).
+   Karena itu media panjang TIDAK PERNAH di-decode utuh. Audio
+   asli tetap bisa dipakai PER JENDELA: sampel AAC diambil langsung
+   dari MP4 (parser box yang sama dengan MODE KILAT) lalu didekode
+   AudioDecoder (WebCodecs) — RAM selalu sekecil jendela (20-60 dtk
+   ≈ ±20 MB), cocok untuk ekspor per part & analisis bertahap.
+
+   Antarmuka:
+     probeAudio(fileLike)            → null / { info, rd }
+     decodeAudioWindow(cache, t, d)  → AudioBuffer (laju asli) / null
+       cache = { info, rd, tbl, dec, sink, decErr } — dipertahankan
+       antar jendela supaya tabel sampel & decoder tidak dibangun ulang.
+   ================================================================ */
+async function parseTrakAudio(rd, trak) {
+  const kids = await childBoxes(rd, trak);
+  const mdia = kids.find(b => b.tag === 'mdia');
+  if (!mdia) return null;
+  const mk = await childBoxes(rd, mdia);
+  const hdlr = mk.find(b => b.tag === 'hdlr');
+  if (hdlr) { const h = await rd(hdlr.off, 12); if (_dtag(h, 8) !== 'soun') return null; }
+  const mdhd = mk.find(b => b.tag === 'mdhd');
+  if (!mdhd) return null;
+  const mh = await rd(mdhd.off, 32);
+  const ver = _du8(mh, 0);
+  const timescale = _du32(mh, ver === 1 ? 20 : 12);
+  if (!timescale) return null;
+  const minf = mk.find(b => b.tag === 'minf');
+  if (!minf) return null;
+  const stbl = (await childBoxes(rd, minf)).find(b => b.tag === 'stbl');
+  if (!stbl) return null;
+  const sk = await childBoxes(rd, stbl);
+  const stsd = sk.find(b => b.tag === 'stsd');
+  const stts = sk.find(b => b.tag === 'stts');
+  const stsc = sk.find(b => b.tag === 'stsc');
+  const stsz = sk.find(b => b.tag === 'stsz');
+  const stco = sk.find(b => b.tag === 'stco');
+  const co64 = sk.find(b => b.tag === 'co64');
+  if (!stsd || !stts || !stsc || !stsz || !(stco || co64)) return null;
+  /* stsd entri pertama harus mp4a (AAC dalam MP4) */
+  const sd = await rd(stsd.off, 8);
+  if (_du32(sd, 4) < 1) return null;
+  const eo = stsd.off + 8;
+  const eh = await rd(eo, 8);
+  const etag = _dtag(eh, 4);
+  if (etag !== 'mp4a') return null;
+  /* AudioSampleEntry — panjang body beda-beda: standar ISO 20 byte, tapi
+     ffmpeg/MOV menulis 28 byte (versi/revisi/vendor ekstra). JANGAN hardcode:
+     pindai langsung box 'esds' di dalam entri, dan baca laju/ch dari
+     kandidat offset yang masuk akal. */
+  const body = await rd(eo + 8, 28);
+  let entrySr = 0;
+  for (const off of [24, 16]) {          /* 16.16 → ambil bagian bulat */
+    const v32 = _du32(body, off);
+    const ip = v32 >>> 16;
+    if (ip >= 7000 && ip <= 96000) { entrySr = ip; break; }
+  }
+  const channelsEntry = _du16(body, 16) || _du16(body, 8) || 0;
+  const scanLen = Math.min(4096, stsd.off + stsd.size - eo);
+  const scan = await rd(eo, Math.max(64, scanLen));
+  let esds = null;
+  for (let o = 8; o + 12 <= scan.length; o++) {
+    if (_dtag(scan, o) === 'esds') {
+      const sz = _du32(scan, o - 4);
+      if (sz >= 12 && o - 4 + sz <= scan.length + 4) { esds = scan.slice(o + 8, o - 4 + sz); break; }
+    }
+  }
+  if (!esds || esds.length < 12) return null;
+  /* ES_Descriptor → 0x03 (ES) → 0x04 (DecoderConfig) → 0x05 (AudioSpecificConfig) */
+  let p = 0;
+  const rdLen = () => { let l = 0, b; do { if (p >= esds.length) return -1; b = esds[p++]; l = (l << 7) | (b & 0x7f); } while (b & 0x80); return l; };
+  let asc = null;
+  if (esds[p] === 0x03) {
+    p++; if (rdLen() < 0) return null; p += 3;
+    if (esds[p] === 0x04) {
+      p++; if (rdLen() < 0) return null; p += 13;
+      if (esds[p] === 0x05) { p++; const l = rdLen(); if (l > 0) asc = esds.slice(p, Math.min(p + l, esds.length)); }
+    }
+  }
+  if (!asc || asc.length < 2) return null;
+  const objType = asc[0] >> 3;
+  const freqIdx = ((asc[0] & 0x07) << 1) | (asc[1] >> 7);
+  const chCfg = (asc[1] >> 3) & 0x0f;
+  const FREQ = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+  if (objType !== 2 && objType !== 5) return null;   /* hanya AAC-LC/HE */
+  const sr = freqIdx === 15 ? 0 : (FREQ[freqIdx] || 0);
+  const sampleRate = sr || entrySr || 48000;
+  const channels = (chCfg && chCfg <= 8 ? chCfg : 0) || channelsEntry || 2;
+  return {
+    kind: 'soun', codecStr: 'mp4a.40.2', asc, sampleRate, channels, timescale,
+    stbl: { stsd, stts, stsc, stsz, stco: stco || co64, co64: !!co64, ctts: null, stss: null }
+  };
+}
+
+async function probeAudio(fileLike) {
+  try {
+    if (!('AudioDecoder' in window)) return null;
+    const f = fileLike;
+    if (!f) return null;
+    if (f.virtual && !f.kurl) return null;
+    const size = f.size || 0;
+    if (size < 2048) return null;
+    const rd = kilatReaderFor(f);
+    const tops = await childBoxes(rd, { off: 0, size, tag: 'root' });
+    const moov = tops.find(b => b.tag === 'moov');
+    if (!moov) return null;
+    const moovKids = await childBoxes(rd, moov);
+    for (const trak of moovKids.filter(b => b.tag === 'trak')) {
+      const info = await parseTrakAudio(rd, trak);
+      if (info) return { info, rd };
+    }
+    return null;
+  } catch (e) {
+    console.warn('audio-demux: probe gagal —', e && e.message);
+    return null;
+  }
+}
+
+/* Decode audio [t, t+dur] dtk dari file menjadi AudioBuffer laju asli.
+   cache wajib (objek yang sama dipakai berulang utk efisiensi). */
+async function decodeAudioWindow(cache, tStart, dur) {
+  const C = cache;
+  if (!C.probe) return null;
+  const { info } = C.probe;
+  if (!C.tbl) C.tbl = await buildSampleTable(C.probe.rd, info);
+  const tbl = C.tbl, nT = info.timescale;
+  const wantFrom = Math.max(0, tStart) * nT, wantTo = (tStart + dur) * nT;
+  let a = 0, b = tbl.n;
+  while (a < b) { const m = (a + b) >> 1; if (tbl.dts[m] < wantFrom) a = m + 1; else b = m; }
+  const i0 = a;
+  let i1 = i0;
+  while (i1 < tbl.n && tbl.dts[i1] < wantTo) i1++;
+  if (i1 <= i0) return null;
+  if (!('AudioDecoder' in window)) return null;
+  /* v3.17.1: decoder BARU tiap jendela — AudioDecoder.reset() terbukti
+     tidak andal untuk AAC (panggilan ke-2 menghasilkan nol/null); buat
+     segar per jendela murah (±ms) dan bebas jebakan status. */
+  {
+    try { if (C.dec) C.dec.close(); } catch (e) { }
+    let decErr = null;
+    const dec = new AudioDecoder({
+      output: ad => { if (C.sink) C.sink(ad); else { try { ad.close(); } catch (e) { } } },
+      error: e => { decErr = decErr || (e && e.message) || String(e); }
+    });
+    dec.configure({ codec: info.codecStr, sampleRate: info.sampleRate, numberOfChannels: info.channels, description: new Uint8Array(info.asc) });
+    C.decErr = null; C.decErrGet = () => decErr; C.dec = dec;
+  }
+  const chans = Array.from({ length: info.channels }, () => []);
+  let total = 0, firstTs = null;
+  C.sink = ad => {
+    const n = ad.numberOfFrames;
+    if (firstTs === null && ad.timestamp != null) firstTs = ad.timestamp / 1e6;
+    for (let c = 0; c < info.channels; c++) {
+      const dst = new Float32Array(n);
+      try { ad.copyTo(dst, { planeIndex: c, format: 'f32-planar' }); } catch (e) { try { ad.copyTo(dst, { planeIndex: c }); } catch (e2) { } }
+      chans[c].push(dst);
+    }
+    total += n;
+    try { ad.close(); } catch (e) { }
+  };
+  const PKT = 48;
+  for (let i = i0; i < i1; i++) {
+    try {
+      const data = new Uint8Array(await C.probe.rd(tbl.off[i], tbl.sizes[i]));
+      C.dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round(tbl.dts[i] / nT * 1e6), data }));
+    } catch (e) { console.warn('audio-demux: paket gagal —', e && e.message); break; }
+    if (C.dec.decodeQueueSize > PKT) await new Promise(r => setTimeout(r, 0));
+  }
+  try { await C.dec.flush(); } catch (e) { }
+  C.sink = null;
+  if (C.decErr) throw new Error('dekode audio: ' + C.decErr);
+  if (!total) { console.warn('audio-demux: jendela t=' + Math.round(tStart) + ' tanpa keluaran — paket', i1 - i0, 'decErr:', C.decErr || '-', 'closed?', C.dec.state); return null; }
+  const buf = new AudioBuffer({ numberOfChannels: info.channels, length: total, sampleRate: info.sampleRate });
+  for (let c = 0; c < info.channels; c++) {
+    const dst = buf.getChannelData(c);
+    let off = 0;
+    for (const seg of chans[c]) { dst.set(seg, off); off += seg.length; }
+  }
+  /* waktu nyata sampel pertama dalam buffer (detik, acuan file) — dipakai
+     pemanggil utk sejajarkan offset bagian */
+  buf.kWin = { t: firstTs != null ? firstTs : tbl.dts[i0] / nT };
+  return buf;
 }

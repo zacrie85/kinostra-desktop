@@ -178,12 +178,114 @@ async function decodeFileAudio() {
        dipegang saat decode baru jalan, puncak RAM jadi dua kali lipat dan
        batch film ke-3 ke atas kehabisan memori fisik */
     state.audioBuffer = null; state.peaks = null;
-    /* v2.6: file virtual dibaca lewat fetch kfile:// (streaming disk) */
-    const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
-      : await state.file.arrayBuffer();
-    state.audioBuffer = await getActx().decodeAudioData(ab);
-    buildPeaks();
+    state._audioDemux = null; state._audioEnv = null; state._audioWin = null;
+    /* v3.17.1 PERBAIKAN LAYAR HITAM/CRASH SETELAH IMPOR — akar masalah:
+       decodeAudioData penuh film panjang = AudioBuffer float stereo
+       ±21 MB/menit (film 2 jam ≈ 2,5 GB; film 188 mnt ≈ 4 GB) di SATU
+       proses render → alokasi gagal → proses render mati (exitCode 133)
+       → layar hitam (v3.16) / blank + pulih (v3.17). Terbukti lewat uji
+       terpandu: alur terberat yang selalu crash → NOL crash ketika
+       decode penuh dilewati. Decode lewat OfflineAudioContext 16 kHz
+       JUGA crash (buffer laju penuh tetap terwujud di dalam).
+       Solusi: ≤±15 mnt = decode penuh (perilaku lama, berkualitas penuh);
+       di atas itu = TIDAK ada decode utuh sama sekali. Sebagai gantinya
+       audio dianalisis bertahap lewat demux AAC + AudioDecoder
+       (decodeAudioWindow — RAM selalu sekecil jendela) utk peaks, RMS
+       & envelope zoom pembicara; ekspor per part memakai jendela yang
+       sama sehingga suara asli tetap ikut. POTONG LANGSUNG tak tersentuh
+       (audio asli disalin langsung dari file). */
+    const dur = state.duration || 0;
+    const estDur = dur || (state.file.size || 0) / 16384;   /* audio file: heuristik 128 kbps */
+    const estNative = estDur * 48000 * 2 * 4;
+    if (estNative <= 350 * 1024 * 1024) {
+      const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
+        : await state.file.arrayBuffer();
+      state.audioBuffer = await getActx().decodeAudioData(ab);
+      buildPeaks();
+      return;
+    }
+    /* media panjang: analisis bertahap di belakang — jangan pernah utuh */
+    state.peaks = [];
+    toast('Video panjang — audio dianalisis hemat memori bertahap; suara asli tetap ikut saat ekspor & POTONG LANGSUNG.', 'info');
+    analyzeAudioViaDemux();   /* async, tidak menunggu loading */
   } catch (e) { state.audioBuffer = null; toast('Track audio tidak terbaca — ekspor mungkin tanpa suara asli', 'warn'); }
+}
+
+/* v3.17.1: analisis audio panjang TANPA decode utuh — jendela 45 dtk
+   berurutan via demux AAC + AudioDecoder; menghasilkan peaks (garis
+   gelombang), RMS global (normalizer AUDIO SEHAT) & envelope 0,5 dtk
+   (zoom pembicara). RAM puncak = 1 jendela (±15-20 MB). */
+async function analyzeAudioViaDemux() {
+  const epoch = state.mediaEpoch || 0;
+  try {
+    const pr = await probeAudio(state.file);
+    if (!pr || !state.duration) { state._audioDemux = null; return; }
+    state._audioDemux = { probe: pr };   /* utk ekspor (renderMix) */
+    const cache = { probe: pr };         /* cache TERPISAH utk analisis —
+        jangan berebut decoder dgn ekspor yang jalan bersamaan */
+    const dur = state.duration;
+    const N = 1400, peaks = new Float32Array(N);
+    const envStep = 0.5, envN = Math.max(1, Math.ceil(dur / envStep));
+    const env = new Float32Array(envN);
+    let sumSq = 0, nSum = 0;
+    const WIN = 45;
+    let nWin = 0, missBeruntun = 0;
+    for (let t = 0; t < dur && state.file && (state.mediaEpoch || 0) === epoch; t += WIN) {
+      /* v3.17.1: ekspor sedang jalan ATAU video sedang DIPUTAR → tunda
+         analisis. Analisis adalah pekerjaan latar yang sopan — jangan pernah
+         bersaing dengan decode video/encode ekspor (terbukti: analisis
+         bersamaan dengan pemutaran di mesin lemah memicu crash proses
+         render; terpisah keduanya 100% aman). Melanjut otomatis saat
+         pause/idle — film 2 jam selesai dianalisis ±1-2 menit browsing. */
+      while (state._audioExporting && state.file && (state.mediaEpoch || 0) === epoch) await new Promise(r => setTimeout(r, 250));
+      while (!videoEl.paused && state.file && (state.mediaEpoch || 0) === epoch) await new Promise(r => setTimeout(r, 500));
+      const d = Math.min(WIN, dur - t);
+      let buf = null;
+      state._audioWinBusy = true;   /* ekspor menunggu flag ini sebelum decode */
+      try { buf = await decodeAudioWindow(state._audioDemux, t, d); } catch (e) { console.warn('analisis: jendela gagal —', e && e.message); }
+      state._audioWinBusy = false;
+      nWin++;
+      if (!buf) {
+        /* satu jendela gagal ≠ seluruh analisis batal — lewati; berhenti
+           hanya bila 3 kegagalan beruntun (file memang tak terbaca) */
+        missBeruntun++;
+        console.info('analisis: jendela', nWin, 't=' + Math.round(t), 'KOSONG');
+        if (missBeruntun >= 3) break;
+        continue;
+      }
+      missBeruntun = 0;
+      const dch = buf.getChannelData(0), L = dch.length;
+      const t0 = t, t1 = t + d;
+      const i0 = Math.floor(t0 / dur * N), i1 = Math.min(N, Math.max(i0 + 1, Math.ceil(t1 / dur * N)));
+      const bs = Math.max(1, Math.floor(L / Math.max(1, i1 - i0)));
+      for (let k = i0; k < i1; k++) {
+        let m = 0; const o = (k - i0) * bs;
+        for (let j = o; j < Math.min(L, o + bs); j += 16) { const v = Math.abs(dch[j] || 0); if (v > m) m = v; }
+        peaks[k] = m;
+      }
+      let s2 = 0, c = 0;
+      for (let j = 0; j < L; j += 24) { const v = dch[j] || 0; s2 += v * v; c++; }
+      const rmsWin = Math.sqrt(s2 / Math.max(1, c));
+      sumSq += s2; nSum += c;
+      const e0 = Math.floor(t0 / envStep), e1 = Math.min(envN, Math.max(e0 + 1, Math.ceil(t1 / envStep)));
+      const w = Math.max(1, Math.floor(L / Math.max(1, e1 - e0)));
+      for (let k = e0; k < e1; k++) {
+        let s3 = 0, c3 = 0; const o = (k - e0) * w;
+        for (let j = o; j < Math.min(L, o + w); j += 24) { const v = dch[j] || 0; s3 += v * v; c3++; }
+        env[k] = Math.sqrt(s3 / Math.max(1, c3));
+      }
+      state.peaks = peaks; state.audioRms = Math.sqrt(sumSq / Math.max(1, nSum));
+      state._rmsEpoch = epoch; state._audioEnv = env;
+      await new Promise(r => setTimeout(r, 0));   /* beri napas ke UI */
+    }
+    if ((state.mediaEpoch || 0) === epoch && state.file) {
+      state.peaks = peaks; state._audioEnv = env;
+      state.audioRms = Math.sqrt(sumSq / Math.max(1, nSum)); state._rmsEpoch = epoch;
+      console.info('audio panjang: analisis bertahap selesai —', Math.round(dur), 'dtk');
+    }
+  } catch (e) {
+    console.warn('analisis audio bertahap gagal —', e && e.message);
+  }
 }
 
 function buildPeaks() {

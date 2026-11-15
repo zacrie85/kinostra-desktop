@@ -242,6 +242,7 @@ async function runBatch(forceAll = false) {
            lama "video pertama lancar, video kedua dst gagal"). */
         state.audioBuffer = null; state.peaks = null; state.audioReady = null;
         state.audioRms = 0; state._kilat = null;
+        state._audioDemux = null; state._audioEnv = null; state._audioWin = null;   /* v3.17.1 */
         await sleep(120);
         /* --- v2.6: muat STREAMING via kfile:// — tanpa membaca seluruh
                file ke memori (video besar langsung siap, hemat RAM) --- */
