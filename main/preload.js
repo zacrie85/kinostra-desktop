@@ -52,6 +52,12 @@ contextBridge.exposeInMainWorld('kinostra', {
   sysInfo: () => ipcRenderer.invoke('sys:info'),
   /* v3.16: PERAWATAN — ukur ({dry:true}) / bersihkan ({dry:false}) cache */
   cleanupCache: (opts) => ipcRenderer.invoke('sys:cleanup', opts || { dry: true }),
+  /* v3.17: PELINDUNG LAYAR HITAM — status & pemulihan otomatis */
+  shieldStatus: () => ipcRenderer.invoke('sys:shield'),
+  testCrashRender: () => ipcRenderer.invoke('sys:testCrash'),
+  onShieldRecovered: (cb) => {
+    ipcRenderer.on('shield:recovered', (e, info) => cb(info));
+  },
   /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
   gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 

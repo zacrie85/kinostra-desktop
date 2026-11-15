@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.16.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -6,13 +6,13 @@ Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
 ## Cara Install
 
 ### Pilihan A — Installer (disarankan)
-1. Jalankan `KINOSTRA-Setup-3.16.0.exe`
+1. Jalankan `KINOSTRA-Setup-3.17.0.exe`
 2. Pilih folder instalasi → Next → Install
 3. Selesai — shortcut muncul di Desktop & Start Menu
 4. Untuk menghapus: **Apps & Features → KINOSTRA → Uninstall**
 
 ### Pilihan B — Portable (tanpa install)
-1. Ekstrak `KINOSTRA-Portable-3.16.0-win64.zip` ke folder mana pun
+1. Ekstrak `KINOSTRA-Portable-3.17.0-win64.zip` ke folder mana pun
 2. Jalankan `KINOSTRA.exe` di dalamnya
 3. Jika Windows SmartScreen muncul (aplikasi belum ditandatangani):
    klik **More info → Run anyway**
@@ -62,6 +62,29 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.17 — PELINDUNG LAYAR HITAM (Pemulihan Otomatis)
+
+Perbaikan besar untuk keluhan: *"aplikasi dipakai beberapa menit lalu layarnya blank hitam, terutama setelah memasukkan video & memakai preset tersimpan"*. Pertanyaan yang sering muncul: **tidak ada batas pemakaian** — KINOSTRA tidak menghitung berapa kali dipakai. Layar hitam adalah galat teknis (crash proses grafis Chromium di Windows) dan kini ditangani berlapis:
+
+### 1. Pemulihan otomatis saat proses tampilan/GPU crash
+- Mesin KINOSTRA memakai GPU berat (decode/encode hardware WebCodecs + komposit pratinjau). Di sebagian Windows (terutama GPU terintegrasi), proses grafis Chromium bisa crash di tengah pemakaian — dulu akibatnya **layar hitam permanen** sampai aplikasi ditutup paksa.
+- Kini saat proses render atau GPU mati, **jendela dimuat ulang otomatis** (±1 detik) lalu muncul toast *"Aplikasi dipulihkan otomatis…"*. Setelan, **preset tersimpan & isi Kotak Video (localStorage/penyimpanan aplikasi) tetap aman** — tidak perlu mengulang pengaturan.
+- Bila crash berulang **4× dalam 15 menit** (indikasi masalah GPU menetap), aplikasi menyalakan ulang dirinya dalam **MODE AMAN** (komposit gambar lewat software) — kecepatan render hardware tetap dipertahankan, layar hitam berulang berhenti.
+
+### 2. Cache grafis korup dibersihkan otomatis saat mulai
+- Cache GPU Chromium (`GPUCache`, `ShaderCache`, `DawnCache`, dll.) yang korup adalah penyebab klasik layar hitam **yang tetap hitam meski aplikasi dibuka ulang** — dan tombol BERSIHKAN CACHE lama tidak menyentuhnya (tidak aman dihapus saat aplikasi hidup).
+- Kini bila sesi sebelumnya mati tak wajar (crash/listrik/kill — dideteksi dari tanda `kinostra.running`), seluruh cache grafis **dibersihkan otomatis sebelum jendela dibuat**, lalu tanda sesi ditulis ulang. Keluar normal (tombol ✕) tidak memicu pembersihan — start tetap cepat.
+
+### 3. Watchdog memori otomatis
+- Tiap 20 detik penggunaan memori JS dipantau. Melewati **2 GB** (video panjang + komposit menumpuk) → cache lapisan pratinjau dibersihkan **otomatis** (dibangun ulang di frame berikutnya) + pemberitahuan — dulu memori bisa membengkak sampai proses mati tanpa peringatan.
+- Status lengkap (lama nyala, jumlah pemulihan GPU/render, kejadian terakhir, MODE AMAN) tampil di **modul 16 PERAWATAN & PERFORMA**.
+
+### 4. Perbaikan kecil lain
+- Blob URL media lama kini dilepas saat memuat film baru (impor lewat dialog) — mencegah menumpuk sepanjang sesi.
+- Tombol OPTIMASI & BERSIHKAN CACHE tetap berfungsi; kini kotak info juga menampilkan status pelindung & memori JS hidup.
+
+**Diuji otomatis (CDP)**: pemulihan crash NYATA (renderer dipaksa crash → pulih sendiri, preset selamat, impor + PAKAI preset jalan lagi), simulasi exit tak wajar (cache grafis palsu dibersihkan saat mulai), storm impor 3 video + PAKAI preset 6× beruntun tanpa exception, kotak pelindung tampil.
 
 ## Yang Baru di v3.16 — TAMPILAN RAPI + PERAWATAN + PENGATURAN TERSIMPAN
 

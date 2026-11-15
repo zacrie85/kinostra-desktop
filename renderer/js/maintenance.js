@@ -38,23 +38,68 @@ function kinoCleanRendererCaches() {
 }
 
 /* ---------- info sistem utk kotak PERAWATAN ---------- */
+function fShield(s) {
+  if (!s) return '';
+  const parts = [];
+  if (s.safeMode) parts.push('<b style="color:#f7a600">MODE AMAN</b> (komposit GPU dimatikan — render hardware tetap jalan)');
+  else parts.push('aktif');
+  const rec = (s.gpuCrashes || 0) + (s.renderCrashes || 0);
+  if (rec > 0) parts.push(`<b>${rec} pemulihan otomatis</b> (GPU ${s.gpuCrashes || 0} · render ${s.renderCrashes || 0} · muat ulang ${s.reloads || 0}×)`);
+  if (s.dirtyExit) parts.push('sesi sebelumnya mati tak wajar — cache grafis dibersihkan otomatis saat mulai');
+  if (s.lastEvent) parts.push('kejadian terakhir: ' + String(s.lastEvent).replace(/</g, '&lt;'));
+  return `<b>PELINDUNG LAYAR HITAM:</b> ${parts.join(' · ')}<br>`;
+}
 async function refreshMntInfo() {
   const box = $('#mntInfo');
   if (!box) return;
   try {
     const sys = await window.kinostra.sysInfo();
     const cl = await window.kinostra.cleanupCache({ dry: true });
+    let sh = null;
+    try { sh = await window.kinostra.shieldStatus(); } catch (e) { }
     const ram = sys && sys.ramGB ? sys.ramGB : (sys && sys.totalMem ? (sys.totalMem / 1073741824).toFixed(1) : null);
     const cores = navigator.hardwareConcurrency || '?';
+    const hm = heapMB();
     box.innerHTML =
+      `<b>PELINDUNG LAYAR HITAM:</b> ${sh ? (sh.safeMode ? 'MODE AMAN aktif' : 'AKTIF') + ` · ${sh.upMin || 0} mnt nyala · memori JS ${fMB(hm)}` : 'memuat…'}<br>` +
+      fShield(sh) +
       `<b>RAM TERPASANG:</b> ${ram ? ram + ' GB' : '—'} · <b>CPU:</b> ${cores} core<br>` +
       `<b>CACHE SEMENTARA TRANSKRIPSI:</b> ${cl.whisperTmp ? fMB(cl.whisperTmp / 1048576) : 'bersih'} (${cl.whisperTmpFiles || 0} file)<br>` +
       `<b>MODEL AI LOKAL:</b> ${cl.modelsDir ? fMB(cl.modelsDir / 1048576) : '—'} (tidak dihapus — dipakai subtitel & suara)<br>` +
-      `<span style="opacity:.7">Cache tampilan/HTTP: ${cl.cacheDir ? fMB(cl.cacheDir / 1048576) : '—'} · dipakai ulang otomatis saat dibutuhkan</span>`;
+      `<span style="opacity:.7">Cache tampilan/HTTP: ${cl.cacheDir ? fMB(cl.cacheDir / 1048576) : '—'} · dipakai ulang otomatis saat dibutuhkan · cache grafis korup dibersihkan otomatis saat aplikasi dimulai</span>`;
   } catch (e) {
     box.textContent = 'Info sistem belum tersedia — ' + (e.message || e);
   }
 }
+
+/* ================================================================
+   v3.17: PELINDUNG — bagian renderer
+   1) WATCHDOG MEMORI: tiap 20 dtk cek heap JS. Bila melewati 2000 MB
+      (video panjang + komposit lama), cache komposisi dibersihkan
+      OTOMATIS (dibangun ulang di frame berikutnya) + pemberitahuan —
+      dulu memori bisa membengkak sampai renderer kehabisan & mati
+      (layar hitam) tanpa pemberitahuan apa pun.
+   2) TOAST PEMULIHAN: setelah proses render/GPU mati & jendela
+      dimuat ulang otomatis oleh main, pengguna diberi tahu jelas
+      bahwa aplikasi sudah pulih & setelannya aman.
+   ================================================================ */
+let _wdCool = 0;
+setInterval(() => {
+  try {
+    const h = heapMB();
+    if (h != null && h > 2000 && !state.busy && Date.now() - _wdCool > 3 * 60 * 1000) {
+      _wdCool = Date.now();
+      if (typeof clearComposeCaches === 'function') clearComposeCaches();
+      console.warn('SHIELD watchdog: heap ' + fMB(h) + ' — cache komposisi dibersihkan otomatis');
+      toast('Memori tinggi (' + fMB(h) + ') — cache pratinjau dibersihkan otomatis agar aplikasi tetap lancar', 'warn');
+    }
+  } catch (e) { }
+}, 20000);
+try {
+  if (window.kinostra.onShieldRecovered) window.kinostra.onShieldRecovered(info => {
+    toast('Aplikasi dipulihkan otomatis setelah galat tampilan (' + (info && (info.gpu + info.render) || 0) + '×) — setelan, preset & pekerjaan di kotak tetap aman', 'ok');
+  });
+} catch (e) { }
 
 /* ---------- OPTIMASI PERFORMA (satu klik) ---------- */
 async function kinoOptimize() {

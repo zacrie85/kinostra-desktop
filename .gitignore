@@ -19,3 +19,7 @@ tool-results/
 
 # Artefak hasil kerja (tidak untuk repo)
 download/
+
+# crash dump uji
+core
+

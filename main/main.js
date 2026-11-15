@@ -13,14 +13,86 @@ const isDev = !app.isPackaged;
 const RENDERER_DIR = path.join(__dirname, '..', 'renderer');
 const MODELS_DIR = path.join(app.getPath('userData'), 'models');
 
+/* ================================================================
+   v3.17: PELINDUNG LAYAR HITAM (SHIELD) — bagian 1: STARTUP
+   Gejala lama: aplikasi jalan beberapa menit → layar blank hitam.
+   Akar: proses GPU Chromium bisa crash saat beban berat (WebCodecs
+   hardware + komposit canvas) & cache grafis yang korup membuat
+   layar tetap hitam bahkan setelah dibuka ulang. Dulu TIDAK ADA
+   penanganan apa pun — jendela tinggal hitam selamanya.
+   Kini: (1) bila sesi sebelumnya mati tak wajar (crash/kill — tanda
+   "kinostra.running" masih ada), cache grafis Chromium dibersihkan
+   OTOMATIS sebelum jendela dibuat → layar hitam "menetap" hilang;
+   (2) crash proses render/GPU → jendela dimuat ulang otomatis
+   (lihat PELINDUNG bagian 2 di createWindow / app lifecycle).
+   ================================================================ */
+const SHIELD = {
+  gpuCrashes: 0, renderCrashes: 0, reloads: 0, dirtyExit: false,
+  unresponsive: false, safeMode: process.argv.includes('--kinostra-safe'),
+  startedAt: Date.now(), _crashT: [], lastEvent: ''
+};
+const RUNNING_MARKER = path.join(app.getPath('userData'), 'kinostra.running');
+const GPU_CACHE_DIRS = ['GPUCache', 'ShaderCache', 'DawnCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'GrShaderCache'];
+function shieldStartup() {
+  try {
+    if (fs.existsSync(RUNNING_MARKER)) {
+      SHIELD.dirtyExit = true;   /* sesi lalu tidak menutup normal (crash/listrik/kill) */
+      let freed = 0;
+      for (const d of GPU_CACHE_DIRS) {
+        const dp = path.join(app.getPath('userData'), d);
+        try { if (fs.existsSync(dp)) { freed++; fs.rmSync(dp, { recursive: true, force: true }); } } catch (_) { }
+      }
+      console.log(`SHIELD: sesi sebelumnya mati tak wajar — ${freed} folder cache grafis dibersihkan (mencegah layar hitam menetap)`);
+    }
+    try { fs.writeFileSync(RUNNING_MARKER, String(Date.now())); } catch (_) { }
+  } catch (e) { console.warn('SHIELD startup:', e.message); }
+}
+shieldStartup();
+
+/* v3.17: hitung crash dalam jendela waktu 15 menit — terlalu sering =
+   masalah GPU menetap → nyalakan ulang aplikasi dalam MODE AMAN */
+function shieldCrashInWindow() {
+  const now = Date.now();
+  SHIELD._crashT = SHIELD._crashT.filter(t => now - t < 15 * 60 * 1000);
+  return SHIELD._crashT.length;
+}
+function shieldNote(s) { SHIELD.lastEvent = `[${new Date().toLocaleTimeString('id-ID')}] ${s}`; console.log('SHIELD: ' + s); }
+function shieldReload(reason) {
+  shieldNote('jendela dimuat ulang otomatis (' + reason + ') — pekerjaan diselamatkan sebisa mungkin');
+  setTimeout(() => {
+    try { if (win && !win.isDestroyed()) { SHIELD.reloads++; win.webContents.reload(); } } catch (_) { }
+  }, 800);
+}
+/* 4+ crash dalam 15 menit = masalah menetap → MODE AMAN (komposit GPU
+   dimatikan; decode/encode WebCodecs tetap berjalan) supaya aplikasi
+   tetap bisa dipakai daripada layar hitam berulang */
+function shieldSafeModeIfStorm() {
+  if (shieldCrashInWindow() >= 4) {
+    shieldNote('crash berulang 4× dalam 15 menit — nyalakan ulang dalam MODE AMAN');
+    try {
+      app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
+      app.exit(0);
+    } catch (_) { }
+    return true;
+  }
+  return false;
+}
+if (SHIELD.safeMode) {
+  /* MODE AMAN diminta sesi sebelumnya: matikan komposit GPU (gambar
+     lewat software) — layar hitam berulang berhenti, kecepatan render
+     hardware (KILAT/GPU) tetap dipertahankan */
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+  console.log('SHIELD: MODE AMAN aktif (disable-gpu-compositing)');
+}
+
+let win = null;
+
 /* ---------- Protokol app:// (renderer) & kmodels:// (model AI lokal) ---------- */
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
   { scheme: 'kmodels', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
   { scheme: 'kfile', privileges: { standard: false, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true, bypassCSP: true } }
 ]);
-
-let win = null;
 
 function createWindow() {
   console.log('MAIN-CREATEWINDOW v' + app.getVersion());
@@ -46,6 +118,30 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   win.loadURL('app://localhost/index.html');
   win.once('ready-to-show', () => win.show());
+
+  /* ================================================================
+     v3.17: PELINDUNG LAYAR HITAM — bagian 2: PEMULIHAN OTOMATIS
+     Dulu: proses render/GPU crash → jendela hitam permanen, user
+     harus tutup paksa. Kini dimuat ulang otomatis & diberi tahu.
+     ================================================================ */
+  win.webContents.on('render-process-gone', (e, d) => {
+    SHIELD.renderCrashes++; SHIELD._crashT.push(Date.now());
+    SHIELD.lastEvent = 'proses render mati: ' + (d && d.reason) + ' (kode ' + (d && d.exitCode) + ')';
+    console.error('SHIELD render-process-gone:', d);
+    if (d && d.reason === 'clean-exit') return;
+    shieldNote('proses render mati (' + (d && d.reason) + ') → pulihkan jendela');
+    shieldReload('render ' + (d && d.reason));
+    shieldSafeModeIfStorm();
+  });
+  win.webContents.on('unresponsive', () => { SHIELD.unresponsive = true; shieldNote('jendela tidak merespons sementara'); });
+  win.webContents.on('responsive', () => { SHIELD.unresponsive = false; });
+  /* setelah pemulihan, beri tahu pengguna lewat toast (renderer mendengarkan shield:recovered) */
+  win.webContents.on('did-finish-load', () => {
+    if (SHIELD.reloads > 0) {
+      const info = { gpu: SHIELD.gpuCrashes, render: SHIELD.renderCrashes, reloads: SHIELD.reloads };
+      try { win.webContents.send('shield:recovered', info); } catch (_) { }
+    }
+  });
 
   // Tampilkan error render di console dev (diagnostik)
   win.webContents.on('console-message', (e, level, message) => {
@@ -1578,6 +1674,19 @@ ipcMain.handle('shell:openPath', async (e, p) => {
 /* ================================================================
    APP LIFECYCLE
    ================================================================ */
+/* v3.17: PELINDUNG — bagian 3: crash proses GPU.
+   Chromium me-restart proses GPU sendiri, tetapi komposit jendela
+   sering tidak pulih (layar hitam) → muat ulang jendela otomatis. */
+app.on('child-process-gone', (e, d) => {
+  if (!d || d.type !== 'gpu') return;
+  SHIELD.gpuCrashes++; SHIELD._crashT.push(Date.now());
+  console.error('SHIELD child-process-gone (GPU):', d.type, d.reason, d.exitCode);
+  if (d.reason === 'clean-exit') return;
+  shieldNote('proses GPU mati (' + (d.reason || '?') + ') → pulihkan jendela');
+  shieldReload('gpu ' + (d.reason || '?'));
+  shieldSafeModeIfStorm();
+});
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -1601,4 +1710,31 @@ if (!gotLock) {
 
 app.on('window-all-closed', () => {
   app.quit();
+});
+
+/* v3.17: keluar normal → hapus tanda "kinostra.running" supaya sesi
+   berikutnya TIDAK perlu membersihkan cache grafis (start tetap cepat) */
+app.on('will-quit', () => {
+  try { fs.rmSync(RUNNING_MARKER, { force: true }); } catch (_) { }
+});
+
+/* ================================================================
+   v3.17: IPC PELINDUNG — status untuk kotak PERAWATAN (modul 16)
+   + pemantik crash uji (HANYA mode uji KINOSTRA_TEST=1) untuk
+   membuktikan pemulihan otomatis nyata di pengujian CDP.
+   ================================================================ */
+ipcMain.handle('sys:shield', async () => {
+  return {
+    ...SHIELD,
+    _crashT: undefined,
+    upMin: Math.round((Date.now() - SHIELD.startedAt) / 60000),
+    ud: app.getPath('userData'),   /* utk diagnostik & pengujian */
+    heapMB: 0   /* diisi renderer bila perlu — di sini 0 (proses main) */
+  };
+});
+ipcMain.handle('sys:testCrash', async () => {
+  if (process.env.KINOSTRA_TEST !== '1') return { ok: false, error: 'hanya mode uji' };
+  if (!win || win.isDestroyed()) return { ok: false, error: 'jendela tidak ada' };
+  win.webContents.forcefullyCrashRenderer();   /* crash NYATA → harus pulih otomatis */
+  return { ok: true };
 });

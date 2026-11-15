@@ -88,6 +88,11 @@ async function loadFileBlob(file, force = false) {
   $('#hudName').textContent = file.name.slice(0, 42).toUpperCase();
   $('#emptyMsg').style.display = 'none';
   const url = isVirtual ? file.kurl : URL.createObjectURL(file);
+  /* v3.17: lepaskan blob URL film sebelumnya — dulu setiap impor file
+     (dialog) meninggalkan satu object URL menggantung selamanya;
+     kecil, tetapi menumpuk sepanjang sesi panjang. */
+  try { if (window._kinoMediaURL && window._kinoMediaURL !== url) URL.revokeObjectURL(window._kinoMediaURL); } catch (e) { }
+  window._kinoMediaURL = isVirtual ? null : url;
   videoEl.srcObject = null; videoEl.src = url;
   /* v3.1: ANTIANTRIAN META — bila metadata terbaca tapi DURASI TIDAK MASUK
      AKAL (mis. 0.1 dtk utk file ratusan KB — balasan decoder/kfile kadang
