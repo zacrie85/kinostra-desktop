@@ -20,6 +20,14 @@ const fMB = v => (v == null ? '—' : v.toFixed(1) + ' MB');
 function kinoCleanRendererCaches() {
   const acts = [];
   try { if (typeof clearComposeCaches === 'function') { clearComposeCaches(); acts.push('cache lapisan pratinjau & neon (mesin compose)'); } } catch (e) { }
+  /* v3.20: OPTIMASI/BERSIHKAN CACHE mematikan MODE PUTARAN HEMAT — pengguna
+     mencoba kembali jalur native penuh (flag permanen v3.20 dihapus) */
+  try {
+    if (localStorage.getItem('kinostra.liteplay') === '1') {
+      localStorage.removeItem('kinostra.liteplay'); window.__kinoLitePlay = false;
+      acts.push('MODE PUTARAN HEMAT dimatikan — jalur native dipakai lagi');
+    }
+  } catch (e) { }
   try { if (typeof resetAccAdaptation === 'function') { resetAccAdaptation(); acts.push('adaptasi encoder GPU/CPU direset — akan diuji ulang'); } } catch (e) { }
   try {
     state._kilat = null; state.audioRms = 0;

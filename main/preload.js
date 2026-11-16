@@ -72,6 +72,11 @@ contextBridge.exposeInMainWorld('kinostra', {
   onShieldRecovered: (cb) => {
     ipcRenderer.on('shield:recovered', (e, info) => cb(info));
   },
+  /* v3.20: MODE PUTARAN HEMAT — pelindung (mode aman) memerintahkan
+     pratinjau disederhanakan permanen karena GPU tetap kewalahan */
+  onLitePlay: (cb) => {
+    ipcRenderer.on('shield:liteplay', () => { try { cb(); } catch (e) { } });
+  },
   /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
   gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 

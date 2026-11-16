@@ -91,7 +91,11 @@ async function makeThumb(it) {
     const ext = (it.name.split('.').pop() || '').toLowerCase();
     if (['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'].includes(ext)) { it.thumb = 'audio'; return; }
     const v = document.createElement('video');
-    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.muted = true; v.playsInline = true;
+    /* v3.20: preload='metadata' (dulu 'auto') — video 4 jam jangan dip buffer
+       di belakang saat hanya butuh satu frame thumbnail; 5 video × buffering
+       auto menambah tekanan memori/disk persis saat pemutaran dimulai */
+    v.preload = 'metadata';
     v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:2px;height:2px';
     v.src = kfileURL(it.path); document.body.appendChild(v);
     try {

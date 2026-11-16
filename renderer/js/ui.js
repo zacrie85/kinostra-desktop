@@ -1185,7 +1185,9 @@ $('#btnQAdd').onclick = async () => {
 $('#btnQClear').onclick = clearQueue;
 
 /* ---------- TIMELINE ---------- */
+let _lastSegShown = -1;   /* v3.20: part yang sedang disorot — sorot O(1) */
 function renderTimeline() {
+  _lastSegShown = -1;   /* daftar part dibangun ulang → sorot ulang nanti */
   /* v2.8.1: ambil referensi playhead SEBELUM innerHTML='' — setelah terdetach,
      document.querySelector('#tlPlay') tidak bisa menemukannya lagi (null) */
   const inn = $('#tlInner'), ph = $('#tlPlay');
@@ -1329,8 +1331,59 @@ let lastTrack = 0, lastHud = 0, lastBusyDraw = 0;
 /* v3.0 OPTIMASI PRATINJAU — jangan gambar ulang 60×/dtk saat PAUSE & tanpa
    animasi (tidak ada frame style/neon/transisi/tracking): pratinjau statis
    digambar maksimal 1×/dtk → CPU & baterai jauh lebih hemat, UI lebih
-   lancar. Saat diputar semua tetap sehalus dulu. */
-let _lastDrawT = -1, _lastDrawAt = 0;
+   lancar. Saat diputar semua tetap sehalus dulu.
+   v3.20 PEMUTARAN RINGAN — akar "hang saat diputar" film panjang (4 jam):
+   dulu video hanya terlihat lewat drawImage(videoEl) ke kanvas 1600×900
+   SETIAP frame (60×/dtk) + latar blur 9:16 dirender ulang tiap 1,6 dtk +
+   HUD menyapu seluruh baris part (film 4 jam = 480 part) tiap 80 ms.
+   Di GPU/driver lemah, drawImage(video) menunggu sinkronisasi GPU yang
+   sedang sibuk dekode → thread utama membeku >12 dtk → pelindung
+   mematikan & memuat ulang (terlihat "ngestart sendiri"). Kini:
+   (1) JALUR NATIVE — saat memutar, elemen <video> asli ditampilkan di
+       belakang kanvas; kanvas menggambar overlay transparan saja → NOL
+       drawImage(video) per frame (frame menuju kompositor langsung);
+   (2) throttle gambar pratinjau saat memutar: overlay native 15 fps,
+       jalur kanvas 24 fps (teks/hiasan statis — tak ada yang hilang);
+   (3) sorot part di timeline O(1) (bukan sapu 480 baris tiap 80 ms);
+   (4) latar blur 9:16 saat memutar di-refresh tiap 8 dtk (dari 1,6);
+   (5) MODE PUTARAN HEMAT permanen bila GPU tetap kewalahan. */
+let _lastDrawT = -1, _lastDrawAt = 0, _lastPlayDraw = 0, _nativeLogged = 0;
+window.__kinoOverlayDraws = 0;
+/* v3.20: SYARAT JALUR NATIVE — putar, sehat, bukan proses berat, dan
+   tidak ada efek yang HARUS menggambar video ke kanvas (zoom/pan,
+   ken burns, transisi, filter warna/vfx, frame bertema, zoom pembicara,
+   pelacakan, 9:16+blur). Bila salah satu aktif → jalur kanvas (kini
+   dithrottle 24 fps). MODE PUTARAN HEMAT mematikan jalur native. */
+function canNativePlay() {
+  if (window.__kinoLitePlay) return false;
+  if (!state.file || state.isAudio || state.busy) return false;
+  if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) return false;
+  if (typeof compSrc === 'function' && compSrc() !== videoEl) return false;
+  if (state.ratio !== '16:9') return false;
+  const fsx = state.frameStyle;
+  if (fsx && fsx !== 'off' && fsx !== 'neon') return false;   /* frame bertema punya latar sendiri */
+  const fr = state.frame || {};
+  if ((fr.zoom || 1) !== 1 || fr.panX || fr.panY) return false;
+  if (state.kb && state.kb.mode && state.kb.mode !== 'off') return false;
+  if (state.trans && state.trans.mode && state.trans.mode !== 'off') return false;
+  const V = state.vfx || {};
+  if (V.bright !== 1 || V.contrast !== 1 || V.saturate !== 1) return false;
+  if (state.colorFilter && state.colorFilter !== 'off') return false;
+  if (state.trackMode || state.track.active) return false;
+  const spk = state.spk || {};
+  if (spk.on && spk.ready && (spk.timeline || []).length) return false;
+  return true;
+}
+/* v3.20: pindahkan elemen video ke dalam panggung sekali (dari ujung body,
+   dulu display:none total) & tampilkan/sembunyikan lewat kelas .live */
+let _vidMoved = false;
+function setLiveVideo(on) {
+  if (!_vidMoved) {
+    _vidMoved = true;
+    try { stage.insertBefore(videoEl, cv); } catch (e) { }
+  }
+  if (!!on !== videoEl.classList.contains('live')) videoEl.classList.toggle('live', !!on);
+}
 function loop() {
   requestAnimationFrame(loop);
   if (state.file) {
@@ -1345,13 +1398,14 @@ function loop() {
     if (!videoEl.paused && state.track.active && performance.now() - lastTrack > 70) {
       lastTrack = performance.now(); trackStep(t);
     }
-    const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
-    const animOn = !!state.neon.on || !!FSTa || (state.trans && state.trans.mode !== 'off') || state.track.active;
-    if (!(videoEl.paused && !animOn && t === _lastDrawT && now - _lastDrawAt < 1000)) {
-      drawComposition(ctx, cv.width, cv.height, t);
-      _lastDrawT = t; _lastDrawAt = now;
+    /* v3.20: pilih jalur & tampilkan/sembunyikan video native */
+    const native = canNativePlay();
+    setLiveVideo(native);
+    if (native && !_nativeLogged) {
+      _nativeLogged = Date.now();
+      try { window.kinostra.noteCrash('putar ringan: jalur NATIVE aktif (video asli, kanvas overlay)'); } catch (e) { }
     }
-    // HUD & playhead
+    /* HUD & playhead — v3.20 O(1): sorot part hanya saat berganti part */
     if (performance.now() - lastHud > 80) {
       lastHud = performance.now();
       $('#tTime').textContent = `${fmtT(t)} / ${fmtT(state.duration)}`;
@@ -1359,14 +1413,45 @@ function loop() {
       const seg = currentSegIndex(t);
       $('#hudPart').textContent = `PART ${String(seg + 1).padStart(2, '0')}/${String(segmentsCount()).padStart(2, '0')}`;
       $('#tlPlay').style.left = (t / (state.duration || 1) * 100) + '%';
-      [...$('#tlInner').children].forEach(c => { if (c.id !== 'tlPlay') c.classList.toggle('cur', +c.dataset.i === seg); });
+      if (seg !== _lastSegShown) {
+        _lastSegShown = seg;
+        const old = $('#tlInner').querySelector('.tlseg.cur');
+        if (old) old.classList.remove('cur');
+        const cur = $('#tlInner').querySelector('.tlseg[data-i="' + seg + '"]');
+        if (cur) cur.classList.add('cur');
+      }
       /* v2.8.1: timeline panjang yang sedang discrol — ikuti playhead otomatis
          saat video diputar, berhenti mengikuti saat pause (bebas menelusuri) */
       tlFollow(t);
     }
+    /* v3.20: throttle gambar SAAT MEMUTAR (overlay 15 fps / kanvas 24 fps) */
+    if (!videoEl.paused && videoEl.readyState >= 2) {
+      if (now - _lastPlayDraw < (native ? 66 : 42)) return;
+      _lastPlayDraw = now;
+    }
+    const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
+    const animOn = !!state.neon.on || !!FSTa || (state.trans && state.trans.mode !== 'off') || state.track.active;
+    if (!(videoEl.paused && !animOn && t === _lastDrawT && now - _lastDrawAt < 1000)) {
+      window.__kinoOverlayDraws++;
+      drawComposition(ctx, cv.width, cv.height, t, native ? { native: true } : undefined);
+      _lastDrawT = t; _lastDrawAt = now;
+    }
   }
 }
 loop();
+/* v3.20: MODE PUTARAN HEMAT — bila GPU/driver tetap kewalahan meski jalur
+   native aktif (pelindung mode aman mencatat hang saat putar ke-2), pratinjau
+   disederhanakan permanen: video native dimatikan, kanvas 24 fps. Flag
+   tersimpan di localStorage — bisa dihapus lewat OPTIMASI (modul 16). */
+try { if (localStorage.getItem('kinostra.liteplay') === '1') window.__kinoLitePlay = true; } catch (e) { }
+try {
+  if (window.kinostra.onLitePlay) window.kinostra.onLitePlay(() => {
+    window.__kinoLitePlay = true;
+    try { localStorage.setItem('kinostra.liteplay', '1'); } catch (e) { }
+    try { clearComposeCaches(); } catch (e) { }
+    toast('GPU masih kewalahan — MODE PUTARAN HEMAT aktif permanen: pratinjau disederhanakan, pemutaran jauh lebih stabil', 'warn');
+  });
+} catch (e) { }
 
 /* ---------- INIT ---------- */
 $('#chipCodec').textContent = 'VideoEncoder' in window ? 'WEBCODECS AKTIF' : 'WEBCODECS TIDAK ADA';

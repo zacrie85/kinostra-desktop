@@ -29,7 +29,7 @@ const MODELS_DIR = path.join(app.getPath('userData'), 'models');
 const SHIELD = {
   gpuCrashes: 0, renderCrashes: 0, reloads: 0, dirtyExit: false,
   unresponsive: false, safeMode: process.argv.includes('--kinostra-safe'),
-  playing: false, _playCrashT: [],   /* v3.19: PELINDUNG PUTAR */
+  playing: false, _playCrashT: [], _litePending: false,   /* v3.19/v3.20: PELINDUNG PUTAR */
   startedAt: Date.now(), _crashT: [], lastEvent: ''
 };
 const RUNNING_MARKER = path.join(app.getPath('userData'), 'kinostra.running');
@@ -130,6 +130,8 @@ setInterval(() => {
     shieldLog(SHIELD.playing
       ? 'HANG SAAT PUTAR — detak jantung hilang >12 dtk; pemulihan paksa dipicu (PELINDUNG PUTAR menghitung)'
       : 'HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
+    /* v3.20: penghitungan MODE PUTARAN HEMAT hanya di render-process-gone
+       (selalu menyala setelah crash paksa) — di sini dobel hitung */
     setTimeout(() => {
       try { win.webContents.forcefullyCrashRenderer(); } catch (_) { }
       setTimeout(() => { hbBusy = false; }, 3000);
@@ -146,6 +148,35 @@ function relaunchSafeMode(reason) {
     app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
     app.exit(0);
   } catch (_) { }
+}
+
+/* ================================================================
+   v3.20: PEMUTARAN RINGAN — AKAR "HANG SAAT MEMUTAR"
+   Pratinjau lama hanya menampilkan video lewat drawImage(videoEl) ke
+   kanvas SETIAP frame saat memutar (elemen video display:none) + latar
+   blur 9:16 dirender ulang tiap 1,6 dtk + HUD menyapu seluruh baris
+   part (film 4 jam = 480 part) tiap 80 ms. Di GPU/driver lemah,
+   drawImage(video) menunggu sinkronisasi GPU yang sedang sibuk dekode
+   film panjang → thread utama membeku → detak jantung hilang →
+   dipulihkan paksa (terlihat "ngestart sendiri"). MODE AMAN v3.19
+   mematikan komposit GPU tetapi TIDAK mematikan raster kanvas — makanya
+   loop bisa berulang di mesin yang sama.
+   Kini renderer memakai JALUR NATIVE saat memutar: elemen <video> asli
+   ditampilkan di belakang kanvas overlay transparan (frame menuju
+   kompositor langsung, tanpa drawImage), gambar pratinjau dithrottle
+   15–24 fps, blur 9:16 per 8 dtk, sorot part O(1).
+   Upaya terakhir bila GPU tetap kewalahan sampai ke raster: hang saat
+   memutar ke-2 DI MODE AMAN → MODE PUTARAN HEMAT permanen (pratinjau
+   disederhanakan; pemutaran audio/video tidak pernah disentuh).
+   ================================================================ */
+let _playHangSafe = 0;
+function notePlayHangSafeMode() {
+  _playHangSafe++;
+  shieldLog('PELINDUNG PUTAR (mode aman) — hang/mati saat memutar ke-' + _playHangSafe +
+    (_playHangSafe >= 2 ? ' → MODE PUTARAN HEMAT permanen dikirim ke renderer' : ' → menunggu kejadian ke-2'));
+  /* v3.20 fix uji: JANGAN kirim saat halaman sedang mati (crash) — pesan
+     hilang. Tandai, lalu kirim tepat setelah halaman pulih (did-finish-load). */
+  if (_playHangSafe >= 2) SHIELD._litePending = true;
 }
 
 /* ---------- Protokol app:// (renderer) & kmodels:// (model AI lokal) ---------- */
@@ -204,6 +235,8 @@ function createWindow() {
       shieldLog('PELINDUNG PUTAR — kejadian saat memutar ke-' + SHIELD._playCrashT.length + ' dalam 15 mnt' +
         (SHIELD._playCrashT.length >= 2 ? ' → MODE AMAN otomatis (komposit GPU dimatikan)' : ' → pulihkan biasa dulu'));
       if (SHIELD._playCrashT.length >= 2) { relaunchSafeMode('crash/hang berulang saat memutar video'); return; }
+    } else if (SHIELD.playing && SHIELD.safeMode) {
+      notePlayHangSafeMode();   /* v3.20: mode aman pun masih beku saat putar → putaran hemat */
     }
     if (d && d.reason === 'clean-exit') return;
     shieldNote('proses render mati (' + (d && d.reason) + ') → pulihkan jendela');
@@ -232,6 +265,11 @@ function createWindow() {
     if (SHIELD.reloads > 0) {
       const info = { gpu: SHIELD.gpuCrashes, render: SHIELD.renderCrashes, reloads: SHIELD.reloads };
       try { win.webContents.send('shield:recovered', info); } catch (_) { }
+    }
+    /* v3.20: MODE PUTARAN HEMAT — kirim ke halaman yang SUDAH pulih */
+    if (SHIELD._litePending) {
+      SHIELD._litePending = false;
+      setTimeout(() => { try { if (win && !win.isDestroyed()) win.webContents.send('shield:liteplay'); } catch (_) { } }, 1200);
     }
   });
 

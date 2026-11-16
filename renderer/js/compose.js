@@ -129,8 +129,14 @@ function buildBlurBg(vid, W, H) {
   return c;
 }
 function bgLayerKey(vid, W, H, tLive) {
-  /* v2.6: preview = bucket waktu ±1.6 dtk (latar ikut video); ekspor = statis */
-  const bucket = tLive == null ? 's' : 'b' + Math.floor(tLive / 1.6);
+  /* v2.6: preview = bucket waktu (latar ikut video); ekspor = statis
+     v3.20: saat MEMUTAR bucket 8 dtk (dari 1,6) — blur 1080×1920 tiap
+     1,6 dtk adalah ledakan kerja raster di GPU/CPU lemah dan ikut
+     menyumbang "hang saat diputar" pada film panjang; latar blur
+     hampir tak berubah, 8 dtk tak terlihat bedanya */
+  const playing = tLive != null && typeof videoEl !== 'undefined' && videoEl && !videoEl.paused;
+  const step = playing ? 8 : 1.6;
+  const bucket = tLive == null ? 's' : 'b' + Math.floor(tLive / step);
   return `bg|${state.mediaEpoch || 0}|${vid.videoWidth}x${vid.videoHeight}|${W}x${H}|${bucket}`;
 }
 function buildVignette(W, H) {
@@ -150,6 +156,11 @@ function buildVignette(W, H) {
    bukan teks overlay video yang ikut tertangkap di screenshot. */
 function drawComposition(x, W, H, t, opts) {
   const noText = !!(opts && opts.noText);
+  /* v3.20: jalur NATIVE — video asli tampil lewat elemen <video> di
+     belakang kanvas; kanvas menggambar overlay saja (tanpa latar, tanpa
+     drawImage video, tanpa filter). canNativePlay() di ui.js yang
+     memutuskan; di sini hanya menurut. */
+  const native = !!(opts && opts.native);
   const u = H / 1080, F = state.font;
   const FST = (typeof frameDef === 'function') ? frameDef() : null;   /* v2.12 */
   /* --- latar --- */
@@ -160,16 +171,19 @@ function drawComposition(x, W, H, t, opts) {
     /* v3.1: ZOOM PEMBICARA — crop kamera otomatis mengisi PENUH kanvas.
        spkCropAt = fungsi murni dari t (deterministik) → preview, ekspor
        tunggal, split & batch menghasilkan kamera yang persis sama. */
-    const spk = (typeof spkCropAt === 'function')
+    const spk = native ? null : (typeof spkCropAt === 'function')
       ? spkCropAt(vid.videoWidth, vid.videoHeight, W, H, t) : null;
-    const fit = spk
+    const fit = native
       ? { x: 0, y: 0, w: W, h: H, covers: true }
-      : videoFrameRect(vid.videoWidth, vid.videoHeight, W, H, t);
+      : (spk
+        ? { x: 0, y: 0, w: W, h: H, covers: true }
+        : videoFrameRect(vid.videoWidth, vid.videoHeight, W, H, t));
     /* v2.12: frame bergaya punya LATAR SENDIRI bertema (mis. merah bioskop,
        biru panel) — menggantikan blur saat frame aktif, persis referensi.
-       v3.1: zoom pembicara aktif → video full-bleed, tanpa latar. */
-    const useBlur = !spk && state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers && !(FST && FST.bg);
-    if (!spk) {
+       v3.1: zoom pembicara aktif → video full-bleed, tanpa latar.
+       v3.20: native → tanpa latar apa pun (video elemen sudah tampil). */
+    const useBlur = !spk && !native && state.ratio === '9:16' && state.bgMode === 'blur' && !fit.covers && !(FST && FST.bg);
+    if (!spk && !native) {
       if (FST && FST.bg) {
         drawFrameBg(x, W, H, t, u);
       } else if (useBlur) {
@@ -182,36 +196,41 @@ function drawComposition(x, W, H, t, opts) {
     }
     /* UPGRADE: filter warna (kecerahan/kontras/saturasi) pada video
        v3.0: + FILTER WARNA sinematik (katalog COLORFILTERS) — css digabung
-       dgn setelan manual VFX; lapisan tint tipis hanya di area video */
+       dgn setelan manual VFX; lapisan tint tipis hanya di area video
+       v3.20: native → LOMBAT semuanya (video asli sudah tampil dari
+       elemen <video>; drawImage video per frame adalah titik sinkron GPU
+       penyebab hang saat memutar di GPU lemah) */
     const V = state.vfx;
     const CF = (typeof COLORFILTERS !== 'undefined' && COLORFILTERS.find(c => c.k === state.colorFilter)) || null;
-    x.save();
-    const fl = [];
-    if (V.bright !== 1) fl.push(`brightness(${V.bright})`);
-    if (V.contrast !== 1) fl.push(`contrast(${V.contrast})`);
-    if (V.saturate !== 1) fl.push(`saturate(${V.saturate})`);
-    if (CF && CF.css) fl.push(CF.css);
-    x.filter = fl.length ? fl.join(' ') : 'none';
-    /* v3.1: crop kamera pembicara (9-argumen: potong sumber → penuh kanvas)
-       atau jalur lama (muat/zoom manual)
-       v3.5: mode FADE — bingkai lama digambar penuh, bingkai baru di atasnya
-       dengan alpha naik 0→1 (melebur, tanpa gerakan kamera terlihat) */
-    if (spk && spk.fadeFrom && spk.fadeK < 1) {
-      x.drawImage(vid, spk.fadeFrom.sx, spk.fadeFrom.sy, spk.fadeFrom.sw, spk.fadeFrom.sh, 0, 0, W, H);
-      x.globalAlpha = Math.max(0, Math.min(1, spk.fadeK));
-      x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
-      x.globalAlpha = 1;
+    if (!native) {
+      x.save();
+      const fl = [];
+      if (V.bright !== 1) fl.push(`brightness(${V.bright})`);
+      if (V.contrast !== 1) fl.push(`contrast(${V.contrast})`);
+      if (V.saturate !== 1) fl.push(`saturate(${V.saturate})`);
+      if (CF && CF.css) fl.push(CF.css);
+      x.filter = fl.length ? fl.join(' ') : 'none';
+      /* v3.1: crop kamera pembicara (9-argumen: potong sumber → penuh kanvas)
+         atau jalur lama (muat/zoom manual)
+         v3.5: mode FADE — bingkai lama digambar penuh, bingkai baru di atasnya
+         dengan alpha naik 0→1 (melebur, tanpa gerakan kamera terlihat) */
+      if (spk && spk.fadeFrom && spk.fadeK < 1) {
+        x.drawImage(vid, spk.fadeFrom.sx, spk.fadeFrom.sy, spk.fadeFrom.sw, spk.fadeFrom.sh, 0, 0, W, H);
+        x.globalAlpha = Math.max(0, Math.min(1, spk.fadeK));
+        x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
+        x.globalAlpha = 1;
+      }
+      else if (spk) x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
+      else x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
+      x.filter = 'none';
+      if (CF && CF.tint) {
+        x.globalCompositeOperation = CF.op || 'overlay';
+        x.fillStyle = CF.tint;
+        x.fillRect(fit.x, fit.y, fit.w, fit.h);
+        x.globalCompositeOperation = 'source-over';
+      }
+      x.restore();
     }
-    else if (spk) x.drawImage(vid, spk.sx, spk.sy, spk.sw, spk.sh, 0, 0, W, H);
-    else x.drawImage(vid, fit.x, fit.y, fit.w, fit.h);
-    x.filter = 'none';
-    if (CF && CF.tint) {
-      x.globalCompositeOperation = CF.op || 'overlay';
-      x.fillStyle = CF.tint;
-      x.fillRect(fit.x, fit.y, fit.w, fit.h);
-      x.globalCompositeOperation = 'source-over';
-    }
-    x.restore();
     /* UPGRADE: vignette (v2.2: dari cache) */
     if (V.vignette) {
       const vg = getLayer('vg|' + W + 'x' + H, () => buildVignette(W, H));

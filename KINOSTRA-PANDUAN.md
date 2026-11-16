@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.19.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.20.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,14 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.20.0 — PEMUTARAN RINGAN
+
+Laporan dari v3.19: *"masih tidak bisa — saat videonya di play aplikasi hang dan kemudian merestar; videonya durasi 4 jam; aku memasukan sebanyak 5 video"*. Kali ini akarnya benar-benar ditemukan, bukan sekadar dipulihkan.
+
+Selama ini **video tidak pernah tampil lewat elemen videonya sendiri** — elemen itu disembunyikan total, dan satu-satunya cara video terlihat adalah `drawImage(video)` ke kanvas pratinjau 1600×900 **setiap frame** (60× per detik) selagi diputar. Di GPU/driver yang lemah, panggilan itu harus menunggu sinkronisasi dengan GPU yang justru sedang sibuk men-decode film 4 jam → thread utama membeku → pelindung mematikan & memuat ulang jendela (terlihat "ngestart sendiri"). MODE AMAN v3.19 mematikan komposit GPU, tetapi raster kanvas tetap lewat jalur yang sama — makanya loop masih bisa berulang.
+
+v3.20 memindahkan pemutaran ke **jalur native**: saat video diputar, elemen videonya sendiri ditampilkan di belakang kanvas, dan kanvas hanya menggambar teks/hiasan transparan. Frame video menuju layar lewat jalur kompositor bawaan browser — **tanpa satu pun drawImage per frame**. Gambar pratinjau saat memutar dibatasi 15 fps (jalur kanvas 24 fps), latar blur 9:16 di-refresh tiap 8 detik (dari 1,6), sorotan part di timeline kini O(1) (film 4 jam = 480 part tidak lagi disapu tiap 80 ms), dan thumbnail kotak video tidak lagi mem-buffer film penuh. Efek khusus (zoom, ken burns, filter warna, frame bertema, zoom pembicara, transisi) otomatis kembali ke jalur kanvas — kualitas ekspor tidak berubah sama sekali. Bila mesin tertentu tetap kewalahan sampai ke mode aman (hang saat putar ke-2), aplikasi menyalakan **MODE PUTARAN HEMAT permanen**: pratinjau disederhanakan, pemutaran audio/video tidak disentuh.
 
 ## Yang Baru di v3.19.0 — PELINDUNG PUTAR
 

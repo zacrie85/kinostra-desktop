@@ -76,7 +76,7 @@ main{display:grid;grid-template-columns:1fr 384px;min-height:0}
 #stage::before,#stage::after{content:"";position:absolute;width:18px;height:18px;z-index:5;pointer-events:none}
 #stage::before{top:-1px;left:-1px;border-top:2px solid var(--acc);border-left:2px solid var(--acc)}
 #stage::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--acc);border-right:2px solid var(--acc)}
-#cv{width:100%;height:100%;display:block;cursor:pointer}
+#cv{width:100%;height:100%;display:block;cursor:pointer;position:relative;z-index:1}
 #stage.hunting #cv{cursor:crosshair}
 #stageHud{position:absolute;inset:0;pointer-events:none;font-family:var(--mono)}
 .hud{position:absolute;font-size:10px;letter-spacing:.18em;color:var(--tx2);background:rgba(6,7,9,.72);
@@ -234,6 +234,14 @@ footer{border-top:1px solid var(--line);background:var(--panel);display:flex;fle
 .toast.warn{border-left-color:#FFB020}
 @keyframes tin{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 video{display:none}
+/* v3.20: PEMUTARAN RINGAN — jalur NATIVE. Saat video diputar (tanpa efek
+   yang butuh kanvas) elemen video asli ditampilkan DI BELAKANG kanvas
+   overlay; kanvas hanya menggambar teks/hiasan transparan. Nol
+   drawImage(video) per frame → tidak ada titik sinkron GPU yang bisa
+   membekukan thread utama di GPU/driver lemah (akar "hang saat
+   diputar" pada film panjang). */
+#vid.live{display:block;position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;background:#000;pointer-events:none;z-index:0}
 
 /* ===== v2.2: KOTAK VIDEO TERPADU (urutan atas → bawah) ===== */
 .qlist{display:flex;flex-direction:column;border:1px solid var(--line2);background:#08090C;max-height:296px;overflow-y:auto}
