@@ -630,3 +630,16 @@ User: "masih tetap tidak gerak videonya kawan... coba cek lagi, lihat VidSplit s
 - RILIS v3.25.0 SELESAI (source ter-push dulu, commit 15d9bac): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.25.0.exe 91,4 MB · KINOSTRA-Portable-3.25.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.25.0
 
 - KONFIRMASI LAPANGAN (2026-11-16, user): "berhasil kawan... terima kasih kawan" — v3.25.0 JALUR VIDSPLIT menuntaskan gambar beku di mesin user. Akar resmi ditutup: overlay kanvas di atas video kini digambar HANYA saat isinya berubah; video berdiri sendiri persis VidSplit. Kasus "waktu jalan tapi gambar beku" (v3.20–v3.24) SELESAI.
+
+## v3.26.0 — AUDIT & UPGRADE MODUL 16: PERAWATAN & PERFORMA (2026-11-16)
+
+User bertanya: apakah "OPTIMASI PERFORMA — satu klik" & "BERSIHKAN CACHE" sudah berfungsi baik atau butuh upgrade? Audit penuh (maintenance.js + main sys:cleanup + preload): KEDUANYA BEKERJA (busy-guard, dry-measure, model/setelan aman), TAPI ada 4 celah + 1 bug lama — semua dibenahi:
+
+- FLAG KANVAS DARURAT DILEPAS (maintenance.js kinoCleanRendererCaches): localStorage 'kinostra.canvasPlay' dihapus + __nativeTriedOnce=false + state._forceCanvasPlay=false → mesin v3.24-era mencoba native lagi (akar beku tuntas di v3.25; pengawas pompa/piksel/layar tetap jaga).
+- CACHE SHADER/KODE GPU (main.js sys:cleanup): ukur & hapus GPUCache/ShaderCache/DawnCache/DawnGraphiteCache/DawnWebGPUCache/GrShaderCache + Code Cache (+GPUCache-nya) — dulu hanya dibersihkan otomatis saat mati tak wajar; kini on-demand (obat efek tampilan korup); file terkunci dilewati (rmSync per entri try/catch). + diskFreed: estimasi total byte dibebaskan (tmp + http + gpu + code).
+- TOTAL DISK DIBEBASKAN tampil di modal BERSIHKAN CACHE (±MB).
+- KOTAK INFO (refreshMntInfo): + JALUR PUTAR (native ala VidSplit / kanvas darurat + ajakan jalankan OPTIMASI) + nama GPU (gi.label) + encoder hardware + ukuran cache shader/kode.
+- BENAHI BUG LAMA: renderer mengecek cl.cleared.includes('cache tampilan/HTTP') padahal main mengirim 'http' → label "cache tampilan/HTTP dibersihkan" TAK PERNAH tampil sejak v3.16. Kini dicek 'http'.
+- Sandbox daur ulang memangkas testmedia/long120.mp4 & long240.mp4 (tak ter-track git) → regenerasi ffmpeg: long120=7200 dtk (2 jam, gradients 320x180@8fps crf42 = 35 MB), long240=14400 dtk (4 jam, 70 MB). Pelajaran: file uji panjang wajib ada generator tersimpan — scripts/buat-longtestmedia.sh.
+- UJI: scripts/kinostra-maintenance-test.mjs BARU 14/14 (info jalur/GPU/shader, dry-ukur GPU cache, muat ulang 3×, seed flag → OPTIMASI melepas + flag hilang, modal BERSIHKAN + disk freed, play-ok + native aktif setelah bersih); frame 6/6; overlay-statik 6/6.
+- Bump 6 file (scripts/bump-v3260.py).

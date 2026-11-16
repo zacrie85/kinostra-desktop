@@ -28,6 +28,18 @@ function kinoCleanRendererCaches() {
       acts.push('MODE PUTARAN HEMAT dimatikan — jalur native dipakai lagi');
     }
   } catch (e) { }
+  /* v3.26: FLAG KANVAS DARURAT (v3.24) IKUT DILEPAS — mesin yang dulu terpaksa
+     masuk jalur kanvas karena "penyajian mati" kini mencoba jalur native lagi;
+     akar beku sudah dibedah tuntas di v3.25 (overlay statik), dan bila pun
+     masih beku, pengawas pompa/piksel/layar + tangga penyembuhan tetap jaga. */
+  try {
+    if (localStorage.getItem('kinostra.canvasPlay') === '1') {
+      localStorage.removeItem('kinostra.canvasPlay');
+      window.__nativeTriedOnce = false;
+      state._forceCanvasPlay = false;
+      acts.push('JALUR KANVAS darurat dilepas — jalur native (perbaikan v3.25) dicoba lagi, pengawas tetap aktif');
+    }
+  } catch (e) { }
   try { if (typeof resetAccAdaptation === 'function') { resetAccAdaptation(); acts.push('adaptasi encoder GPU/CPU direset — akan diuji ulang'); } } catch (e) { }
   try {
     state._kilat = null; state.audioRms = 0;
@@ -67,14 +79,25 @@ async function refreshMntInfo() {
     try { sh = await window.kinostra.shieldStatus(); } catch (e) { }
     let lg = null;
     try { lg = await window.kinostra.crashLog(); } catch (e) { }
+    let gi = null;
+    try { gi = await window.kinostra.gpuInfo(); } catch (e) { }
+    /* v3.26: JALUR PUTAR (native/kanvas) + nama GPU — relevan sejak v3.25 */
+    let jalur = 'NATIVE — video berdiri sendiri ala VidSplit · pengawas gambar & layar aktif';
+    let jalurWarn = false;
+    try {
+      if (localStorage.getItem('kinostra.canvasPlay') === '1') { jalur = 'JALUR KANVAS (darurat tersimpan) — jalankan OPTIMASI PERFORMA untuk mencoba native lagi'; jalurWarn = true; }
+    } catch (e) { }
     const ram = sys && sys.ramGB ? sys.ramGB : (sys && sys.totalMem ? (sys.totalMem / 1073741824).toFixed(1) : null);
     const cores = navigator.hardwareConcurrency || '?';
     const hm = heapMB();
     box.innerHTML =
+      `<b>JALUR PUTAR:</b> ${jalurWarn ? `<b style="color:#FFB020">${jalur}</b>` : jalur}<br>` +
+      `<b>GPU:</b> ${gi && gi.label ? String(gi.label).replace(/</g, '&lt;') : '—'}${gi && gi.hasEncHw ? ' · encoder hardware tersedia' : ''}<br>` +
       `<b>PELINDUNG LAYAR HITAM:</b> ${sh ? (sh.safeMode ? 'MODE AMAN aktif' : 'AKTIF') + ` · ${sh.upMin || 0} mnt nyala · memori JS ${fMB(hm)}` : 'memuat…'}<br>` +
       fShield(sh) +
       `<b>RAM TERPASANG:</b> ${ram ? ram + ' GB' : '—'} · <b>CPU:</b> ${cores} core<br>` +
       `<b>CACHE SEMENTARA TRANSKRIPSI:</b> ${cl.whisperTmp ? fMB(cl.whisperTmp / 1048576) : 'bersih'} (${cl.whisperTmpFiles || 0} file)<br>` +
+      `<b>CACHE SHADER/KODE GPU:</b> ${(cl.gpuCache || 0) + (cl.codeCache || 0) > 0 ? fMB(((cl.gpuCache || 0) + (cl.codeCache || 0)) / 1048576) + ' — dihapus oleh BERSIHKAN CACHE' : 'bersih'}<br>` +
       `<b>MODEL AI LOKAL:</b> ${cl.modelsDir ? fMB(cl.modelsDir / 1048576) : '—'} (tidak dihapus — dipakai subtitel & suara)<br>` +
       `<span style="opacity:.7">Cache tampilan/HTTP: ${cl.cacheDir ? fMB(cl.cacheDir / 1048576) : '—'} · dipakai ulang otomatis saat dibutuhkan · cache grafis korup dibersihkan otomatis saat aplikasi dimulai</span><br>` +
       `<b>RIWAYAT KEJADIAN (tersimpan permanen):</b> ${lg && lg.text ? String(lg.text.trim().split('\n').pop()).replace(/</g, '&lt;') : 'belum ada — log kosong'}<br>` +
@@ -167,7 +190,11 @@ async function kinoClearCache() {
     try { cl = await window.kinostra.cleanupCache({ dry: false }); } catch (e) { }
     if (cl) {
       if (cl.whisperTmpCleared) acts.push(`${cl.whisperTmpCleared} file sementara transkripsi dihapus (${fMB(cl.whisperTmp / 1048576)})`);
-      if ((cl.cleared || []).includes('cache tampilan/HTTP')) acts.push('cache tampilan/HTTP aplikasi dibersihkan');
+      if ((cl.cleared || []).includes('http')) acts.push('cache tampilan/HTTP aplikasi dibersihkan');   /* v3.26: benahi — dulu mengecek teks yang tak pernah dikirim main */
+      /* v3.26: cache shader/kode GPU + total disk dibebaskan */
+      if (cl.gpuCacheCleared) acts.push(`cache shader GPU dihapus (${fMB(cl.gpuCache / 1048576)}) — memperbaiki juga efek tampilan korup`);
+      if (cl.codeCacheCleared) acts.push(`cache kode JS/GPU dihapus (${fMB(cl.codeCache / 1048576)})`);
+      if (cl.diskFreed > 0) acts.push(`<b>total disk dibebaskan ±${fMB(cl.diskFreed / 1048576)}</b> (beberapa berkas mungkin menyusut penuh setelah aplikasi dibuka ulang)`);
     }
     const h1 = heapMB();
     const freed = (h0 != null && h1 != null) ? Math.max(0, h0 - h1) : null;

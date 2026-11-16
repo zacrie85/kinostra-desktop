@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.25.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.26.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,19 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.26.0 — AUDIT & UPGRADE MODUL 16: PERAWATAN & PERFORMA
+
+Pertanyaanmu — *"apakah OPTIMASI PERFORMA satu-klik dan BERSIHKAN CACHE sudah berfungsi baik, ataukah butuh upgrade?"* — jawabannya: **duanya sudah bekerja, tapi layak diupgrade, dan kini sudah diupgrade.** Audit menemukan empat celah dan satu bug lama; semuanya dibenahi:
+
+1. **OPTIMASI & BERSIHKAN CACHE kini melepas FLAG KANVAS DARURAT.** Mesin yang pernah dipaksa masuk jalur kanvas oleh pengawas era v3.24 ("penyajian mati") terjebak di jalur itu selamanya — padahal akar beku sudah dibedah tuntas di v3.25. Kini setelah optimasi/bersih, aplikasi mencoba jalur native lagi; bila pun masih beku, tiga pengawas (pompa, piksel, layar) + tangga penyembuhan tetap menjaga.
+2. **BERSIHKAN CACHE kini menghapus CACHE SHADER/KODE GPU** (GPUCache, ShaderCache, Dawn*, Code Cache — bisa ratusan MB). Dulu folder ini hanya dibersihkan otomatis saat aplikasi mati tak wajar; kini bisa dipanggil manual — sekaligus jadi obat kalau efek tampilan terlihat korup/rusak. Berkas yang sedang dikunci sistem dilewati dengan aman.
+3. **Hasil pembersihan menampilkan TOTAL DISK dibebaskan** (estimasi MB) — dulu hanya daftar aksi tanpa angka.
+4. **Kotak info kini menampilkan JALUR PUTAR** (native ala VidSplit / kanvas darurat) **+ nama GPU + status encoder hardware + ukuran cache shader** — jadi status sehat mesinmu terlihat sekali pandang.
+
+Plus benahi bug lama yang baru ketahuan saat audit: label *"cache tampilan/HTTP dibersihkan"* **tidak pernah muncul sejak v3.16** karena renderer mengecek teks `'cache tampilan/HTTP'` padahal main process mengirim `'http'`.
+
+Diuji: uji baru khusus modul 16 **14/14** (modal hasil, flag kanvas benar-benar dilepas, disk dibebaskan tampil, info jalur/GPU, dan putar tetap sehat di jalur native setelah pembersihan), frame-test **6/6**, overlay-statik **6/6**.
 
 ## Yang Baru di v3.25.0 — JALUR VIDSPLIT: AKAR GAMBAR BEKU DIBEDAH SEBENARNYA
 

@@ -1506,7 +1506,12 @@ ipcMain.handle('sys:info', async () => {
    ================================================================ */
 ipcMain.handle('sys:cleanup', async (e, opts = {}) => {
   const dry = !!opts.dry;
-  const out = { whisperTmp: 0, whisperTmpFiles: 0, whisperTmpCleared: 0, cacheDir: 0, modelsDir: 0, cleared: [] };
+  /* v3.26: + cache shader/kode GPU (GPUCache, ShaderCache, Dawn*, Code Cache)
+     — bisa ratusan MB, biasanya hanya dibersihkan otomatis saat keluar tak
+     wajar; kini bisa dibersihkan manual dari BERSIHKAN CACHE. Files yang
+     sedang dikunci sistem dilewati (coba lagi berikutnya / setelah dibuka
+     ulang). + diskFreed: estimasi total disk dibebaskan (byte). */
+  const out = { whisperTmp: 0, whisperTmpFiles: 0, whisperTmpCleared: 0, cacheDir: 0, modelsDir: 0, gpuCache: 0, codeCache: 0, gpuCacheCleared: 0, codeCacheCleared: 0, diskFreed: 0, cleared: [] };
   const dirSize = (p) => {
     let n = 0;
     try {
@@ -1517,22 +1522,52 @@ ipcMain.handle('sys:cleanup', async (e, opts = {}) => {
     } catch (_) { }
     return n;
   };
+  const ud = app.getPath('userData');
+  const GPU_DIRS = ['GPUCache', 'ShaderCache', 'DawnCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'GrShaderCache'].map(d => path.join(ud, d));
+  const CODE_DIRS = [path.join(ud, 'Code Cache'), path.join(ud, 'Code Cache GPUCache')];
   try {
     out.whisperTmp = dirSize(WHISPER_TMP_DIR);
     out.whisperTmpFiles = fs.existsSync(WHISPER_TMP_DIR) ? fs.readdirSync(WHISPER_TMP_DIR).length : 0;
   } catch (_) { }
   try { out.modelsDir = dirSize(MODELS_DIR) + dirSize(WHISPER_MODELS_DIR); } catch (_) { }
-  try { out.cacheDir = dirSize(path.join(app.getPath('userData'), 'Cache')); } catch (_) { }
+  try { out.cacheDir = dirSize(path.join(ud, 'Cache')); } catch (_) { }
+  try { out.gpuCache = GPU_DIRS.reduce((a, p) => a + dirSize(p), 0); } catch (_) { }
+  try { out.codeCache = CODE_DIRS.reduce((a, p) => a + dirSize(p), 0); } catch (_) { }
   if (!dry) {
     try {
       if (fs.existsSync(WHISPER_TMP_DIR)) {
         for (const f of fs.readdirSync(WHISPER_TMP_DIR)) {
           try { fs.rmSync(path.join(WHISPER_TMP_DIR, f), { recursive: true, force: true }); out.whisperTmpCleared++; } catch (_) { }
         }
-        if (out.whisperTmpCleared) out.cleared.push('tmp');
+        if (out.whisperTmpCleared) { out.cleared.push('tmp'); out.diskFreed += out.whisperTmp; }
       }
     } catch (_) { }
-    try { if (win && win.webContents) { await win.webContents.session.clearCache(); out.cleared.push('http'); } } catch (_) { }
+    try { if (win && win.webContents) { await win.webContents.session.clearCache(); out.cleared.push('http'); out.diskFreed += out.cacheDir; } } catch (_) { }
+    /* v3.26: hapus isi cache shader/kode GPU — direktorinya dibiarkan (Chromium
+       membuat ulang otomatis); file yang dikunci dilewati tanpa galat */
+    let gFreed = 0, gN = 0, cFreed = 0, cN = 0;
+    for (const p of GPU_DIRS) {
+      const sz = dirSize(p);
+      if (!sz) continue;
+      let del = 0;
+      try {
+        for (const f of fs.readdirSync(p)) { try { fs.rmSync(path.join(p, f), { recursive: true, force: true }); del++; } catch (_) { } }
+      } catch (_) { }
+      if (del) { gFreed += sz; gN++; }
+    }
+    for (const p of CODE_DIRS) {
+      const sz = dirSize(p);
+      if (!sz) continue;
+      let del = 0;
+      try {
+        for (const f of fs.readdirSync(p)) { try { fs.rmSync(path.join(p, f), { recursive: true, force: true }); del++; } catch (_) { } }
+      } catch (_) { }
+      if (del) { cFreed += sz; cN++; }
+    }
+    out.gpuCacheCleared = gN; out.codeCacheCleared = cN;
+    out.diskFreed += gFreed + cFreed;
+    if (gN) out.cleared.push('gpu-shader');
+    if (cN) out.cleared.push('code');
   }
   return out;
 });
