@@ -85,7 +85,7 @@ try {
     if (s.fc) break;
   }
   const log = await logTail(cdp);
-  const bek = log.split('\n').filter(l => /v3\.24 GAMBAR BEKU/.test(l));
+  const bek = log.split('\n').filter(l => /v3\.25 GAMBAR BEKU/.test(l));
   console.log('LOG PENYEMBUH:\n  ' + (bek.join('\n  ') || '(kosong)'));
   ok('Detektor menyala & mencatat ke log', bek.length >= 3, bek.length + ' entri');
   ok('Alasan = PIKSEL DIAM (penyajian mati — bukan pompa)', bek.some(l => /piksel diam \(decoder maju tapi penyajian mati\)/.test(l)));

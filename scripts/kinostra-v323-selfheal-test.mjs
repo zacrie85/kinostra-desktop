@@ -92,7 +92,7 @@ try {
     if (s.fc) break;
   }
   const log = await logTail(cdp);
-  const v323 = log.split('\n').filter(l => /v3\.24 GAMBAR BEKU/.test(l));
+  const v323 = log.split('\n').filter(l => /v3\.25 GAMBAR BEKU/.test(l));
   ladder.kocok = v323.some(l => /kocok halus/.test(l));
   ladder.vis = v323.some(l => /visibilitas/.test(l));
   ladder.kanvas = v323.some(l => /jalur kanvas overlay/.test(l));

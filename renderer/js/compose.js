@@ -266,13 +266,15 @@ function drawComposition(x, W, H, t, opts) {
   const _pA = (state.partAnim && state.partAnim !== 'off' && _tinP < 1.6)
     ? ncTextState(state.partAnim, _tinP, 1e9, seg * 131 + 7 + Math.floor(t * 30)) : null;
   if (state.partShow === 'intro') {
-    let a = clamp(1 - _tinP / 1.6, 0, 1);
-    if (_pA) a = Math.min(a, _pA.alpha);
+    /* v3.25 JALUR VIDSPLIT: pratinjau native = overlay statik — label masuk
+       langsung keadaan akhir (tanpa animasi); ekspor tetap beranimasi penuh */
+    let a = native ? 1 : clamp(1 - _tinP / 1.6, 0, 1);
+    if (_pA && !native) a = Math.min(a, _pA.alpha);
     if (a > 0.004) {
       x.save(); x.globalAlpha = a; x.textAlign = 'center';
       const cx = W / 2 + ppx * W * 0.30;
       const cy = H * clamp(0.42 + ppy * 0.40, 0.085, 0.90);
-      if (_pA) {
+      if (_pA && !native) {
         if (_pA.scale !== 1) { x.translate(cx, cy); x.scale(_pA.scale, _pA.scale); x.translate(-cx, -cy); }
         if (_pA.dy) x.translate(0, _pA.dy * H);
       }
@@ -290,7 +292,7 @@ function drawComposition(x, W, H, t, opts) {
     x.save();
     const px = W * clamp(0.05 + ppx * 0.35, 0.02, 0.68);
     const py = H * clamp(0.925 + ppy * 0.88, 0.062, 0.985);
-    if (_pA) {
+    if (_pA && !native) {
       x.globalAlpha = _pA.alpha;
       if (_pA.scale !== 1) { x.translate(px, py); x.scale(_pA.scale, _pA.scale); x.translate(-px, -py); }
       if (_pA.dy) x.translate(0, _pA.dy * H);
@@ -347,7 +349,8 @@ function drawComposition(x, W, H, t, opts) {
     const _sbA = (typeof currentSegBounds === 'function' && currentSegBounds(t)) || null;
     const _tlA = _sbA ? (t - _sbA.start) / _spdA : 1e9;
     const _aKey = state.titleAnim && state.titleAnim !== 'off' ? state.titleAnim : null;
-    const tA = (_aKey && (_aKey === 'neon' || _tlA < 1.6))
+    /* v3.25 JALUR VIDSPLIT: pratinjau native = judul statik (tanpa animasi) */
+    const tA = (!native && _aKey && (_aKey === 'neon' || _tlA < 1.6))
       ? ncTextState(_aKey, _tlA, 1e9, 700 + Math.floor(t * 30)) : null;
     if (tA && tA.alpha <= 0.004 && tA.kind !== 'wipe') {
       x.restore();   /* belum waktunya muncul — blok judul disembunyikan */

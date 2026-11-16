@@ -146,13 +146,13 @@ async function loadFileBlob(file, force = false) {
     toast(`Video tidak bisa dibaca engine (${file.name}) — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
-  /* v3.24: reset penyembuh gambar per video. Jika mesin ini pernah terbukti
+  /* v3.25: reset penyembuh gambar per video. Jika mesin ini pernah terbukti
      penyajiannya macet (flag tersimpan) DAN native sudah dicoba sekali pada
      sesi ini → langsung jalur kanvas; sesi baru tetap mencoba native sekali
      (driver bisa saja membaik). Seek terkendali 0,04 dtk tetap dipakai utk
      memicu dekode frame pratinjau pertama. */
   state._forceCanvasPlay = (localStorage.getItem('kinostra.canvasPlay') === '1' && window.__nativeTriedOnce) ? true : false;
-  _frStreak = 0; _frLast = -1; _pxLast = -1;
+  _frStreak = 0; _frLast = -1; _pxLast = -1; _layarLast = '';
   try {
     if (!state.isAudio && videoEl.readyState >= 1 && videoEl.paused && isFinite(videoEl.duration) && videoEl.duration > 0) {
       videoEl.currentTime = Math.min(0.04, videoEl.duration * 0.001);
@@ -517,29 +517,50 @@ function measureAudioRms() {
   return state.audioRms;
 }
 
-/* ---------- v3.23+v3.24: PENGAWAS GERAK GAMBAR (penyembuh otomatis) ----------
-   Laporan user: waktu berjalan tapi GAMBAR BEKU. Dua mekanisme beda, satu tangga:
+/* ---------- v3.23→v3.25: PENGAWAS GERAK GAMBAR + PENGAWAS LAYAR ----------
+   Laporan user: waktu berjalan tapi GAMBAR BEKU. TIGA detektor, satu tangga:
    (a) POMPA MACET — totalVideoFrames diam padahal currentTime maju (v3.23);
-   (b) PENYAJIAN MATI — decoder maju (fr naik) tapi piksel yang tampak tak pernah
-       berubah: lapisan video kompositor Windows (DirectComposition) berhenti
-       memperbarui gambar; kanvas overlay & DOM tetap hidup (v3.24 — persis
-       rekaman user 2026-11-16: caption bergerak, video beku, TANPA toast =
-       detektor v3.23 tak pernah menyala → fr di mesin user selalu maju).
-   v3.24 menambah detektor PIKSEL: videoEl disampel ke kanvas 48x27 tiap 2 dtk;
-   hash diam + fr maju + waktu maju = penyajian mati.
-   TANGGA PENYEMBUHAN (dipicu salah satu deteksi):
-   1) kocok halus — seek +0,05 dtk (memicu dekode ulang satu frame)
+   (b) PENYAJIAN MATI — decoder maju (fr naik) tapi piksel video (sampel
+       drawImage kanvas 48x27) tak pernah berubah (v3.24);
+   (c) LAYAR BENAR-BENAR BEKU — capturePage dari main process membaca piksel
+       JENDELA yang tersaji; diam padahal waktu maju (v3.25). (a)&(b) bisa
+       lolos kareno decoder & drawImage mengambil frame baru dari decoder
+       padahal kompositor tak pernah menyajikannya ke layar — (c) detektor
+       sejati, jalan di jalur native MAUPUN kanvas.
+   Plus akar yang dibedah di v3.25: overlay kanvas di atas video yang
+   digambar ulang terus-menerus (15x/dtk walau statik) meng-invalidate
+   region di atas video → lapisan video tak pernah naik ke hardware overlay
+   kompositor Windows → beku di GPU/driver tertentu. ui.js kini menggambar
+   overlay native HANYA saat isinya berubah (JALUR VIDSPLIT).
+   TANGGA PENYEMBUHAN (streak gabungan, dipicu detektor mana pun):
+   1) kocok halus (seek +0,05 dtk) + latar blur dibekukan (berhenti
+      diperbarui — satu invalidasi kanvas lagi-lagi di atas/bawah video)
    2) nyalakan ulang visibilitas elemen (lapisan kompositor dipasang ulang)
-   3) jatuh ke jalur kanvas overlay (_forceCanvasPlay dibaca canNativePlay di
-      ui.js — gambar digambar manual via drawImage: SATU lapisan komposit,
-      kebal bug lapisan video; caption ikut tergambar di kanvas)
-   Penyembuhan diingat per mesin (localStorage 'kinostra.canvasPlay'): impor
-   berikutnya pada sesi yang sama langsung jalur kanvas; sesi baru tetap
-   mencoba native sekali (driver bisa saja membaik). Semua tercatat ke log.
-   Nol false-positive utk pompa: mesin lambat yang tetap memompa 2 fps pun
-   fr-nya bertambah; piksel diuji HANYA saat fr maju. */
+   3) jatuh ke jalur kanvas overlay (_forceCanvasPlay dibaca canNativePlay)
+      — DIINGAT per mesin (localStorage 'kinostra.canvasPlay'): impor
+      berikutnya pada sesi sama langsung kanvas; sesi baru mencoba native
+      sekali (driver bisa saja membaik). Semua tercatat ke log. */
 let _frLast = -1, _frLastT = 0, _frStreak = 0, _pxLast = -1;
 let _pxCv = null, _pxCtx = null;
+let _layarLast = '', _layarLastT = 0;
+function terapkanTangga(why, pos) {
+  _frStreak++;
+  if (_frStreak === 1) {
+    try { videoEl.currentTime = videoEl.currentTime + 0.05; } catch (e) { }
+    window.__kinoBlurFreeze = true;
+    if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.25 GAMBAR BEKU t=' + pos + ' — ' + why + ' — kocok halus + latar blur dibekukan');
+    if (typeof toast === 'function') toast('Gambar tidak bergerak — dikocok halus…', 'warn');
+  } else if (_frStreak === 2) {
+    videoEl.style.display = 'none'; void videoEl.offsetWidth; videoEl.style.display = '';
+    if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.25 GAMBAR BEKU t=' + pos + ' — ' + why + ' — visibilitas elemen dinyalakan ulang');
+  } else if (_frStreak === 3) {
+    state._forceCanvasPlay = true;
+    window.__nativeTriedOnce = true;
+    try { localStorage.setItem('kinostra.canvasPlay', '1'); } catch (e) { }
+    if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.25 GAMBAR BEKU t=' + pos + ' — ' + why + ' — jatuh ke jalur kanvas overlay (diingat utk impor berikutnya)');
+    if (typeof toast === 'function') toast('Penyajian gambar macet — beralih ke jalur kanvas', 'warn');
+  }
+}
 function cekGambarBergerak() {
   try {
     if (!state.file || state.isAudio || state.busy) return;
@@ -560,28 +581,36 @@ function cekGambarBergerak() {
       } catch (e) { _pxLast = -1; }
     } else _pxLast = -1;
     if ((frStuck || pxStuck) && tMaju) {
-      _frStreak++;
-      const pos = (typeof fmtT === 'function' ? fmtT(t) : Math.round(t) + ' dtk');
-      const why = frStuck ? 'frame diam (pompa macet)' : 'piksel diam (decoder maju tapi penyajian mati)';
-      if (_frStreak === 1) {
-        videoEl.currentTime = t + 0.05;
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — kocok halus (seek +0,05 dtk)');
-        if (typeof toast === 'function') toast('Gambar tidak bergerak — dikocok halus…', 'warn');
-      } else if (_frStreak === 2) {
-        videoEl.style.display = 'none'; void videoEl.offsetWidth; videoEl.style.display = '';
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — visibilitas elemen dinyalakan ulang');
-      } else if (_frStreak === 3) {
-        state._forceCanvasPlay = true;
-        window.__nativeTriedOnce = true;
-        try { localStorage.setItem('kinostra.canvasPlay', '1'); } catch (e) { }
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — jatuh ke jalur kanvas overlay (diingat utk impor berikutnya)');
-        if (typeof toast === 'function') toast('Penyajian gambar macet — beralih ke jalur kanvas', 'warn');
-      }
+      terapkanTangga(frStuck ? 'frame diam (pompa macet)' : 'piksel diam (decoder maju tapi penyajian mati)',
+        (typeof fmtT === 'function' ? fmtT(t) : Math.round(t) + ' dtk'));
     } else _frStreak = 0;
     _frLast = fr; _frLastT = t;
   } catch (e) { }
 }
 setInterval(cekGambarBergerak, 2000);
+/* PENGAWAS LAYAR (v3.25) — region = pita tengah elemen yang diputar
+   (menghindari teks judul di atas & bawah). Hash piksel jendela dibandingkan
+   antar-sampel 5 dtk; diam + waktu maju ≥3,5 dtk = beku sesungguhnya. */
+async function cekLayarTersaji() {
+  try {
+    if (!state.file || state.isAudio || state.busy) return;
+    if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) { _layarLast = ''; return; }
+    if (!window.kinostra || typeof kinostra.cekLayar !== 'function') return;
+    const t = videoEl.currentTime;
+    const el = canNativePlay() ? videoEl : cv;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const rect = { x: Math.round(r.x + r.width * 0.12), y: Math.round(r.y + r.height * 0.32), width: Math.max(8, Math.round(r.width * 0.76)), height: Math.max(8, Math.round(r.height * 0.36)) };
+    const h = await kinostra.cekLayar(rect);
+    if (!h) return;
+    if (h === _layarLast && t > _layarLastT + 3.5) {
+      terapkanTangga('LAYAR diam (capturePage: piksel jendela tak pernah berubah)',
+        (typeof fmtT === 'function' ? fmtT(t) : Math.round(t) + ' dtk'));
+    }
+    _layarLast = h; _layarLastT = t;
+  } catch (e) { }
+}
+setInterval(cekLayarTersaji, 5000);
 
 /* ---------- SEEK PRESISI (v2.1: mendukung elemen video worker paralel) ---------- */
 function seekTo(t, el) {

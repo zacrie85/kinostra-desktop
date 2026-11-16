@@ -1388,6 +1388,12 @@ function canNativePlay() {
   if (state.trans && state.trans.mode && state.trans.mode !== 'off') return false;
   const V = state.vfx || {};
   if (V.bright !== 1 || V.contrast !== 1 || V.saturate !== 1) return false;
+  /* v3.25 JALUR VIDSPLIT: yang menggambar kanvas PER FRAME harus jalur kanvas
+     — kalau dibiarkan native, overlay tak bisa statik dan lapisan video
+     kembali di-invalidate terus (akar gambar beku) */
+  if (V.grain) return false;                        /* grain = noise tiap frame */
+  if (state.neon && state.neon.on) return false;    /* frame neon berputar */
+  if (state.titleAnim === 'neon') return false;     /* judul berkedip terus */
   if (state.colorFilter && state.colorFilter !== 'off') return false;
   if (state.trackMode || state.track.active) return false;
   const spk = state.spk || {};
@@ -1428,6 +1434,28 @@ function drawBgBlurMini() {
     window.__kinoBlurDraws++;
   } catch (e) { /* frame belum siap — detik berikutnya */ }
 }
+/* v3.25: tanda tangan overlay native — semua masukan drawComposition jalur
+   native yang bisa berubah nilainya (part aktif, subtitel aktif, ukuran
+   kanvas, setelan teks/frame/rasio). Perubahan setelan apa pun dari UI juga
+   menandai kotor lewat event input/change di dokumen (capture), jadi tak
+   ada setelan baru yang luput menggambar ulang overlay. */
+let _natSig = '', _natNeed = true;
+function nativeOverlaySig(t) {
+  let si = -1;
+  if (state.subsOn && state.subs && state.subs.length) {
+    for (let i = 0; i < state.subs.length; i++) { const s = state.subs[i]; if (t >= s.s && t < s.e) { si = i; break; } }
+  }
+  const FSTs = (typeof frameDef === 'function') ? frameDef() : null;
+  return [currentSegIndex(t), segmentsCount(), si, cv.width, cv.height,
+    state.partShow, state.partPrefix, state.partPosX, state.partPosY, state.partSize, state.partAnim, state._noPart,
+    state.titleOn, state.title, state.titleSize, state.titleScale, state.titlePosY, state.upper, state.titleFrame, state.titleAnim,
+    state.descOn, state.desc, state.descSize, state.descPosY, state.descPos,
+    state.subsOn, state.subScale, state.subPosY, state.splitSec, state.speed,
+    state.vfx && state.vfx.vignette, state.frameStyle, FSTs ? FSTs.k : null,
+    state.bgMode, state.ratio].join('|');
+}
+document.addEventListener('input', () => { _natNeed = true; }, true);
+document.addEventListener('change', () => { _natNeed = true; }, true);
 function loop() {
   requestAnimationFrame(loop);
   if (state.file) {
@@ -1459,7 +1487,7 @@ function loop() {
         _blurCv.classList.toggle('live', want);
         if (want) { _lastBlurDraw = 0; drawBgBlurMini(); }   /* isi frame pertama segera */
       }
-      if (want && now - _lastBlurDraw >= 100) { _lastBlurDraw = now; drawBgBlurMini(); }   /* 10 fps ala VidSplit */
+      if (want && !window.__kinoBlurFreeze && now - _lastBlurDraw >= 100) { _lastBlurDraw = now; drawBgBlurMini(); }   /* 10 fps ala VidSplit; v3.25: berhenti saat penyembuhan beku */
     }
     /* HUD & playhead — v3.20 O(1): sorot part hanya saat berganti part */
     if (performance.now() - lastHud > 80) {
@@ -1487,12 +1515,31 @@ function loop() {
       if (now - _lastPlayDraw < batas) return;
       _lastPlayDraw = now;
     }
-    const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
-    const animOn = !!state.neon.on || !!FSTa || (state.trans && state.trans.mode !== 'off') || state.track.active;
-    if (!(videoEl.paused && !animOn && t === _lastDrawT && now - _lastDrawAt < 1000)) {
-      window.__kinoOverlayDraws++;
-      drawComposition(ctx, cv.width, cv.height, t, native ? { native: true } : undefined);
-      _lastDrawT = t; _lastDrawAt = now;
+    /* v3.25 JALUR VIDSPLIT — saat native, overlay kanvas digambar HANYA bila
+       isinya berubah (ganti part, ganti subtitel, pengeditan setelan, resize,
+       masuk/keluar native). Kanvas yang digambar ulang 15x/dtk WALAU statik
+       membuat region di atas video terus di-invalidate → lapisan video tak
+       pernah naik ke hardware overlay kompositor Windows → GAMBAR BEKU di
+       GPU/driver tertentu (rekaman user v3.24: decoder maju, piksel jendela
+       diam). Overlay statik = persis VidSplit: video berdiri sendiri. */
+    if (native) {
+      const sig = nativeOverlaySig(t);
+      if (sig !== _natSig || _natNeed) {
+        _natSig = sig; _natNeed = false;
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        window.__kinoOverlayDraws++;
+        drawComposition(ctx, cv.width, cv.height, t, { native: true });
+        _lastDrawT = t; _lastDrawAt = now;
+      }
+    } else {
+      _natSig = ''; _natNeed = true;
+      const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
+      const animOn = !!state.neon.on || !!FSTa || (state.trans && state.trans.mode !== 'off') || state.track.active;
+      if (!(videoEl.paused && !animOn && t === _lastDrawT && now - _lastDrawAt < 1000)) {
+        window.__kinoOverlayDraws++;
+        drawComposition(ctx, cv.width, cv.height, t, undefined);
+        _lastDrawT = t; _lastDrawAt = now;
+      }
     }
   }
 }

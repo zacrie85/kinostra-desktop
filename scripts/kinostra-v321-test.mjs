@@ -133,7 +133,8 @@ try {
   const c1 = await evalRetry(cdp, `({ t: videoEl.currentTime, stall: Math.round(window.__stall.max), draws: window.__kinoOverlayDraws })`, 8000);
   ok('C1 playhead maju (Δ' + (c1.t - t0).toFixed(1) + ' dtk)', c1.t - t0 >= 5);
   ok('C1 tanpa beku >2,5 dtk (maks ' + c1.stall + ' ms)', c1.stall < 2500);
-  ok('C1 overlay dithrottle (' + c1.draws + ' gambar/11 dtk ≤25 fps)', c1.draws > 30 && c1.draws < 500, String(c1.draws));
+  /* v3.25 JALUR VIDSPLIT: overlay statik — digambar hanya saat isi berubah (±1 di awal) */
+  ok('C1 overlay statik ala VidSplit (' + c1.draws + ' gambar/11 dtk — hanya saat isi berubah)', c1.draws >= 0 && c1.draws <= 8, String(c1.draws));
   await cdp.eval(`(function(){ if (!videoEl.paused) togglePlay(); return 'pause'; })()`);
   await sleep(1200);
 
@@ -229,7 +230,8 @@ try {
   ok('v3.21: jalur NATIVE tetap aktif di mode hemat', e2.cn === true && e2.live === true, JSON.stringify(e2));
   await sleep(8000);
   const e3 = await evalRetry(cdp2, `window.__kinoOverlayDraws`, 8000);
-  ok('v3.21: overlay diperlambat ±5 fps (' + e3 + ' gambar/11 dtk)', e3 > 5 && e3 < 90, String(e3));
+  /* v3.25: mode hemat + overlay statik → nyaris nol gambar ulang saat native */
+  ok('v3.25: overlay statik di mode hemat (' + e3 + ' gambar/11 dtk — nyaris nol)', e3 >= 0 && e3 <= 8, String(e3));
 
   console.log('\nHASIL: ' + pass + ' lulus, ' + fail + ' gagal');
   process.exit(fail ? 1 : 0);

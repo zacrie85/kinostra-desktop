@@ -1546,6 +1546,21 @@ ipcMain.handle('sys:cleanup', async (e, opts = {}) => {
    Deteksi encoder kira-kira: NVIDIA GTX/RTX/Quadro, AMD Radeon RX,
    Intel HD/UHD/Iris/Arc era 2012+ punya encoder hardware H.264. */
 let _gpuCache = null;
+/* v3.25: PENGAWAS LAYAR — capture region jendela & hash pikselnya. Ini
+   membaca yang BENAR-BENAR tersaji di layar (bukan klaim decoder/drawImage)
+   → detektor beku gambar sejati utk renderer (media.js cekLayarTersaji). */
+ipcMain.handle('kinostra:cek-layar', async (e, rect) => {
+  try {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w || !rect || !(rect.width > 0) || !(rect.height > 0)) return '';
+    const img = await w.webContents.capturePage(rect);
+    if (!img || img.isEmpty()) return '';
+    const small = img.resize({ width: 48, quality: 'good' });
+    const b = small.toBitmap();
+    let h = 0; for (let i = 0; i < b.length; i += 40) h = (h * 31 + b[i] + b[i + 1] * 3 + b[i + 2] * 7) | 0;
+    return String(h) + ':' + b.length;
+  } catch (err) { return ''; }
+});
 ipcMain.handle('sys:gpu', async () => {
   if (_gpuCache) return _gpuCache;
   const gpus = [];

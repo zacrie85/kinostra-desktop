@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.24.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.25.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,16 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.25.0 — JALUR VIDSPLIT: AKAR GAMBAR BEKU DIBEDAH SEBENARNYA
+
+Permintaanmu kemarin — *"lihat VidSplit sebagai referensi"* — adalah petunjuk yang tepat sasaran, kawan. VidSplit bergerak di mesin yang sama karena video-nya **berdiri sendiri**: tidak ada apa pun di atasnya. KINOSTRA selama ini menaruh **kanvas overlay di atas elemen video** dan menggambar ulangnya **15× per detik walau isinya tidak berubah** (label part & judul memang statis sepanjang part). Setiap gambar ulang meng-invalidate region di atas video di kompositor Windows — akibatnya lapisan video **tidak pernah naik ke hardware overlay**, dan di GPU/driver sepertimu gambar video berhenti tersaji: waktu jalan, decoder "bekerja", gambar beku. Persis rekamanmu.
+
+v3.25 membedah dan membuang akar itu: **saat memutar native, overlay kini digambar HANYA saat isinya benar-benar berubah** — ganti part, ganti subtitel, pengeditan setelan, perubahan ukuran. Hasil uji: **3 gambar dalam 9 detik putar** (dulu ±135). Video berdiri sendiri persis VidSplit. Animasi masuk part/judul dirender langsung ke keadaan akhir di pratinjau native (ekspor tetap beranimasi penuh), dan efek yang memang butuh kanvas per frame (grain, frame neon berputar, judul neon berkedip) otomatis pindah ke jalur kanvas.
+
+Plus: **PENGAWAS LAYAR sejati** — main process kini meng-capture piksel jendela yang benar-benar tersaji (`capturePage`, pita tengah area putar, tiap 5 detik) dan meng-hash-nya. Detektor ini **tidak bisa dibohongi** decoder maupun `drawImage` — kalau piksel jendela diam padahal waktu berjalan, itu beku sesungguhnya, apa pun mekanismenya. Ketiga detektor (pompa, piksel, layar) kini berbagi satu tangga: **kocok halus + latar blur dibekukan** → **visibilitas dinyalakan ulang** → **jalur kanvas** (diingat per mesin).
+
+Diuji: overlay-statik **6/6**, pengawas layar **nol false-fire** di video bergerak (12 dtk putar penuh), frame-test **6/6**, sandera pompa **6/6**, piksel **8/8**, regresi v3.21 **32/33** (sisa = asersi versi).
 
 ## Yang Baru di v3.24.0 — DETEKTOR PIKSEL: MEKANISME BEKU KEDUA TUMBANG
 
