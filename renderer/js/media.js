@@ -146,11 +146,10 @@ async function loadFileBlob(file, force = false) {
     toast(`Video tidak bisa dibaca engine (${file.name}) — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
-  /* v3.22: preload='metadata' → frame pertama untuk pratinjau diambil dgn
-     seek kecil TERKENDALI (bukan buffering 'auto' yang membaca film 4 jam
-     bertahap-tahap di belakang tanpa henti — lihat catatan index.html).
-     Seek ±0,04 dtk memicu dekode satu frame lalu pipeline diam; pemutaran
-     tetap lancar karena bacaan berikutnya dijalankan sesuai permintaan. */
+  /* v3.23: reset penyembuh gambar — video baru selalu dapat kesempatan
+     jalur native lagi; seek terkendali 0,04 dtk memicu dekode frame
+     pratinjau pertama lalu pipeline diam (preload default = auto). */
+  state._forceCanvasPlay = false; _frStreak = 0; _frLast = -1;
   try {
     if (!state.isAudio && videoEl.readyState >= 1 && videoEl.paused && isFinite(videoEl.duration) && videoEl.duration > 0) {
       videoEl.currentTime = Math.min(0.04, videoEl.duration * 0.001);
@@ -514,6 +513,48 @@ function measureAudioRms() {
   state._rmsEpoch = state.mediaEpoch || 0;
   return state.audioRms;
 }
+
+/* ---------- v3.23: PENGAWAS GERAK GAMBAR (penyembuh otomatis) ----------
+   Laporan user v3.22 (Windows): waktu berjalan tapi GAMBAR BEKU. Pompa
+   frame kompositor Chromium bisa macet (elemen tadinya tersembunyi lalu
+   ditampilkan, GPU driver pilih-pilih) sementara jam media tetap maju.
+   Pantau tiap 2 dtk selagi memutar: totalVideoFrames diam PADAHAL
+   currentTime maju = pompa macet → tangga penyembuhan:
+   1) kocok halus — seek +0,05 dtk (memicu dekode ulang satu frame)
+   2) nyalakan ulang visibilitas elemen (kompositor dipasang ulang)
+   3) jatuh ke jalur kanvas overlay (flag _forceCanvasPlay dibaca
+      canNativePlay di ui.js → gambar digambar manual tiap frame)
+   Semua kejadian dicatat ke log utk diagnosis lapangan. Hanya aktif saat
+   BENAR-BENAR beku (frame diam total sementara waktu maju) — mesin lambat
+   yang tetap memompa 2 fps pun tidak salah dipicu. */
+let _frLast = -1, _frLastT = 0, _frStreak = 0;
+function cekGambarBergerak() {
+  try {
+    if (!state.file || state.isAudio || state.busy) return;
+    if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) { _frStreak = 0; _frLast = -1; return; }
+    const q = videoEl.getVideoPlaybackQuality ? videoEl.getVideoPlaybackQuality() : null;
+    const fr = q ? q.totalVideoFrames : (videoEl.webkitDecodedFrameCount || 0);
+    const t = videoEl.currentTime;
+    if (fr === _frLast && t > _frLastT + 1.2) {
+      _frStreak++;
+      const pos = (typeof fmtT === 'function' ? fmtT(t) : Math.round(t) + ' dtk');
+      if (_frStreak === 1) {
+        videoEl.currentTime = t + 0.05;
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — kocok halus (seek +0,05 dtk)');
+        if (typeof toast === 'function') toast('Gambar tidak bergerak — dikocok halus…', 'warn');
+      } else if (_frStreak === 2) {
+        videoEl.style.display = 'none'; void videoEl.offsetWidth; videoEl.style.display = '';
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — visibilitas elemen dinyalakan ulang');
+      } else if (_frStreak === 3) {
+        state._forceCanvasPlay = true;
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — jatuh ke jalur kanvas overlay');
+        if (typeof toast === 'function') toast('Pompa gambar macet — beralih ke jalur kanvas', 'warn');
+      }
+    } else _frStreak = 0;
+    _frLast = fr; _frLastT = t;
+  } catch (e) { }
+}
+setInterval(cekGambarBergerak, 2000);
 
 /* ---------- SEEK PRESISI (v2.1: mendukung elemen video worker paralel) ---------- */
 function seekTo(t, el) {

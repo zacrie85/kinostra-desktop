@@ -1377,6 +1377,7 @@ window.__kinoOverlayDraws = 0; window.__kinoBlurDraws = 0;
    memperlambat overlay — jalur native tetap aktif. */
 function canNativePlay() {
   if (!state.file || state.isAudio || state.busy) return false;
+  if (state._forceCanvasPlay) return false;   /* v3.23: penyembuh gambar memaksa jalur kanvas */
   if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) return false;
   if (typeof compSrc === 'function' && compSrc() !== videoEl) return false;
   const fsx = state.frameStyle;

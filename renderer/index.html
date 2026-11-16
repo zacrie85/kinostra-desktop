@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.22.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.23.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.22.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.23.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -626,11 +626,14 @@
 </div></div>
 
 <div id="toasts"></div>
-<!-- v3.22: preload='metadata' — pipeline media BERHENTI mem-buffer setelah
-     metadata terbaca; dulu 'auto' (default) membuat Chromium membaca film
-     4 jam bertahap-tahap DI BELAKANG selamanya → bacaan demux analisis audio
-     bertumpuk di atasnya → beban baca berbarengan di mesin lemah. -->
-<video id="vid" playsinline preload="metadata"></video>
+<!-- v3.23 PELAJARAN v3.22: preload="metadata" dinonaktifkan — laporan user
+     (Windows): waktu berjalan tapi GAMBAR BEKU. preload=metadata bisa membuat
+     pompa frame kompositor tak pernah aktif di sebagian mesin (elemen tadinya
+     tersembunyi lalu ditampilkan saat native play). Kembalikan default (auto)
+     — persis formula VidSplit/v3.21 yang terbukti gambarnya bergerak;
+     kekhawatiran buffering belakang tak pernah terbukti jadi masalah, dan
+     pengawas gerak gambar baru (media.js) menyembuhkan pompa macet otomatis. -->
+<video id="vid" playsinline></video>
 
 <script src="vendor/lucide.min.js"></script>
 <script src="vendor/mp4-muxer.min.js"></script>

@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.22.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.23.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,16 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.23.0 — GAMBAR BERGERAK LAGI
+
+Kabar baiknya dulu: laporan kamu *"videonya berhasil di play dan aplikasi tidak merestar kawannn mantaappp"* berarti **akar v3.22 berhasil di mesin kamu** — impor film panjang tidak lagi membuat aplikasi ngestar. Sisa bugnya satu: *"gambar yang di play tidak bergerak, walaupun waktunya berjalan"*.
+
+Ini disebut **pompa frame macet**: jam media (waktu) dipegang pipa audio yang terus berjalan, tapi jalur penyajian gambar kompositor Chromium berhenti meminta frame baru — layar menampilkan satu frame terakhir selamanya. A/B di sandbox membuktikan kode v3.21 sebelumnya pun tidak bisa diuji langsung untuk ini (kompositor lingkungan uji selalu ±2 fps), artinya bekunya di mesin kamu mekanisme Windows yang spesifik; dan perubahan v3.22 yang menyentuh elemen media hanya satu: `preload="metadata"` — tebakan penghematan yang sekarang **dibuang total** karena justru berisiko membuat pompa frame tidak pernah aktif untuk elemen yang tadinya tersembunyi lalu ditampilkan.
+
+Dua perbaikan: **(1) elemen media kembali persis formula VidSplit/v3.21** yang terbukti gambarnya bergerak di mesin yang sama. **(2) PENGAWAS GERAK GAMBAR — penyembuh otomatis**: setiap 2 detik selagi memutar, aplikasi membandingkan `totalVideoFrames` (jumlah frame yang benar-benar disajikan) dengan majunya waktu. Frame diam PADAHAL waktu maju = pompa macet, dan tangga penyembuhan menyala: **kocok halus** (seek +0,05 detik — memicu dekode ulang satu frame, obat klasik untuk pompa yang tidur) → **nyalakan ulang visibilitas elemen** (kompositor dipasang ulang) → **jatuh ke jalur kanvas overlay** (gambar digambar manual tiap frame — mode darurat yang selalu tampak). Setiap kejadian dicatat ke log (`v3.23 GAMBAR BEKU …`) supaya kalau masih ada mesin yang bandel, log langsung memberi tahu di tangga mana masalahnya.
+
+Pengawas ini diuji dengan "sandera" (counter frame dibuat diam sementara jam terus jalan): **6/6 lulus** — deteksi ±2 detik, seluruh tangga menyala berurutan, waktu tetap berjalan, dan **nol false-positive** saat pompa hidup normal (mesin lambat yang tetap memompa 2 fps tidak salah dipicu). Hasil akhir: aplikasi tidak ngestar saat impor (v3.22) DAN gambar pasti bergerak saat diputar (v3.23) — kalau pompa macet, aplikasi menyembuhkan dirinya dalam ±6 detik tanpa kamu melakukan apa pun.
 
 ## Yang Baru di v3.22.0 — ANALISIS AUDIO TERTIB
 
