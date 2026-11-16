@@ -506,3 +506,11 @@ Work Log:
 - Bump 6 file 3.17.2 (python massal): package.json (versi+deskripsi v3.17.2 di depan), installer.nsi (5 titik), afterpack.js (3.17.2.0 ×2), README (badge + fitur 60), PANDUAN (judul + bagian "Yang Baru di v3.17.2" — saran SALIN LOG bila masih merestar), index.html (boot+header).
 - Build: npx electron-builder --win --dir (win-unpacked segar; verifikasi sys:crashlog di main & btnSafeModeNow di html+maintenance masuk paket) → afterpack manual → makensis NSISDIR nsis-3.0.4.1 → Setup 95.8 MB; zip Portable 137 MB. scripts/build-v3172.sh.
 - Rilis: scripts/release-v3172.sh (body JSON dibangun ulang via json.dumps — re.sub merusak escape \n) → Release ID 446468251, 3 aset: Setup 91.3 MB, Portable 130.6 MB, PANDUAN 0.1 MB — https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.17.2
+---
+Task: GARIS KLASIK dibuka — v2.16.1 dari basis v2.16.0 (keputusan user setelah "hang total saat video dimasukan")
+
+Work Log:
+- User melaporkan v3.17.2 semakin buruk: video dimasukan → HANG TOTAL; meminta kembali ke KINOSTRA-Portable-2.16.0 dan mulai ulang penaikan dari sana. Keputusan: garis v3.x DIPARKIR (rilis tetap tersedia), branch classic-v2 dibuka dari commit 2e244cb (v2.16.0) via worktree /home/z/my-project/classic216.
+- Rilis v2.16.1 (branch classic-v2) = v2.16.0 PERSIS + satu tambahan: log crash ringan main process (userData/kinostra-crash.log: mulai/RENDER MATI/GPU MATI/HANG/keluar normal) tanpa perubahan perilaku apa pun — supaya bila hang terulang, penyebab BISA DIBUKTIKAN dari log (user kirim %APPDATA%\KINOSTRA\kinostra-crash.log).
+- Uji skenario persis user (impor → PUTAR → pengaturan → putar+geser → ganti video): 11/11 LULUS di classic216/scripts/classic-v2161-test.mjs; build Setup 95,7 MB + Portable 136,9 MB; rilis ID 446475845 (3 aset terverifikasi byte-sama) — tag v2.16.1, URL releases/tag/v2.16.1.
+- Garis utama (main, v3.17.2) TIDAK disentuh kali ini — hanya catatan worklog ini. Rencana penaikan: fitur v3.x dikembalikan satu per rilis (v2.17+), tiap rilis wajib lulus uji skenario impor→putar→pengaturan; log crash menunjuk fitur penyebab bila hang terulang.
