@@ -71,10 +71,16 @@ function clearQueue() {
    berjalan (state.busy) — dulu dekode/seek file BESAR utk thumbnail film
    ke-3/4/5 jalan BERSAMAAN dgn render film aktif → saling berebut RAM,
    dekoder & CPU → ekspor film berikutnya bisa gagal di tengah jalan.
-   Antrean dilanjutkan otomatis setelah proses selesai (runBatch finally). */
+   Antrean dilanjutkan otomatis setelah proses selesai (runBatch finally).
+   v3.21: antrean juga DITAHAN selagi video DIPUTAR (bukan hanya saat
+   state.busy) — persis alur user "impor 5 video → langsung play": dulu
+   dekode+seek film ke-2/3/4/5 utk thumbnail berdesakan dengan PEMUTARAN
+   film aktif di GPU/CPU lemah → pemutaran tersendat → pelindung
+   menganggap hang. Lanjut otomatis saat pause/berhenti (listener di ui.js). */
 let _thumbRunning = false;
 function queueBatchThumb() {
   if (_thumbRunning || state.busy) return;
+  if (typeof videoEl !== 'undefined' && videoEl && !videoEl.paused && videoEl.readyState >= 2 && state.file) return;   /* v3.21 */
   const it = state.batch.find(b => !b.thumb && b.status === 'wait' && !b._thumbErr);
   if (!it) return;
   _thumbRunning = true;

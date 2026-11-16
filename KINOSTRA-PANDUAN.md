@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.20.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.21.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,14 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.21.0 — FORMULA VIDSplit
+
+Laporan dari v3.20: *"masih error — setiap video dengan durasi 3 atau 4 jam lebih dimasukan, aplikasi langsung ngerestar sendiri saat videonya di play"*. Kabar baiknya kawan memberi **referensi kerja yang benar**: aplikasi kembar VidSplit v3.9.2 terbukti memutar video 4 jam LANCAR di mesin yang sama.
+
+Kode VidSplit dibedah dan formula stabilnya ditemukan: elemen `<video>` asli **selalu** menjadi tampilan di semua mode; overlay judul/Part adalah lapisan DOM terpisah; latar blur adalah **kanvas mini 90×160** (blur 4 px, 10 fps) yang dibesarkan lewat CSS — dan **tidak ada satu pun drawImage(video) ke kanvas besar saat memutar**. KINOSTRA v3.20 sudah memakai jalur native, tetapi hanya untuk rasio 16:9 — rasio **9:16** (yang dipakai konten potongan) masih jatuh ke jalur kanvas penuh: drawImage(video) 24×/detik + blur 1080×1920. Itulah akar sisa hang di mesin Anda.
+
+v3.21 mengadopsi formula VidSplit utuh: jalur native berlaku di **semua rasio** (16:9 & 9:16+blur), latar blur saat memutar = kanvas mini 10 fps, video tampil contain di tengah latar, overlay transparan di atasnya. Antrean thumbnail kotak video kini **ditahan selagi video diputar** (dulu dekode film ke-2/3/4/5 untuk thumbnail berdesakan dengan pemutaran — persis alur "impor 5 video lalu langsung play"; lanjut otomatis saat pause). MODE PUTARAN HEMAT kini hanya memperlambat overlay ke 5 fps — jalur native tetap aktif, karena justru itulah jalur yang terbukti aman.
 
 ## Yang Baru di v3.20.0 — PEMUTARAN RINGAN
 

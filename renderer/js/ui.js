@@ -1262,9 +1262,12 @@ function togglePlay() {
   if (videoEl.paused) { getActx().resume(); videoEl.play(); try { window.kinostra.reportPlay(true); } catch (e) { } }
   else { videoEl.pause(); try { window.kinostra.reportPlay(false); } catch (e) { } }
 }
-/* v3.19: status memutar ikut dilaporkan bila video berhenti sendiri */
-videoEl.addEventListener('pause', () => { try { window.kinostra.reportPlay(false); } catch (e) { } });
-videoEl.addEventListener('ended', () => { try { window.kinostra.reportPlay(false); } catch (e) { } });
+/* v3.19: status memutar ikut dilaporkan bila video berhenti sendiri
+   v3.21: antrean thumbnail kotak video dilanjutkan saat pemutaran berhenti
+   (selagi diputar antrean DITAHAN — dekode film berikutnya jangan berdesakan
+   dengan pemutaran film aktif; akar konten "impor 5 video → langsung play") */
+videoEl.addEventListener('pause', () => { try { window.kinostra.reportPlay(false); } catch (e) { } if (typeof queueBatchThumb === 'function') queueBatchThumb(); });
+videoEl.addEventListener('ended', () => { try { window.kinostra.reportPlay(false); } catch (e) { } if (typeof queueBatchThumb === 'function') queueBatchThumb(); });
 $('#btnPlay').onclick = togglePlay;
 $('#btnPrev').onclick = () => { if (state.duration) { const r = rangeInfo();
   const c = Math.floor((videoEl.currentTime - r.start) / state.splitSec);
@@ -1347,19 +1350,35 @@ let lastTrack = 0, lastHud = 0, lastBusyDraw = 0;
    (3) sorot part di timeline O(1) (bukan sapu 480 baris tiap 80 ms);
    (4) latar blur 9:16 saat memutar di-refresh tiap 8 dtk (dari 1,6);
    (5) MODE PUTARAN HEMAT permanen bila GPU tetap kewalahan. */
+/* v3.21 PEMUTARAN RINGAN — FORMULA VIDSplit (bukti lapangan: aplikasi
+   se-anak kandung, VidSplit v3.9.2, memutar film 4 jam LANCAR di mesin
+   yang sama yang membuat KINOSTRA hang). Formula VidSplit:
+   <video> asli SELALU yang jadi tampilan; overlay = lapisan DOM/kanvas
+   transparan; latar blur = kanvas MINI 90×160 dibesarkan CSS. KINOSTRA
+   v3.21 mengadopsi persis itu:
+   (1) JALUR NATIVE DI SEMUA RASIO — 16:9 maupun 9:16 (dulu 9:16 jatuh ke
+       kanvas penuh = drawImage(video) tiap frame, akar hang di mesin user);
+   (2) latar blur 9:16 saat memutar = kanvas mini 90×160, blur(4px),
+       refresh 10 fps (dulu kanvas penuh 1080×1920 per 8 dtk);
+   (3) video contain di tengah latar, overlay transparan di atasnya;
+   (4) thumbnail kotak video TIDAK jalan selagi video diputar (dulu
+       dekode film ke-2/3/4 berdesakan dengan pemutaran — konten persis
+       alur user: impor 5 video → langsung play);
+   (5) MODE PUTARAN HEMAT kini hanya memperlambat overlay (5 fps) —
+       jalur native tetap, karena native justru jalur yang aman. */
 let _lastDrawT = -1, _lastDrawAt = 0, _lastPlayDraw = 0, _nativeLogged = 0;
-window.__kinoOverlayDraws = 0;
-/* v3.20: SYARAT JALUR NATIVE — putar, sehat, bukan proses berat, dan
+let _lastBlurDraw = 0, _blurCv = null, _blurCtx = null;
+window.__kinoOverlayDraws = 0; window.__kinoBlurDraws = 0;
+/* v3.21: SYARAT JALUR NATIVE — putar, sehat, bukan proses berat, dan
    tidak ada efek yang HARUS menggambar video ke kanvas (zoom/pan,
    ken burns, transisi, filter warna/vfx, frame bertema, zoom pembicara,
-   pelacakan, 9:16+blur). Bila salah satu aktif → jalur kanvas (kini
-   dithrottle 24 fps). MODE PUTARAN HEMAT mematikan jalur native. */
+   pelacakan). SEMUA rasio kini eligible; latar blur 9:16 ditangani
+   kanvas mini (lihat drawBgBlurMini). MODE PUTARAN HEMAT hanya
+   memperlambat overlay — jalur native tetap aktif. */
 function canNativePlay() {
-  if (window.__kinoLitePlay) return false;
   if (!state.file || state.isAudio || state.busy) return false;
   if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) return false;
   if (typeof compSrc === 'function' && compSrc() !== videoEl) return false;
-  if (state.ratio !== '16:9') return false;
   const fsx = state.frameStyle;
   if (fsx && fsx !== 'off' && fsx !== 'neon') return false;   /* frame bertema punya latar sendiri */
   const fr = state.frame || {};
@@ -1374,7 +1393,7 @@ function canNativePlay() {
   if (spk.on && spk.ready && (spk.timeline || []).length) return false;
   return true;
 }
-/* v3.20: pindahkan elemen video ke dalam panggung sekali (dari ujung body,
+/* v3.21: pindahkan elemen video ke dalam panggung sekali (dari ujung body,
    dulu display:none total) & tampilkan/sembunyikan lewat kelas .live */
 let _vidMoved = false;
 function setLiveVideo(on) {
@@ -1383,6 +1402,30 @@ function setLiveVideo(on) {
     try { stage.insertBefore(videoEl, cv); } catch (e) { }
   }
   if (!!on !== videoEl.classList.contains('live')) videoEl.classList.toggle('live', !!on);
+}
+/* v3.21: LATAR BLUR MINI ala VidSplit — kanvas 90×160 (9:16), frame video
+   digambar cover dgn blur(4px) saturate(1.2) + lapisan gelap tipis (persis
+   rasa buildBlurBg), lalu dibesarkan CSS object-fit:cover. Blur pada kanvas
+   kecil = murah di GPU/CPU lemah; dulu kanvas penuh 1080×1920. */
+function drawBgBlurMini() {
+  if (!_blurCv) {
+    _blurCv = $('#bgBlurCv');
+    if (!_blurCv) return;
+    _blurCv.width = 90; _blurCv.height = 160;
+    _blurCtx = _blurCv.getContext('2d');
+  }
+  if (!_blurCtx || !videoEl.videoWidth) return;
+  try {
+    const cw = 90, ch = 160;
+    const skala = Math.max(cw / videoEl.videoWidth, ch / videoEl.videoHeight);
+    const w = videoEl.videoWidth * skala, h = videoEl.videoHeight * skala;
+    _blurCtx.filter = 'blur(4px) saturate(1.2)';
+    _blurCtx.drawImage(videoEl, (cw - w) / 2, (ch - h) / 2, w, h);
+    _blurCtx.filter = 'none';
+    _blurCtx.fillStyle = 'rgba(4,5,8,.45)';
+    _blurCtx.fillRect(0, 0, cw, ch);
+    window.__kinoBlurDraws++;
+  } catch (e) { /* frame belum siap — detik berikutnya */ }
 }
 function loop() {
   requestAnimationFrame(loop);
@@ -1398,12 +1441,22 @@ function loop() {
     if (!videoEl.paused && state.track.active && performance.now() - lastTrack > 70) {
       lastTrack = performance.now(); trackStep(t);
     }
-    /* v3.20: pilih jalur & tampilkan/sembunyikan video native */
+    /* v3.21: pilih jalur & tampilkan/sembunyikan video native + latar blur */
     const native = canNativePlay();
     setLiveVideo(native);
     if (native && !_nativeLogged) {
       _nativeLogged = Date.now();
       try { window.kinostra.noteCrash('putar ringan: jalur NATIVE aktif (video asli, kanvas overlay)'); } catch (e) { }
+    }
+    const blurNative = native && state.ratio === '9:16' && state.bgMode === 'blur';
+    if (_blurCv || $('#bgBlurCv')) {
+      const want = !!blurNative;
+      if (want !== (_blurCv && _blurCv.classList.contains('live'))) {
+        if (!_blurCv) { _blurCv = $('#bgBlurCv'); _blurCv.width = 90; _blurCv.height = 160; _blurCtx = _blurCv.getContext('2d'); }
+        _blurCv.classList.toggle('live', want);
+        if (want) { _lastBlurDraw = 0; drawBgBlurMini(); }   /* isi frame pertama segera */
+      }
+      if (want && now - _lastBlurDraw >= 100) { _lastBlurDraw = now; drawBgBlurMini(); }   /* 10 fps ala VidSplit */
     }
     /* HUD & playhead — v3.20 O(1): sorot part hanya saat berganti part */
     if (performance.now() - lastHud > 80) {
@@ -1424,9 +1477,11 @@ function loop() {
          saat video diputar, berhenti mengikuti saat pause (bebas menelusuri) */
       tlFollow(t);
     }
-    /* v3.20: throttle gambar SAAT MEMUTAR (overlay 15 fps / kanvas 24 fps) */
+    /* v3.21: throttle gambar SAAT MEMUTAR — overlay native 15 fps
+       (mode hemat 5 fps) / jalur kanvas 24 fps */
     if (!videoEl.paused && videoEl.readyState >= 2) {
-      if (now - _lastPlayDraw < (native ? 66 : 42)) return;
+      const batas = native ? (window.__kinoLitePlay ? 200 : 66) : 42;
+      if (now - _lastPlayDraw < batas) return;
       _lastPlayDraw = now;
     }
     const FSTa = (typeof frameDef === 'function') ? frameDef() : null;
@@ -1439,17 +1494,18 @@ function loop() {
   }
 }
 loop();
-/* v3.20: MODE PUTARAN HEMAT — bila GPU/driver tetap kewalahan meski jalur
-   native aktif (pelindung mode aman mencatat hang saat putar ke-2), pratinjau
-   disederhanakan permanen: video native dimatikan, kanvas 24 fps. Flag
-   tersimpan di localStorage — bisa dihapus lewat OPTIMASI (modul 16). */
+/* v3.21: MODE PUTARAN HEMAT — bila GPU/driver tetap kewalahan (pelindung
+   mode aman mencatat hang saat putar ke-2), overlay pratinjau diperlambat
+   permanen ke 5 fps; JALUR NATIVE TETAP AKTIF karena justru itulah jalur
+   aman ala VidSplit. Flag tersimpan di localStorage — bisa dihapus lewat
+   OPTIMASI (modul 16). */
 try { if (localStorage.getItem('kinostra.liteplay') === '1') window.__kinoLitePlay = true; } catch (e) { }
 try {
   if (window.kinostra.onLitePlay) window.kinostra.onLitePlay(() => {
     window.__kinoLitePlay = true;
     try { localStorage.setItem('kinostra.liteplay', '1'); } catch (e) { }
     try { clearComposeCaches(); } catch (e) { }
-    toast('GPU masih kewalahan — MODE PUTARAN HEMAT aktif permanen: pratinjau disederhanakan, pemutaran jauh lebih stabil', 'warn');
+    toast('GPU masih kewalahan — MODE PUTARAN HEMAT aktif permanen: overlay pratinjau diperlambat (putaran tetap native & stabil)', 'warn');
   });
 } catch (e) { }
 
