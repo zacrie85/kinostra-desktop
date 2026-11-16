@@ -514,3 +514,9 @@ Work Log:
 - Rilis v2.16.1 (branch classic-v2) = v2.16.0 PERSIS + satu tambahan: log crash ringan main process (userData/kinostra-crash.log: mulai/RENDER MATI/GPU MATI/HANG/keluar normal) tanpa perubahan perilaku apa pun — supaya bila hang terulang, penyebab BISA DIBUKTIKAN dari log (user kirim %APPDATA%\KINOSTRA\kinostra-crash.log).
 - Uji skenario persis user (impor → PUTAR → pengaturan → putar+geser → ganti video): 11/11 LULUS di classic216/scripts/classic-v2161-test.mjs; build Setup 95,7 MB + Portable 136,9 MB; rilis ID 446475845 (3 aset terverifikasi byte-sama) — tag v2.16.1, URL releases/tag/v2.16.1.
 - Garis utama (main, v3.17.2) TIDAK disentuh kali ini — hanya catatan worklog ini. Rencana penaikan: fitur v3.x dikembalikan satu per rilis (v2.17+), tiap rilis wajib lulus uji skenario impor→putar→pengaturan; log crash menunjuk fitur penyebab bila hang terulang.
+---
+Task: v2.16.2 — akar "hang total" DIBUHTIKAN & DIPERBAIKI di garis klasik
+
+Work Log:
+- User kirim video error: v2.16.1 + film 188 mnt (71 part) → aplikasi LENYAP dtk 25. Analisis frame-demi-frame + repro laboratorium: akar = decodeAudioData penuh film panjang (188 mnt ≈ 4 GB) — repro: RENDER MATI kode 133, 8 dtk setelah impor film 120 mnt di sandbox 3 GB.
+- v2.16.2 (branch classic-v2): film >±15 mnt tak pernah di-decode utuh (demux MP4 + AudioDecoder per jendela 45 dtk, port v3.17.1); ekspor tetap bersuara per part; SHIELD ringan (reload otomatis ≤3×, teruji; berulang → MODE AMAN --kinostra-aman); SUBS AI film panjang dimatikan dgn pesan. Uji 25 hijau (repro 6/6, SHIELD 5/5, suara 3/3, skenario 11/11). Rilis ID 446496081 — Setup+Portable+PANDUAN byte-sama. Garis utama (v3.17.2) tak disentuh.
