@@ -225,23 +225,45 @@ async function renderMix(start, durOut, spd = 1) {
      Sekarang: audio asli dilewati bila sudah lewat, musik diputar BERULANG
      (loop) sehingga durasi buffer berapa pun tidak pernah crash.
      v2.12: kecepatan → audio asli diputar lebih cepat/lambat memakai
-     playbackRate (pitch ikut naik/turun seperti efek fast-forward klasik). */
-  if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
-    const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
-    s.playbackRate.value = spd;
-    const g = oc.createGain(); g.gain.value = state.audioGain;
-    s.connect(g); g.connect(oc.destination);
-    s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
-  }
-  if (state.music.buffer && state.music.buffer.duration > 0.01) {
-    const s = oc.createBufferSource(); s.buffer = state.music.buffer;
-    s.playbackRate.value = spd;
-    const g = oc.createGain(); g.gain.value = state.music.gain;
-    s.connect(g); g.connect(oc.destination);
-    s.loop = true;   /* buffer lebih pendek dari part → mengulang, bukan crash */
-    s.start(0, start % state.music.buffer.duration, durOut);
-  }
-  return oc.startRendering();
+     playbackRate (pitch ikut naik/turun seperti efek fast-forward klasik).
+     v2.16.2: film panjang (audioBuffer sengaja tak di-decode utuh — demi
+     RAM) tetap BERSUARA: audio asli diambil per part lewat jendela demux
+     MP4 + AudioDecoder (RAM puncak = 1 jendela ±15-20 MB), selaras ke
+     waktu mulai part lewat stempel jendela (kWin.t). */
+  state._audioExporting = true;
+  try {
+    if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
+      const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
+      s.playbackRate.value = spd;
+      const g = oc.createGain(); g.gain.value = state.audioGain;
+      s.connect(g); g.connect(oc.destination);
+      s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
+    } else if (state._audioDemux && state.file && durOut > 0.05) {
+      while (state._audioWinBusy) await new Promise(r => setTimeout(r, 100));
+      try {
+        const win = await decodeAudioWindow(state._audioDemux, Math.max(0, start - 0.5), durOut * spd + 1.5);
+        if (win) {
+          const off = Math.max(0, start - (win.kWin ? win.kWin.t : start));
+          if (off < win.duration - 0.01) {
+            const s = oc.createBufferSource(); s.buffer = win;
+            s.playbackRate.value = spd;
+            const g = oc.createGain(); g.gain.value = state.audioGain;
+            s.connect(g); g.connect(oc.destination);
+            s.start(0, off, Math.max(0.01, Math.min(durOut, (win.duration - off) / spd)));
+          }
+        }
+      } catch (e) { console.warn('ekspor: audio jendela gagal —', e && e.message); }
+    }
+    if (state.music.buffer && state.music.buffer.duration > 0.01) {
+      const s = oc.createBufferSource(); s.buffer = state.music.buffer;
+      s.playbackRate.value = spd;
+      const g = oc.createGain(); g.gain.value = state.music.gain;
+      s.connect(g); g.connect(oc.destination);
+      s.loop = true;   /* buffer lebih pendek dari part → mengulang, bukan crash */
+      s.start(0, start % state.music.buffer.duration, durOut);
+    }
+    return await oc.startRendering();
+  } finally { state._audioExporting = false; }
 }
 /* ---------- ENCODING AUDIO (v2.15: PER BLOK 60 dtk — RAM tetap datar) ----------
    Dulu: SELURUH audio part dirender dulu oleh OfflineAudioContext →

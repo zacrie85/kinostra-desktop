@@ -18,3 +18,7 @@ Thumbs.db
 
 # Symlink dependensi (worktree garis klasik)
 node_modules
+
+# core dump dari proses yang crash saat uji
+core
+core.*

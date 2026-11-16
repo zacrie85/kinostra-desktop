@@ -63,6 +63,9 @@ APP.stdout.on('data', d => mainLog.push(d.toString()));
 APP.stderr.on('data', d => mainLog.push(d.toString()));
 process.on('exit', () => { try { APP.kill('SIGKILL'); } catch (e) { } });
 const conLog = [];
+/* filter log per-sesi: hanya baris BARU sejak uji dimulai yang dinilai */
+const LG = '/home/z/.config/KINOSTRA/kinostra-crash.log';
+const baseLines = fs.existsSync(LG) ? fs.readFileSync(LG, 'utf8').split('\n').length : 0;
 
 try {
   const cdp = await CDP.connect(PORT);
@@ -87,7 +90,7 @@ try {
     hasLog: typeof window.kinostra.crashLog === 'function',
     hasOpen: typeof window.kinostra.openCrashLog === 'function'
   }))()`);
-  ok('Header bertanda v2.16.1 (garis klasik)', /v2\.16\.1/.test(a.tag), JSON.stringify(a.tag));
+  ok('Header bertanda v2.16.2 (garis klasik)', /v2\.16\.2/.test(a.tag), JSON.stringify(a.tag));
   ok('Panel modul tampil', a.mods > 5, String(a.mods));
   ok('API log crash tersedia (crashLog + openCrashLog)', a.hasLog && a.hasOpen, JSON.stringify(a));
 
@@ -154,10 +157,10 @@ try {
   await sleep(1500);
   const bad = conLog.filter(l => /Out of memory|crashed|FATAL|Uncaught/.test(l));
   ok('Nol exception berbahaya selama seluruh skenario', bad.length === 0, JSON.stringify(bad));
-  const g1 = await cdp.eval(`(async () => { const lg = await window.kinostra.crashLog(); return { n: (lg.text.match(/\\n/g) || []).length, hasStart: /mulai — KINOSTRA v2\\.16\\.1/.test(lg.text), pathOk: /kinostra-crash\\.log$/.test(lg.path) }; })()`);
-  ok('Log crash mencatat MULAI v2.16.1 & menunjuk berkas yang benar', g1.hasStart && g1.pathOk, JSON.stringify(g1));
-  const lgFile = fs.readFileSync('/home/z/.config/KINOSTRA/kinostra-crash.log', 'utf8');
-  const badLog = lgFile.split('\n').filter(l => /v2\.16\.1/.test(l) && /RENDER MATI|GPU MATI|HANG/.test(l));   /* hanya baris sesi garis klasik — log dipakai bersama antar versi */
+  const g1 = await cdp.eval(`(async () => { const lg = await window.kinostra.crashLog(); return { n: (lg.text.match(/\\n/g) || []).length, hasStart: /mulai — KINOSTRA v2\\.16\\./.test(lg.text), pathOk: /kinostra-crash\\.log$/.test(lg.path) }; })()`);
+  ok('Log crash mencatat MULAI v2.16.x & menunjuk berkas yang benar', g1.hasStart && g1.pathOk, JSON.stringify(g1));
+  const lgFile = fs.readFileSync(LG, 'utf8');
+  const badLog = lgFile.split('\n').slice(baseLines).filter(l => /RENDER MATI|GPU MATI|HANG/.test(l));   /* hanya baris sesi ini — log dipakai bersama antar versi */
   ok('TIDAK ada kejadian tidak-normal selama skenario (log bersih)', badLog.length === 0, JSON.stringify(badLog));
 
   /* ============ RINGKASAN ============ */

@@ -22,6 +22,13 @@ protocol.registerSchemesAsPrivileged([
 
 let win = null;
 
+/* v2.16.2: MODE AMAN — dipicu SHIELD saat crash berulang; komposit GPU
+   dimatikan SEBELUM app siap agar berlaku dari detik pertama */
+if (process.argv.includes('--kinostra-aman')) {
+  app.commandLine.appendSwitch('disable-gpu-compositing');
+  console.log('MAIN: MODE AMAN aktif — komposit GPU dimatikan');
+}
+
 /* ================================================================
    v2.16.1 (GARIS KLASIK): LOG CRASH RINGAN — satu-satunya tambahan
    di atas v2.16.0. Setiap kejadian tidak-normal dicatat PERMANEN ke
@@ -71,11 +78,23 @@ function createWindow() {
     if (level >= 2 || (process.env.KINOSTRA_DEBUG === '1' && level >= 1)) console.log('[renderer]', message);
   });
 
-  /* v2.16.1: catat kejadian tidak-normal ke log permanen (log SAJA —
-     perilaku tidak diubah sama sekali dari v2.16.0) */
+  /* v2.16.1: catat kejadian tidak-normal ke log permanen
+     v2.16.2 SHIELD RINGAN — dulu log SAJA; kini jika proses render mati,
+     jendela DIMUAT ULANG OTOMATIS (aplikasi hidup lagi, tidak lenyap
+     seperti di rekaman user). Crash berulang (3×) → nyalakan ulang dalam
+     MODE AMAN (komposit GPU dimatikan) — pola terbukti dari v3.17. */
   win.webContents.on('render-process-gone', (e, d) => {
     if (d && d.reason === 'clean-exit') return;
     crashLog(`RENDER MATI — alasan: ${d && d.reason} · kode keluar: ${d && d.exitCode}`);
+    win._goneCount = (win._goneCount || 0) + 1;
+    if (win._goneCount <= 3) {
+      crashLog(`pemulihan otomatis ke-${win._goneCount} — jendela dimuat ulang`);
+      setTimeout(() => { try { win.webContents.reload(); } catch (_) { } }, 1200);
+    } else {
+      crashLog('crash berulang — nyalakan ulang dalam MODE AMAN (komposit GPU dimatikan)');
+      app.relaunch({ args: process.argv.slice(1).concat('--kinostra-aman') });
+      app.quit();
+    }
   });
   win.webContents.on('unresponsive', () => crashLog('HANG — jendela tidak merespons (import/putar/setelan saat itu sedang dicatat pengguna)'));
 

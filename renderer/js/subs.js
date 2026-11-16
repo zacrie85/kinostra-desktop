@@ -55,8 +55,15 @@ async function whisperTmpDir() {
 async function getMono16k() {
   /* v2.6: decode audio kini berjalan di belakang saat loading —
      tunggu promise-nya, jangan decode dua kali */
-  if (!state.audioBuffer) await (state.audioReady || decodeFileAudio());
-  if (!state.audioBuffer) throw new Error('Audio tidak terbaca');
+  if (!state.audioBuffer) {
+    await (state.audioReady || decodeFileAudio());
+    if (!state.audioBuffer) {
+      /* v2.16.2: film panjang sengaja tidak di-decode utuh (demi RAM —
+         akar "hang total") → SUBS AI otomatis tidak tersedia utk film panjang */
+      if (state._audioDemux) throw new Error('Film panjang (di atas ±15 menit): SUBS AI otomatis dimatikan demi kestabilan — gunakan berkas .srt');
+      throw new Error('Audio tidak terbaca');
+    }
+  }
   const sr = 16000, len = Math.ceil((state.duration || state.audioBuffer.duration) * sr);
   const oc = new OfflineAudioContext(1, len, sr);
   const s = oc.createBufferSource(); s.buffer = state.audioBuffer; s.connect(oc.destination); s.start(0);

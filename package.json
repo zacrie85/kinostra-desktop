@@ -1,8 +1,8 @@
 {
   "name": "kinostra-desktop",
   "productName": "KINOSTRA",
-  "version": "2.16.1",
-  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v2.16.1 GARIS KLASIK: kembali ke basis v2.16.0 yang stabil + log crash ringan (kejadian tidak-normal dicatat permanen utk bukti pelaporan) · v2.15 Ekspor GPU Kilat + Auto-Subtitel",
+  "version": "2.16.2",
+  "description": "KINOSTRA — Suite Video Otonom · Desktop 100% Offline · v2.16.2 GARIS KLASIK: PERBAIKAN AKAR HANG TOTAL — rekaman user membuktikan film panjang membuat aplikasi mati/beku; kini audio film >±15 mnt TIDAK di-decode utuh (RAM selalu kecil; port terbukti v3.17.1): ekspor tetap bersuara lewat jendela demux+AudioDecoder, peaks bertahap, SHIELD ringan memuat ulang jendela otomatis saat render mati + MODE AMAN otomatis saat crash berulang · v2.16.1 GARIS KLASIK: kembali ke basis v2.16.0 yang stabil + log crash ringan (kejadian tidak-normal dicatat permanen utk bukti pelaporan) · v2.15 Ekspor GPU Kilat + Auto-Subtitel",
   "main": "main/main.js",
   "author": "KINOSTRA",
   "license": "MIT",
