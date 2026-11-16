@@ -57,6 +57,8 @@ async function refreshMntInfo() {
     const cl = await window.kinostra.cleanupCache({ dry: true });
     let sh = null;
     try { sh = await window.kinostra.shieldStatus(); } catch (e) { }
+    let lg = null;
+    try { lg = await window.kinostra.crashLog(); } catch (e) { }
     const ram = sys && sys.ramGB ? sys.ramGB : (sys && sys.totalMem ? (sys.totalMem / 1073741824).toFixed(1) : null);
     const cores = navigator.hardwareConcurrency || '?';
     const hm = heapMB();
@@ -66,7 +68,9 @@ async function refreshMntInfo() {
       `<b>RAM TERPASANG:</b> ${ram ? ram + ' GB' : '—'} · <b>CPU:</b> ${cores} core<br>` +
       `<b>CACHE SEMENTARA TRANSKRIPSI:</b> ${cl.whisperTmp ? fMB(cl.whisperTmp / 1048576) : 'bersih'} (${cl.whisperTmpFiles || 0} file)<br>` +
       `<b>MODEL AI LOKAL:</b> ${cl.modelsDir ? fMB(cl.modelsDir / 1048576) : '—'} (tidak dihapus — dipakai subtitel & suara)<br>` +
-      `<span style="opacity:.7">Cache tampilan/HTTP: ${cl.cacheDir ? fMB(cl.cacheDir / 1048576) : '—'} · dipakai ulang otomatis saat dibutuhkan · cache grafis korup dibersihkan otomatis saat aplikasi dimulai</span>`;
+      `<span style="opacity:.7">Cache tampilan/HTTP: ${cl.cacheDir ? fMB(cl.cacheDir / 1048576) : '—'} · dipakai ulang otomatis saat dibutuhkan · cache grafis korup dibersihkan otomatis saat aplikasi dimulai</span><br>` +
+      `<b>RIWAYAT KEJADIAN (tersimpan permanen):</b> ${lg && lg.text ? String(lg.text.trim().split('\n').pop()).replace(/</g, '&lt;') : 'belum ada — log kosong'}<br>` +
+      `<span style="opacity:.7">Setiap pemulihan otomatis &amp; penyebabnya tercatat di berkas log (tombol SALIN LOG CRASH di atas) — kirimkan saat melapor agar penyebab pasti diketahui.</span>`;
   } catch (e) {
     box.textContent = 'Info sistem belum tersedia — ' + (e.message || e);
   }
@@ -180,5 +184,32 @@ async function kinoClearCache() {
   const bO = $('#btnOptimize'), bC = $('#btnClearCache');
   if (bO) bO.onclick = kinoOptimize;
   if (bC) bC.onclick = kinoClearCache;
+  /* v3.17.2: log crash permanen — salin ke clipboard utk dilaporkan,
+     buka foldernya, dan tombol MODE AMAN manual (hentikan crash berulang
+     tanpa menunggu 4 crash otomatis). */
+  const bCopy = $('#btnCopyCrashLog');
+  if (bCopy) bCopy.onclick = async () => {
+    try {
+      const lg = await window.kinostra.crashLog();
+      const txt = (lg && lg.text) ? lg.text : '(log kosong — belum ada kejadian tercatat)';
+      const full = 'LOG CRASH KINOSTRA — ' + ((lg && lg.path) || '') + '\n' + txt;
+      try { await navigator.clipboard.writeText(full); }
+      catch (_) {
+        const ta = document.createElement('textarea');
+        ta.value = full; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+      }
+      toast('Log crash disalin — tempel (Ctrl+V) di pesan ke pengembang', 'ok');
+    } catch (e) { toast('Gagal menyalin log: ' + (e.message || e), 'err'); }
+  };
+  const bOpen = $('#btnOpenCrashLog');
+  if (bOpen) bOpen.onclick = async () => {
+    try { await window.kinostra.openCrashLog(); } catch (e) { toast('Gagal membuka folder log', 'err'); }
+  };
+  const bSafe = $('#btnSafeModeNow');
+  if (bSafe) bSafe.onclick = async () => {
+    toast('Menyalakan ulang dalam MODE AMAN (komposit GPU dimatikan — tampilan jadi mode aman, render tetap cepat)…', 'info');
+    setTimeout(async () => { try { await window.kinostra.safeModeNow(); } catch (_) { } }, 600);
+  };
   if (bO || bC) refreshMntInfo();
 })();

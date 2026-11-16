@@ -55,6 +55,10 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* v3.17: PELINDUNG LAYAR HITAM — status & pemulihan otomatis */
   shieldStatus: () => ipcRenderer.invoke('sys:shield'),
   testCrashRender: () => ipcRenderer.invoke('sys:testCrash'),
+  /* v3.17.2: log crash permanen + mode aman manual */
+  crashLog: () => ipcRenderer.invoke('sys:crashlog'),
+  openCrashLog: () => ipcRenderer.invoke('sys:openCrashLog'),
+  safeModeNow: () => ipcRenderer.invoke('sys:safeModeNow'),
   onShieldRecovered: (cb) => {
     ipcRenderer.on('shield:recovered', (e, info) => cb(info));
   },

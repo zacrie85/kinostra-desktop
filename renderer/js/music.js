@@ -200,6 +200,13 @@ function setBsoundBuffer(buf, name) {
 async function loadBsoundFile(file) {
   if (!file) return;
   try {
+    /* v3.17.2: pengaman kelas sama dgn film panjang — audio >±160 MB
+       (±80 mnt) jangan pernah di-decode utuh (AudioBuffer bisa >1,5 GB
+       → proses render mati, persis kasus layar hitam v3.16/v3.17) */
+    if ((file.size || 0) > 160 * 1024 * 1024) {
+      toast('Backsound terlalu besar (>' + Math.round(file.size / 1048576) + ' MB) — pakai audio lebih pendek (≤±80 menit)', 'warn');
+      return;
+    }
     const ab = await file.arrayBuffer();
     const buf = await getActx().decodeAudioData(ab);
     setBsoundBuffer(buf, file.name || 'backsound');
@@ -215,6 +222,8 @@ async function loadBsoundFromPath(p) {
   try {
     const name = (p.split(/[\\/]/).pop() || 'backsound.mp3');
     const ab = await (await fetch(kfileURL(p))).arrayBuffer();
+    /* v3.17.2: pengaman decode utuh (lihat loadBsoundFile) */
+    if (ab.byteLength > 160 * 1024 * 1024) return { ok: false, error: 'audio terlalu besar (maks ±160 MB)' };
     const buf = await getActx().decodeAudioData(ab);
     setBsoundBuffer(buf, name);
     if (!videoEl.paused) startBsoundSync();

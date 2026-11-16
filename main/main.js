@@ -32,9 +32,24 @@ const SHIELD = {
   startedAt: Date.now(), _crashT: [], lastEvent: ''
 };
 const RUNNING_MARKER = path.join(app.getPath('userData'), 'kinostra.running');
+/* v3.17.2: LOG CRASH PERMANEN — setiap pemulihan/restart dicatat ke disk
+   (dulu status pelindung hanya di memori: hilang saat aplikasi nyala ulang,
+   pengguna tidak bisa menjawab "kenapa aplikasi merestar sendiri?").
+   File: userData/kinostra-crash.log — bisa disalin/dibuka dari modul 16. */
+const CRASH_LOG = path.join(app.getPath('userData'), 'kinostra-crash.log');
+function shieldLog(line) {
+  try {
+    const t = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    let body = '';
+    try { body = fs.readFileSync(CRASH_LOG, 'utf8'); } catch (_) { }
+    body = (body + `[${t}] v${app.getVersion()}${SHIELD.safeMode ? '-aman' : ''} ${line}\n`).split('\n').slice(-400).join('\n');   /* simpan ±400 baris terakhir */
+    fs.writeFileSync(CRASH_LOG, body);
+  } catch (_) { }
+}
 const GPU_CACHE_DIRS = ['GPUCache', 'ShaderCache', 'DawnCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'GrShaderCache'];
 function shieldStartup() {
   try {
+    shieldLog(`mulai — KINOSTRA v${app.getVersion()} · mode aman: ${SHIELD.safeMode ? 'YA' : 'tidak'}`);
     if (fs.existsSync(RUNNING_MARKER)) {
       SHIELD.dirtyExit = true;   /* sesi lalu tidak menutup normal (crash/listrik/kill) */
       let freed = 0;
@@ -43,6 +58,7 @@ function shieldStartup() {
         try { if (fs.existsSync(dp)) { freed++; fs.rmSync(dp, { recursive: true, force: true }); } } catch (_) { }
       }
       console.log(`SHIELD: sesi sebelumnya mati tak wajar — ${freed} folder cache grafis dibersihkan (mencegah layar hitam menetap)`);
+      shieldLog(`sesi sebelumnya mati tak wajar — ${freed} folder cache grafis dibersihkan saat mulai`);
     }
     try { fs.writeFileSync(RUNNING_MARKER, String(Date.now())); } catch (_) { }
   } catch (e) { console.warn('SHIELD startup:', e.message); }
@@ -68,6 +84,7 @@ function shieldReload(reason) {
    tetap bisa dipakai daripada layar hitam berulang */
 function shieldSafeModeIfStorm() {
   if (shieldCrashInWindow() >= 4) {
+    shieldLog('MODE AMAN OTOMATIS — crash ≥4× dalam 15 mnt → nyalakan ulang dgn disable-gpu-compositing');
     shieldNote('crash berulang 4× dalam 15 menit — nyalakan ulang dalam MODE AMAN');
     try {
       app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
@@ -128,12 +145,17 @@ function createWindow() {
     SHIELD.renderCrashes++; SHIELD._crashT.push(Date.now());
     SHIELD.lastEvent = 'proses render mati: ' + (d && d.reason) + ' (kode ' + (d && d.exitCode) + ')';
     console.error('SHIELD render-process-gone:', d);
+    shieldLog('RENDER MATI — alasan: ' + (d && d.reason) + ' · kode keluar: ' + (d && d.exitCode) +
+      ' · nyala ' + Math.round((Date.now() - SHIELD.startedAt) / 1000) + ' dtk · pemulihan ke-' + SHIELD.renderCrashes);
     if (d && d.reason === 'clean-exit') return;
     shieldNote('proses render mati (' + (d && d.reason) + ') → pulihkan jendela');
     shieldReload('render ' + (d && d.reason));
     shieldSafeModeIfStorm();
   });
-  win.webContents.on('unresponsive', () => { SHIELD.unresponsive = true; shieldNote('jendela tidak merespons sementara'); });
+  win.webContents.on('unresponsive', () => {
+    if (!SHIELD.unresponsive) shieldLog('jendela tidak merespons sementara (hang)');
+    SHIELD.unresponsive = true; shieldNote('jendela tidak merespons sementara');
+  });
   win.webContents.on('responsive', () => { SHIELD.unresponsive = false; });
   /* setelah pemulihan, beri tahu pengguna lewat toast (renderer mendengarkan shield:recovered) */
   win.webContents.on('did-finish-load', () => {
@@ -1682,6 +1704,7 @@ app.on('child-process-gone', (e, d) => {
   SHIELD.gpuCrashes++; SHIELD._crashT.push(Date.now());
   console.error('SHIELD child-process-gone (GPU):', d.type, d.reason, d.exitCode);
   if (d.reason === 'clean-exit') return;
+  shieldLog(`GPU MATI — alasan: ${d.reason || '?'} · kode keluar: ${d.exitCode} → dimuat ulang otomatis`);
   shieldNote('proses GPU mati (' + (d.reason || '?') + ') → pulihkan jendela');
   shieldReload('gpu ' + (d.reason || '?'));
   shieldSafeModeIfStorm();
@@ -1715,6 +1738,7 @@ app.on('window-all-closed', () => {
 /* v3.17: keluar normal → hapus tanda "kinostra.running" supaya sesi
    berikutnya TIDAK perlu membersihkan cache grafis (start tetap cepat) */
 app.on('will-quit', () => {
+  shieldLog('keluar normal');   /* v3.17.2: penanda sesi ditutup baik-baik */
   try { fs.rmSync(RUNNING_MARKER, { force: true }); } catch (_) { }
 });
 
@@ -1737,4 +1761,25 @@ ipcMain.handle('sys:testCrash', async () => {
   if (!win || win.isDestroyed()) return { ok: false, error: 'jendela tidak ada' };
   win.webContents.forcefullyCrashRenderer();   /* crash NYATA → harus pulih otomatis */
   return { ok: true };
+});
+/* v3.17.2: baca log crash (teks + lokasi) utk kotak PERAWATAN & pelaporan */
+ipcMain.handle('sys:crashlog', async () => {
+  let text = '';
+  try { text = fs.readFileSync(CRASH_LOG, 'utf8'); } catch (_) { }
+  return { path: CRASH_LOG, text: text.slice(-8000), size: text.length };
+});
+ipcMain.handle('sys:openCrashLog', async () => {
+  try { if (!fs.existsSync(CRASH_LOG)) fs.writeFileSync(CRASH_LOG, '[log kosong — belum ada kejadian tercatat]\n'); } catch (_) { }
+  shell.showItemInFolder(CRASH_LOG);
+  return { ok: true };
+});
+/* v3.17.2: pengguna bisa menyalakan MODE AMAN sendiri — hentikan rangkaian
+   crash GPU tanpa menunggu 4 crash otomatis */
+ipcMain.handle('sys:safeModeNow', async () => {
+  shieldLog('MODE AMAN diminta manual dari PERAWATAN → nyalakan ulang (disable-gpu-compositing)');
+  try {
+    app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
+    app.exit(0);
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
 });

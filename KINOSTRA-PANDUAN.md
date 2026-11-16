@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.1
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.2
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,18 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.17.2 — LOG CRASH PERMANEN + MODE AMAN MANUAL
+
+Setelah v3.17.1, sebagian pengguna masih melihat aplikasi "merestar sendiri". Masalahnya: status pelindung hanya tersimpan **di memori** — begitu jendela dimuat ulang, catatannya hilang, dan penyebab restart tidak bisa ditelusuri dari laporan pengguna. v3.17.2 membuat **semua kejadian tercatat permanen** supaya penyebab pasti bisa dibuktikan, bukan diduga:
+
+1. **LOG CRASH PERMANEN** — setiap kejadian dicatat ke berkas `kinostra-crash.log` di folder data aplikasi: waktu, versi, mode aman, alasan crash (mis. `OOM` / `crashed`), kode keluar, pemulihan otomatis, pembersihan cache saat mulai, sampai keluar normal. Log dipangkas otomatis (±400 baris) supaya tidak membengkak.
+2. **SALIN LOG CRASH** (modul 16 PERAWATAN) — satu klik menyalin seluruh isi log ke clipboard; tempel (Ctrl+V) saat melapor ke pengembang. **BUKA FOLDER LOG** membuka lokasi berkasnya.
+3. **MODE AMAN SEKARANG** — tombol manual untuk segera menyalakan ulang aplikasi dengan komposit GPU dimatikan (render hardware tetap cepat) tanpa menunggu 4 crash otomatis. Cocok bila tampilan berulang kali blank/restart pada PC dengan driver GPU bermasalah.
+4. **RIWAYAT KEJADIAN** — baris terakhir log tampil di kotak info PERAWATAN, jadi keluhan bisa dilaporkan hanya dengan screenshot.
+5. **Pengaman backsound** — audio backsound/musik **>±160 MB (±80 menit)** tidak di-decode utuh lagi (kelas crash yang sama dengan film panjang v3.16/v3.17).
+
+> Masih merestar setelah v3.17.2? Buka modul **16 PERAWATAN → SALIN LOG CRASH** dan kirimkan isinya — dari log itu penyebab persisnya (memori/GPU/driver) langsung terlihat.
 
 ## Yang Baru di v3.17.1 — AUDIO FILM PANJANG ANTI-CRASH
 
