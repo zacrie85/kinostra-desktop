@@ -84,9 +84,10 @@ function queueBatchThumb() {
   const it = state.batch.find(b => !b.thumb && b.status === 'wait' && !b._thumbErr);
   if (!it) return;
   _thumbRunning = true;
+  state._thumbBusy = true;   /* v3.22: analisis audio latar menunggu rantai thumbnail */
   makeThumb(it)
     .catch(() => { it._thumbErr = true; })
-    .finally(() => { _thumbRunning = false; renderQueue(); queueBatchThumb(); });
+    .finally(() => { _thumbRunning = false; state._thumbBusy = false; renderQueue(); queueBatchThumb(); });
 }
 
 async function makeThumb(it) {

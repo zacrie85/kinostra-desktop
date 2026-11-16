@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.21.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.22.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,16 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.22.0 — ANALISIS AUDIO TERTIB
+
+Laporan kawan: *"masih belum bisa — ada keterangan seperti di gambar referensi sebelum aplikasinya ngerestar sendiri"*, lalu tebakan penting: *"atau sepertinya aplikasi ini error saat menganalisis suaranya"*. **Tebakan itu tepat.** Log crash menunjukkan pola yang sama di v3.18-v3.21: impor film >1,9 jam → baris `audio: mode JENDELA (hemat RAM)` → 10-15 detik kemudian `HANG — detak jantung renderer hilang >12 dtk` → `RENDER MATI`. Toast "Video panjang — audio dianalisis hemat memori bertahap" di gambar referensi adalah penanda persis: aplikasi mati **saat sedang menganalisis suara**, bukan saat pemutaran.
+
+Akar sejatinya ditemukan lewat reproduksi pertama di sandbox: video uji dibuat **realistis seperti file unduhan** (3,6 jam, moov di akhir file, audio stereo, tabel sampel padat) dan CPU diperlambat 6× (simulasi laptop lemah) — dan kode lama langsung membeku >40 detik lalu crash. Isolasi bertahap menyempitkan ke **satu loop di mesin pembaca tabel MP4**: `Array.shift()` yang mahalnya O(n) per panggilan, dipanggil sampai 127.880 kali untuk file nyata (interleaving rapat) = O(nSc²) ≈ 8-16 **miliar** operasi geser. Thread utama membeku **sinkron** 10-60 detik persis setelah impor; detak jantung hilang; pelindung v3.18 mengira renderer beku dan **mematikan aplikasi yang sebenarnya sedang bekerja**. Video uji lama hanya punya 1-3 entri stsc — makanya bug ini tak pernah tampak di uji sandbox selama 4 versi.
+
+v3.22 membenahi enam titik: **(1) offset tabel via penunjuk indeks O(1)** dan stsc dibaca blok bulk (dulu 127.880 fetch per-entri) — tabel kini selesai <0,5 detik untuk film berapa pun; ikut mempercepat probe ekspor MODE KILAT untuk file nyata. **(2) Pelindung kini bertanya dulu** — sebelum mematikan, proses utama mengirim probe langsung ke renderer (batas 4 detik); masih menjawab = kerja berat latar, dibiarkan bekerja (tercatat "renderer merespons"); tidak menjawab = beku sejati → pemulihan paksa seperti sebelumnya. **(3) Analisis audio mulai tertib** — menunggu 10 detik tenang beruntun (tidak memutar, tidak ekspor, tidak thumbnail, tidak sibuk) sebelum jendela pertama. **(4) Pacing** — tiap 64 paket diberi jeda 6 ms dan napas 120 ms antar jendela. **(5) Thumbnail ikut melapor** — rantai thumbnail menunda analisis hingga selesai. **(6) Video utama preload=metadata** — Chromium berhenti mem-buffer film 4 jam di belakang; frame pertama pratinjau diambil lewat seek kecil terkendali.
+
+Hasil terukur (video uji 3,6 jam + throttle 6×): sebelum = renderer tak merespons >40 dtk + SIGSEGV; sesudah = jeda event loop maksimum **58 ms**, tabel 127.880 entri selesai <1 dtk, analisis mengalir tertib, **nol crash**. Film 3,6 jam kini bisa diimpor, diputar segera, dan dianalisis di belakang tanpa satu pun restart.
 
 ## Yang Baru di v3.21.0 — FORMULA VIDSplit
 

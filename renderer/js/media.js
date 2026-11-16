@@ -146,6 +146,16 @@ async function loadFileBlob(file, force = false) {
     toast(`Video tidak bisa dibaca engine (${file.name}) — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
+  /* v3.22: preload='metadata' → frame pertama untuk pratinjau diambil dgn
+     seek kecil TERKENDALI (bukan buffering 'auto' yang membaca film 4 jam
+     bertahap-tahap di belakang tanpa henti — lihat catatan index.html).
+     Seek ±0,04 dtk memicu dekode satu frame lalu pipeline diam; pemutaran
+     tetap lancar karena bacaan berikutnya dijalankan sesuai permintaan. */
+  try {
+    if (!state.isAudio && videoEl.readyState >= 1 && videoEl.paused && isFinite(videoEl.duration) && videoEl.duration > 0) {
+      videoEl.currentTime = Math.min(0.04, videoEl.duration * 0.001);
+    }
+  } catch (e) { }
   if (state.isAudio) {
     state.duration = await new Promise(async res => {
       await decodeFileAudio(); res(state.audioBuffer ? state.audioBuffer.duration : videoEl.duration || 0);
@@ -227,6 +237,27 @@ async function analyzeAudioViaDemux() {
     state._audioDemux = { probe: pr };   /* utk ekspor (renderMix) */
     const cache = { probe: pr };         /* cache TERPISAH utk analisis —
         jangan berebut decoder dgn ekspor yang jalan bersamaan */
+    /* v3.22: MULAI TERTIB — analisis = pekerjaan latar PALING sopan.
+       Persis setelah impor thread utama sibuk: metadata, gambar pertama,
+       thumbnail kotak video (makeThumb memakai elemen video sendiri, tak
+       terlihat oleh cek videoEl.paused di bawah). Dulu analisis langsung
+       membanjiri renderer dgn ribuan demux/dekode per jendela DI ATAS
+       semuanya → di mesin lemah detak jantung preload tertahan >12 dtk →
+       pelindung mematikan aplikasi ("ngestart sendiri" persis setelah
+       impor film 3-4 jam; log user v3.18-v3.21). Kini jendela pertama
+       menunggu 10 dtk TENANG BERUNTUN (tidak memutar/ekspor/thumbnail/
+       sibuk); pacing per paket (demux.js) memberi jeda teratur sesudahnya.
+       Ekspor tetap kebagian _audioDemux sesuai jadwalnya sendiri. */
+    {
+      let tenang = 0;
+      while (state.file && (state.mediaEpoch || 0) === epoch && tenang < 100) {
+        const sibuk = state.busy || state._audioExporting || state._audioWinBusy || state._thumbBusy
+          || (typeof videoEl !== 'undefined' && videoEl && !videoEl.paused && videoEl.readyState >= 2);
+        if (sibuk) { tenang = 0; await new Promise(r => setTimeout(r, 400)); }
+        else { tenang++; await new Promise(r => setTimeout(r, 100)); }
+      }
+      if (!state.file || (state.mediaEpoch || 0) !== epoch) return;
+    }
     const dur = state.duration;
     const N = 1400, peaks = new Float32Array(N);
     const envStep = 0.5, envN = Math.max(1, Math.ceil(dur / envStep));
@@ -245,7 +276,10 @@ async function analyzeAudioViaDemux() {
          bersamaan dengan pemutaran di mesin lemah memicu crash proses
          render; terpisah keduanya 100% aman). Melanjut otomatis saat
          pause/idle — film 2 jam selesai dianalisis ±1-2 menit browsing. */
-      while (state._audioExporting && state.file && (state.mediaEpoch || 0) === epoch) await new Promise(r => setTimeout(r, 250));
+      /* v3.22: jeda juga saat thumbnail berantai aktif & aplikasi sibuk —
+         dulu hanya cek ekspor + pemutaran; thumbnail kotak video jalan
+         bersamaan tanpa terlihat (elemen videonya sendiri) */
+      while ((state._audioExporting || state._thumbBusy || state.busy) && state.file && (state.mediaEpoch || 0) === epoch) await new Promise(r => setTimeout(r, 250));
       while (!videoEl.paused && state.file && (state.mediaEpoch || 0) === epoch) await new Promise(r => setTimeout(r, 500));
       const d = Math.min(WIN, dur - t);
       let buf = null;
@@ -284,7 +318,7 @@ async function analyzeAudioViaDemux() {
       }
       state.peaks = peaks; state.audioRms = Math.sqrt(sumSq / Math.max(1, nSum));
       state._rmsEpoch = epoch; state._audioEnv = env;
-      await new Promise(r => setTimeout(r, 0));   /* beri napas ke UI */
+      await new Promise(r => setTimeout(r, 120));   /* v3.22: napas jendela 120 ms (dulu 0) */
     }
     if ((state.mediaEpoch || 0) === epoch && state.file) {
       state.peaks = peaks; state._audioEnv = env;

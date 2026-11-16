@@ -210,13 +210,22 @@ async function buildSampleTable(rd, info) {
       have += want; off += want * (is64 ? 8 : 4);
     }
   }
-  /* stsc → sampel per chunk */
+  /* stsc → sampel per chunk
+     v3.22: BACA BULK — dulu SATU fetch 12 byte per entri; file unduhan nyata
+     (interleaving rapat) punya stsc PULUHAN/RATUS RIBU entri → 127.880 round
+     trip fetch untuk film 3,6 jam. Kini blok 768 KB sekali jalan seperti
+     stsz/stco — total tetap linear. */
   const sc = await rd(S.stsc.off, 8);
   const nSc = _du32(sc, 4);
   const runs = [];
-  for (let i = 0; i < nSc; i++) {
-    const b = await rd(S.stsc.off + 8 + i * 12, 12);
-    runs.push([_du32(b, 0), _du32(b, 4), _du32(b, 8)]);   /* first_chunk, spc, sdi */
+  {
+    let have = 0, off0 = S.stsc.off + 8;
+    while (have < nSc) {
+      const want = Math.min(nSc - have, 1 << 16);
+      const b = await rd(off0, want * 12);
+      for (let i = 0; i < want; i++) runs.push([_du32(b, i * 12), _du32(b, i * 12 + 4), _du32(b, i * 12 + 8)]);   /* first_chunk, spc, sdi */
+      have += want; off0 += want * 12;
+    }
   }
   if (!runs.length) GAGAL('stsc kosong');
   /* stts → dts kumulatif */
@@ -263,13 +272,21 @@ async function buildSampleTable(rd, info) {
       if (k >= 1 && k <= n) key[k - 1] = 1;
     }
   }
-  /* offset per sampel dari stsc × chunks */
+  /* offset per sampel dari stsc × chunks
+     v3.22: PENUNJUK INDEKS, bukan runs.shift() — shift() = O(n) per panggilan
+     (menggeser ulang seluruh larik); file unduhan nyata dgn stsc 127.880 entri
+     menjadikannya O(nSc²) ≈ 8-16 miliar operasi geser = thread utama MEMBEKU
+     SINKRON 10-60 dtk PERSIS SETELAH IMPOR film panjang → detak jantung
+     hilang >12 dtk → pelindung mematikan aplikasi yang sedang membangun
+     tabel ("ngestar sendiri" — log user v3.18-v3.21). Video uji lama
+     (base30/long240, stsc 1-3 entri) tak pernah mengungkap bug ini.
+     Kini total O(nChk + nSc + n) — selesai <0,5 dtk untuk film berapa pun. */
   const off = new Float64Array(n);
   {
-    let s = 0;
+    let s = 0, ri = 0;
     for (let c = 0; c < nChk && s < n; c++) {
-      while (runs.length > 1 && c + 1 >= runs[1][0]) runs.shift();
-      const spc = runs[0][1];
+      while (ri + 1 < runs.length && c + 1 >= runs[ri + 1][0]) ri++;
+      const spc = runs[ri][1];
       let p = chunks[c];
       for (let k = 0; k < spc && s < n; k++) { off[s] = p; p += sizes[s]; s++; }
     }
@@ -604,12 +621,18 @@ async function decodeAudioWindow(cache, tStart, dur) {
     try { ad.close(); } catch (e) { }
   };
   const PKT = 48;
+  /* v3.22: NAPAS TERATUR — dulu paket mengalir tanpa jeda selama antrean
+     belum penuh; jendela 120 dtk = ±5.600 paket demux+decode beruntun.
+     Kini tiap 64 paket beri jeda 6 ms + saat antrean penuh tetap yield —
+     biaya total hanya ±0,5 dtk per jendela, thread utama selalu bernapas. */
+  let napas = 0;
   for (let i = i0; i < i1; i++) {
     try {
       const data = new Uint8Array(await C.probe.rd(tbl.off[i], tbl.sizes[i]));
       C.dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round(tbl.dts[i] / nT * 1e6), data }));
     } catch (e) { console.warn('audio-demux: paket gagal —', e && e.message); break; }
     if (C.dec.decodeQueueSize > PKT) await new Promise(r => setTimeout(r, 0));
+    else if (++napas >= 64) { napas = 0; await new Promise(r => setTimeout(r, 6)); }
   }
   try { await C.dec.flush(); } catch (e) { }
   C.sink = null;

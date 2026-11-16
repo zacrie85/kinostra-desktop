@@ -128,14 +128,34 @@ setInterval(() => {
     if (Date.now() - hbLast <= 12000) return;
     hbBusy = true;
     shieldLog(SHIELD.playing
-      ? 'HANG SAAT PUTAR — detak jantung hilang >12 dtk; pemulihan paksa dipicu (PELINDUNG PUTAR menghitung)'
-      : 'HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
-    /* v3.20: penghitungan MODE PUTARAN HEMAT hanya di render-process-gone
-       (selalu menyala setelah crash paksa) — di sini dobel hitung */
-    setTimeout(() => {
+      ? 'HANG SAAT PUTAR — detak jantung hilang >12 dtk; memeriksa respons renderer…'
+      : 'HANG — detak jantung renderer hilang >12 dtk; memeriksa respons renderer…');
+    /* v3.22: PROBE RESPONS SEBELUM MEMATIKAN — detak jantung bisa tertahan
+       karena renderer sedang KERJA ASINKRON PADAT (demux/dekode audio film
+       panjang mengirim ribuan callback per jendela + thumbnail berantai di
+       belakang) padahal thread utama MASIH HIDUP. Dulu langsung
+       forcefullyCrashRenderer → aplikasi tampak "ngestart sendiri" persis
+       saat sedang bekerja (log user v3.18-v3.21: HANG 10-15 dtk setelah
+       impor film 3-4 jam, berulang tiap versi). Kini: tanya renderer
+       langsung dgn executeJavaScript (batas 4 dtk). Terjawab = biarkan
+       bekerja (detak dihitung ulang); tak terjawab = benar-benar beku
+       (sync block) → crash paksa seperti dulu. Beku sejati tetap tertangkap:
+       task probe ikut mengantre di thread yang sama dgn detak jantung. */
+    let answered = false;
+    const probeFail = () => {
+      if (answered) return;
+      answered = true;
       try { win.webContents.forcefullyCrashRenderer(); } catch (_) { }
       setTimeout(() => { hbBusy = false; }, 3000);
-    }, 500);
+    };
+    const probeTm = setTimeout(probeFail, 4000);
+    win.webContents.executeJavaScript('1', true).then(() => {
+      if (answered) return;
+      answered = true; clearTimeout(probeTm);
+      shieldLog('  → renderer merespons (kerja berat latar, bukan beku) — tidak dipaksa mati');
+      hbLast = Date.now();   /* mulai hitung ulang jendela 12 dtk dari sekarang */
+      setTimeout(() => { hbBusy = false; }, 3000);
+    }).catch(probeFail);
   } catch (_) { }
 }, 3000);
 
