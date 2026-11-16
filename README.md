@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.23.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.24.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -85,6 +85,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 64 | **FORMULA VIDSplit** ⭐v3.21.0 | Laporan "video 3-4 jam masih ngerestar saat di play" dijawab dgn referensi nyata: VidSplit v3.9.2 (aplikasi kembar) terbukti lancar di mesin yang sama. Formula stabilnya diadopsi utuh: **jalur native di SEMUA rasio** (16:9 & 9:16), latar blur 9:16 saat memutar = kanvas mini 90×160 (10 fps) dibesarkan CSS — bukan kanvas penuh 1080×1920, dan **antrean thumbnail kotak video ditahan selagi video diputar** (dulu berdesakan dgn pemutaran). Mode putaran hemat kini hanya memperlambat overlay — jalur native tetap |
 | 65 | **ANALISIS AUDIO TERTIB** ⭐v3.22.0 | Tebakan user tepat: aplikasi "ngestar sendiri" saat MENGANALISIS SUARA film panjang — akar sejatinya `Array.shift()` O(n) pada tabel sampel dgn stsc 127.880 entri (file unduhan nyata) = O(nSc²) ≈ 8-16 miliar operasi = thread utama beku 10-60 dtk persis setelah impor → pelindung mematikan aplikasi yang sedang bekerja. Kini: penunjuk indeks O(1) + stsc bulk, watchdog **mengecek respons renderer dulu** (masih menjawab = tidak dipaksa mati), analisis **menunggu 10 dtk tenang** sebelum mulai, pacing 6 ms tiap 64 paket, thumbnail ikut menunda analisis, video utama preload=metadata. Reproduksi sandbox dgn video uji realistis 3,6 jam: sebelum = tak merespons >40 dtk + SIGSEGV; sesudah = jeda maks 58 ms, nol crash |
 | 66 | **GAMBAR BERGERAK LAGI** ⭐v3.23.0 | Bug sisa v3.22: waktu berjalan tapi gambar beku (pompa frame kompositor macet di sebagian mesin Windows). Kini: elemen media kembali persis formula VidSplit/v3.21 (preload default) + **PENGAWAS GERAK GAMBAR** penyembuh otomatis — frame diam & waktu maju = pompa macet → kocok halus (seek +0,05 dtk) → visibilitas dinyalakan ulang → jatuh ke jalur kanvas overlay; semua tercatat di log. Diuji dgn sandera counter: 6/6 lulus, nol false-positive |
+| 67 | **DETEKTOR PIKSEL** ⭐v3.24.0 | Mekanisme beku kedua dari rekaman layar kawan: decoder maju tapi gambar tak pernah tersaji (penyajian mati di lapisan video Windows; detektor frame v3.23 buta kareno fr selalu maju). Kini pengawas menyampel video ke kanvas 48x27 tiap 2 dtk — piksel diam + fr maju = penyajian mati → tangga: kocok halus → visibilitas → jalur kanvas overlay; pilihan diingat per mesin; log memuat identitas GPU. Diuji dgn video adegan-diam nyata: 8/8 lulus, nol false-positive |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline

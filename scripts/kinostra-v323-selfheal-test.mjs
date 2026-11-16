@@ -66,7 +66,7 @@ process.on('exit', () => { try { APP.kill('SIGKILL'); } catch (e) { } });
 try {
   const cdp = await CDP.connect(PORT);
   await sleep(2000);
-  await evalRetry(cdp, `try { localStorage.removeItem('kinostra.liteplay'); } catch (e) {} 'bersih'`);
+  await evalRetry(cdp, `try { localStorage.removeItem('kinostra.liteplay'); localStorage.removeItem('kinostra.canvasPlay'); } catch (e) {} 'bersih'`);
   await evalRetry(cdp, `loadFromPath(${JSON.stringify(VIDEO)}); 'ok'`, 30000);
   for (let i = 0; i < 30; i++) { await sleep(1000);
     const s = await evalRetry(cdp, `state.duration || 0`, 6000).catch(() => 0);
@@ -92,7 +92,7 @@ try {
     if (s.fc) break;
   }
   const log = await logTail(cdp);
-  const v323 = log.split('\n').filter(l => /v3\.23 GAMBAR BEKU/.test(l));
+  const v323 = log.split('\n').filter(l => /v3\.24 GAMBAR BEKU/.test(l));
   ladder.kocok = v323.some(l => /kocok halus/.test(l));
   ladder.vis = v323.some(l => /visibilitas/.test(l));
   ladder.kanvas = v323.some(l => /jalur kanvas overlay/.test(l));

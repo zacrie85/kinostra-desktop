@@ -1447,7 +1447,9 @@ function loop() {
     setLiveVideo(native);
     if (native && !_nativeLogged) {
       _nativeLogged = Date.now();
-      try { window.kinostra.noteCrash('putar ringan: jalur NATIVE aktif (video asli, kanvas overlay)'); } catch (e) { }
+      let gpu = '';   /* v3.24: identitas GPU utk diagnosis lapangan beku gambar */
+      try { const gl = document.createElement('canvas').getContext('webgl'); const x = gl && gl.getExtension('WEBGL_debug_renderer_info'); gpu = gl ? String(gl.getParameter(x ? x.UNMASKED_RENDERER_WEBGL : gl.RENDERER)) : ''; } catch (e) { }
+      try { window.kinostra.noteCrash('putar ringan: jalur NATIVE aktif (video asli, kanvas overlay)' + (gpu ? ' — GPU: ' + gpu.slice(0, 120) : '')); } catch (e) { }
     }
     const blurNative = native && state.ratio === '9:16' && state.bgMode === 'blur';
     if (_blurCv || $('#bgBlurCv')) {

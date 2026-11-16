@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.23.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.24.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,14 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.24.0 — DETEKTOR PIKSEL: MEKANISME BEKU KEDUA TUMBANG
+
+Rekaman layar yang kamu kirim (*"gambar tidak bergerak.mp4"*) adalah bukti detektif yang sempurna, kawan. Dari 4 frame rekaman 9 detik bisa dibaca: header menunjukkan **v3.23.0 sudah terpasang dengan benar**; waktu berjalan normal (`00:15.4 → 00:22.9`); gambar **identik piksel demi piksel** di semua frame; dan yang paling penting — **tidak ada toast penyembuh sama sekali**. Artinya pengawas v3.23 tidak pernah menyala di mesinmu: `totalVideoFrames` di mesinmu **selalu maju** (decoder yakin dia bekerja) padahal gambar yang tersaji tidak pernah berubah. Ini mekanisme KEDUA: **penyajian mati** — lapisan video kompositor Windows (DirectComposition) berhenti memperbarui gambar, sementara dekode, DOM, dan kanvas overlay tetap sehat (caption-mu tetap tergambar tajam di rekaman). VidSplit bergerak di mesin yang sama karena video-nya berdiri sendiri tanpa lapisan di atasnya.
+
+v3.24 menambahkan **detektor level piksel**: setiap 2 detik selagi memutar, video disampel ke kanvas kecil 48×27 dan hash pikselnya dibandingkan. Kalau decoder maju (fr naik) tapi piksel diam dan waktu tetap berjalan — persis kondisi mesinmu — tangga penyembuhan menyala: **kocok halus** → **nyalakan ulang visibilitas** → **jatuh ke jalur kanvas overlay**, tempat gambar digambar manual dengan `drawImage` menjadi SATU lapisan komposit yang kebal bug lapisan video (caption ikut tergambar di kanvas). Pilihan penyembuhan **diingat per mesin**: impor berikutnya pada sesi yang sama langsung jalur kanvas tanpa menunggu beku; sesi baru tetap mencoba native sekali (driver bisa saja membaik). Log kini juga mencatat identitas GPU saat putaran native dimulai.
+
+Diuji dengan **video adegan-diam nyata** (warna solid — decoder maju fr 52→360 sementara piksel tak pernah berubah): **8/8 lulus** — deteksi ±2 detik, tangga utuh dalam 6 detik, waktu tetap berjalan, nol false-positive di video bergerak normal (frame-test 6/6) dan jalur pompa-macet lama tetap utuh (sandera 6/6). Hasil akhir di mesinmu: putar film → bila penyajian beku, dalam ±6 detik aplikasi pindah sendiri ke jalur kanvas dan gambar bergerak; impor berikutnya tak pernah beku lagi.
 
 ## Yang Baru di v3.23.0 — GAMBAR BERGERAK LAGI
 

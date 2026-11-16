@@ -146,10 +146,13 @@ async function loadFileBlob(file, force = false) {
     toast(`Video tidak bisa dibaca engine (${file.name}) — coba konversi ke MP4/H.264`, 'err');
     $('#hudName').textContent = 'FORMAT TAK DIDUKUNG'; return;
   }
-  /* v3.23: reset penyembuh gambar — video baru selalu dapat kesempatan
-     jalur native lagi; seek terkendali 0,04 dtk memicu dekode frame
-     pratinjau pertama lalu pipeline diam (preload default = auto). */
-  state._forceCanvasPlay = false; _frStreak = 0; _frLast = -1;
+  /* v3.24: reset penyembuh gambar per video. Jika mesin ini pernah terbukti
+     penyajiannya macet (flag tersimpan) DAN native sudah dicoba sekali pada
+     sesi ini → langsung jalur kanvas; sesi baru tetap mencoba native sekali
+     (driver bisa saja membaik). Seek terkendali 0,04 dtk tetap dipakai utk
+     memicu dekode frame pratinjau pertama. */
+  state._forceCanvasPlay = (localStorage.getItem('kinostra.canvasPlay') === '1' && window.__nativeTriedOnce) ? true : false;
+  _frStreak = 0; _frLast = -1; _pxLast = -1;
   try {
     if (!state.isAudio && videoEl.readyState >= 1 && videoEl.paused && isFinite(videoEl.duration) && videoEl.duration > 0) {
       videoEl.currentTime = Math.min(0.04, videoEl.duration * 0.001);
@@ -514,41 +517,65 @@ function measureAudioRms() {
   return state.audioRms;
 }
 
-/* ---------- v3.23: PENGAWAS GERAK GAMBAR (penyembuh otomatis) ----------
-   Laporan user v3.22 (Windows): waktu berjalan tapi GAMBAR BEKU. Pompa
-   frame kompositor Chromium bisa macet (elemen tadinya tersembunyi lalu
-   ditampilkan, GPU driver pilih-pilih) sementara jam media tetap maju.
-   Pantau tiap 2 dtk selagi memutar: totalVideoFrames diam PADAHAL
-   currentTime maju = pompa macet → tangga penyembuhan:
+/* ---------- v3.23+v3.24: PENGAWAS GERAK GAMBAR (penyembuh otomatis) ----------
+   Laporan user: waktu berjalan tapi GAMBAR BEKU. Dua mekanisme beda, satu tangga:
+   (a) POMPA MACET — totalVideoFrames diam padahal currentTime maju (v3.23);
+   (b) PENYAJIAN MATI — decoder maju (fr naik) tapi piksel yang tampak tak pernah
+       berubah: lapisan video kompositor Windows (DirectComposition) berhenti
+       memperbarui gambar; kanvas overlay & DOM tetap hidup (v3.24 — persis
+       rekaman user 2026-11-16: caption bergerak, video beku, TANPA toast =
+       detektor v3.23 tak pernah menyala → fr di mesin user selalu maju).
+   v3.24 menambah detektor PIKSEL: videoEl disampel ke kanvas 48x27 tiap 2 dtk;
+   hash diam + fr maju + waktu maju = penyajian mati.
+   TANGGA PENYEMBUHAN (dipicu salah satu deteksi):
    1) kocok halus — seek +0,05 dtk (memicu dekode ulang satu frame)
-   2) nyalakan ulang visibilitas elemen (kompositor dipasang ulang)
-   3) jatuh ke jalur kanvas overlay (flag _forceCanvasPlay dibaca
-      canNativePlay di ui.js → gambar digambar manual tiap frame)
-   Semua kejadian dicatat ke log utk diagnosis lapangan. Hanya aktif saat
-   BENAR-BENAR beku (frame diam total sementara waktu maju) — mesin lambat
-   yang tetap memompa 2 fps pun tidak salah dipicu. */
-let _frLast = -1, _frLastT = 0, _frStreak = 0;
+   2) nyalakan ulang visibilitas elemen (lapisan kompositor dipasang ulang)
+   3) jatuh ke jalur kanvas overlay (_forceCanvasPlay dibaca canNativePlay di
+      ui.js — gambar digambar manual via drawImage: SATU lapisan komposit,
+      kebal bug lapisan video; caption ikut tergambar di kanvas)
+   Penyembuhan diingat per mesin (localStorage 'kinostra.canvasPlay'): impor
+   berikutnya pada sesi yang sama langsung jalur kanvas; sesi baru tetap
+   mencoba native sekali (driver bisa saja membaik). Semua tercatat ke log.
+   Nol false-positive utk pompa: mesin lambat yang tetap memompa 2 fps pun
+   fr-nya bertambah; piksel diuji HANYA saat fr maju. */
+let _frLast = -1, _frLastT = 0, _frStreak = 0, _pxLast = -1;
+let _pxCv = null, _pxCtx = null;
 function cekGambarBergerak() {
   try {
     if (!state.file || state.isAudio || state.busy) return;
-    if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) { _frStreak = 0; _frLast = -1; return; }
+    if (videoEl.paused || videoEl.readyState < 2 || videoEl.seeking) { _frStreak = 0; _frLast = -1; _pxLast = -1; return; }
     const q = videoEl.getVideoPlaybackQuality ? videoEl.getVideoPlaybackQuality() : null;
     const fr = q ? q.totalVideoFrames : (videoEl.webkitDecodedFrameCount || 0);
     const t = videoEl.currentTime;
-    if (fr === _frLast && t > _frLastT + 1.2) {
+    const tMaju = t > _frLastT + 1.2;
+    const frStuck = fr === _frLast, frMaju = fr > _frLast;
+    let pxStuck = false;
+    if (frMaju && tMaju) {   /* decoder klaim maju — cek piksel yang benar2 tersaji */
+      try {
+        if (!_pxCv) { _pxCv = document.createElement('canvas'); _pxCv.width = 48; _pxCv.height = 27; _pxCtx = _pxCv.getContext('2d', { willReadFrequently: true }); }
+        _pxCtx.drawImage(videoEl, 0, 0, 48, 27);
+        const d = _pxCtx.getImageData(0, 0, 48, 27).data;
+        let h = 0; for (let i = 0; i < d.length; i += 40) h = (h * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) | 0;
+        pxStuck = (h === _pxLast); _pxLast = h;
+      } catch (e) { _pxLast = -1; }
+    } else _pxLast = -1;
+    if ((frStuck || pxStuck) && tMaju) {
       _frStreak++;
       const pos = (typeof fmtT === 'function' ? fmtT(t) : Math.round(t) + ' dtk');
+      const why = frStuck ? 'frame diam (pompa macet)' : 'piksel diam (decoder maju tapi penyajian mati)';
       if (_frStreak === 1) {
         videoEl.currentTime = t + 0.05;
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — kocok halus (seek +0,05 dtk)');
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — kocok halus (seek +0,05 dtk)');
         if (typeof toast === 'function') toast('Gambar tidak bergerak — dikocok halus…', 'warn');
       } else if (_frStreak === 2) {
         videoEl.style.display = 'none'; void videoEl.offsetWidth; videoEl.style.display = '';
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — visibilitas elemen dinyalakan ulang');
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — visibilitas elemen dinyalakan ulang');
       } else if (_frStreak === 3) {
         state._forceCanvasPlay = true;
-        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.23 GAMBAR BEKU t=' + pos + ' — jatuh ke jalur kanvas overlay');
-        if (typeof toast === 'function') toast('Pompa gambar macet — beralih ke jalur kanvas', 'warn');
+        window.__nativeTriedOnce = true;
+        try { localStorage.setItem('kinostra.canvasPlay', '1'); } catch (e) { }
+        if (window.kinostra && kinostra.noteCrash) kinostra.noteCrash('v3.24 GAMBAR BEKU t=' + pos + ' — ' + why + ' — jatuh ke jalur kanvas overlay (diingat utk impor berikutnya)');
+        if (typeof toast === 'function') toast('Penyajian gambar macet — beralih ke jalur kanvas', 'warn');
       }
     } else _frStreak = 0;
     _frLast = fr; _frLastT = t;
