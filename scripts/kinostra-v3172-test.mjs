@@ -127,7 +127,7 @@ try {
     hasTestCrash: typeof window.kinostra.testCrashRender === 'function',
     hasRecovered: typeof window.kinostra.onShieldRecovered === 'function'
   }))()`);
-  ok('Header bertanda v3.17.1', /v3\.17\.2/.test(a.tag), JSON.stringify(a.tag));
+  ok('Header bertanda versi berjalan', new RegExp('v' + (JSON.parse(fs.readFileSync('/home/z/my-project/package.json', 'utf8')).version).replace(/\./g, '\\.')).test(a.tag), JSON.stringify(a.tag));
   ok('Panel tetap 17 modul', a.nMods === 17, String(a.nMods));
   ok('API pelindung lengkap (status + uji crash + notifikasi pemulihan)', a.hasShield && a.hasTestCrash && a.hasRecovered, JSON.stringify(a));
 
@@ -256,7 +256,7 @@ try {
     await sleep(500);
     try {
       const r = await cdp.eval(`({ ready: document.readyState, tag: (document.querySelector('.tag') || {}).textContent || '', preset: JSON.parse(localStorage.getItem('kinostra.presets.v1') || '[]').length })`);
-      if (r.ready === 'complete' && /v3\.17\.2/.test(r.tag)) { recovered = r; break; }
+      if (r.ready === 'complete' && new RegExp('v' + (JSON.parse(fs.readFileSync('/home/z/my-project/package.json', 'utf8')).version).replace(/\./g, '\\.')).test(r.tag)) { recovered = r; break; }
     } catch (e) { /* sedang crash / reload — coba lagi */ }
   }
   ok('Jendela dimuat ulang OTOMATIS setelah crash (±beberapa detik)', !!recovered, recovered ? JSON.stringify(recovered) : 'tidak pulih dalam 30 dtk');

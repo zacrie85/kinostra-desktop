@@ -3,6 +3,12 @@
    ================================================================ */
 const { contextBridge, ipcRenderer } = require('electron');
 
+/* v3.18: DETAK JANTUNG — dipakai main utk mendeteksi HANG renderer.
+   Main thread renderer tersumbat (hang beku persis keluhan user
+   "aplikasi macet saat diputar") → interval ini berhenti mengirim
+   → main tahu dalam 12 dtk → pemulihan paksa + muat ulang SHIELD. */
+setInterval(() => { try { ipcRenderer.send('hb:beat'); } catch (e) { } }, 3000);
+
 contextBridge.exposeInMainWorld('kinostra', {
   /* dialogs */
   openMedia: () => ipcRenderer.invoke('dialog:openMedia'),
@@ -58,6 +64,8 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* v3.17.2: log crash permanen + mode aman manual */
   crashLog: () => ipcRenderer.invoke('sys:crashlog'),
   openCrashLog: () => ipcRenderer.invoke('sys:openCrashLog'),
+  /* v3.18: jejak diagnostik satu arah (impor/putar/ekspor → log pemulihan) */
+  noteCrash: (line) => { try { ipcRenderer.send('log:note', String(line).slice(0, 300)); } catch (e) { } },
   safeModeNow: () => ipcRenderer.invoke('sys:safeModeNow'),
   onShieldRecovered: (cb) => {
     ipcRenderer.on('shield:recovered', (e, info) => cb(info));

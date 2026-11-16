@@ -1251,6 +1251,12 @@ function setPlayIcon() {
 }
 function togglePlay() {
   if (!state.file) return;
+  /* v3.18: jejak diagnostik (maks 1×/30 dtk) — konteks bila hang saat putar */
+  const now = Date.now();
+  if (!state._lastPlayLog || now - state._lastPlayLog > 30000) {
+    state._lastPlayLog = now;
+    try { window.kinostra.noteCrash(`putar dimulai t=${(videoEl.currentTime || 0).toFixed(1)}dtk · ${(state.file.name || '').slice(0, 60)}`); } catch (e) { }
+  }
   if (videoEl.paused) { getActx().resume(); videoEl.play(); } else videoEl.pause();
 }
 $('#btnPlay').onclick = togglePlay;

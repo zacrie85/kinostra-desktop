@@ -104,6 +104,33 @@ if (SHIELD.safeMode) {
 
 let win = null;
 
+/* ================================================================
+   v3.18: WATCHDOG HANG — DETAK JANTUNG
+   Event 'unresponsive' terbukti tidak selalu menyala (uji: hang 15
+   dtk pulih tanpa event). Maka deteksi HANG pakai detak jantung:
+   preload mengirim 'hb:beat' tiap 3 dtk dari main thread renderer.
+   Main thread tersumbat (hang beku persis keluhan "macet saat
+   diputar") → detak berhenti → setelah 12 dtk tanpa detak:
+   crash-kan renderer TERKENDALI → jalur SHIELD (render-process-gone)
+   memuat ulang jendela otomatis; berulang ikut menghitung MODE AMAN.
+   ================================================================ */
+let hbLast = 0, hbSeen = 0, hbBusy = false;
+ipcMain.on('hb:beat', () => { hbLast = Date.now(); hbSeen++; });
+ipcMain.on('log:note', (e, line) => shieldLog(String(line || '').replace(/[\r\n]+/g, ' ').slice(0, 300)));
+setInterval(() => {
+  try {
+    if (!win || win.isDestroyed() || !hbSeen || hbBusy) return;
+    if (win.webContents.isLoading()) return;
+    if (Date.now() - hbLast <= 12000) return;
+    hbBusy = true;
+    shieldLog('HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
+    setTimeout(() => {
+      try { win.webContents.forcefullyCrashRenderer(); } catch (_) { }
+      setTimeout(() => { hbBusy = false; }, 3000);
+    }, 500);
+  } catch (_) { }
+}, 3000);
+
 /* ---------- Protokol app:// (renderer) & kmodels:// (model AI lokal) ---------- */
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -155,6 +182,17 @@ function createWindow() {
   win.webContents.on('unresponsive', () => {
     if (!SHIELD.unresponsive) shieldLog('jendela tidak merespons sementara (hang)');
     SHIELD.unresponsive = true; shieldNote('jendela tidak merespons sementara');
+    /* v3.18: kalau masih macet 1,5 dtk kemudian → pulihkan paksa
+       (crash terkendali → render-process-gone → muat ulang SHIELD);
+       bila pulih sendiri (responsive), tidak disentuh */
+    setTimeout(() => {
+      try {
+        if (win && !win.isDestroyed() && SHIELD.unresponsive) {
+          shieldLog('HANG — masih tak merespons 1,5 dtk; pemulihan paksa dipicu');
+          win.webContents.forcefullyCrashRenderer();
+        }
+      } catch (_) { }
+    }, 1500);
   });
   win.webContents.on('responsive', () => { SHIELD.unresponsive = false; });
   /* setelah pemulihan, beri tahu pengguna lewat toast (renderer mendengarkan shield:recovered) */

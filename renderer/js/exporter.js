@@ -1612,6 +1612,7 @@ async function doExport() {
   if (state.busy) return;
   if (!('VideoEncoder' in window)) { toast('Engine tidak mendukung WebCodecs', 'err'); return; }
   state.busy = true; state.abort = false;
+  try { window.kinostra.noteCrash(`ekspor dimulai: ${(state.file.name || '').slice(0, 60)}`); } catch (e) { }
   try {
     const dir = await window.kinostra.pickOutputDir(_lastOutDir || undefined);
     if (!dir) { state.busy = false; return; }

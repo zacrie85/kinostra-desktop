@@ -207,6 +207,7 @@ async function pickOutDir() { return window.kinostra.pickOutputDir(_lastOutDir |
 async function runBatch(forceAll = false) {
   if (!state.batch.length) { toast('Kotak kosong — tambah video dulu', 'warn'); return; }
   if (state.busy) { toast('Tunggu proses lain selesai', 'warn'); return; }
+  try { window.kinostra.noteCrash(`ekspor batch dimulai: ${state.batch.length} video`); } catch (e) { }
   if (forceAll) state.batch.forEach(b => { if (b.status === 'done') { b.status = 'wait'; b.msg = ''; } });
   const pending = state.batch.filter(b => b.status !== 'done');
   if (!pending.length) { toast('Semua video dalam kotak sudah selesai', 'ok'); return; }

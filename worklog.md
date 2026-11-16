@@ -520,3 +520,17 @@ Task: v2.16.2 — akar "hang total" DIBUHTIKAN & DIPERBAIKI di garis klasik
 Work Log:
 - User kirim video error: v2.16.1 + film 188 mnt (71 part) → aplikasi LENYAP dtk 25. Analisis frame-demi-frame + repro laboratorium: akar = decodeAudioData penuh film panjang (188 mnt ≈ 4 GB) — repro: RENDER MATI kode 133, 8 dtk setelah impor film 120 mnt di sandbox 3 GB.
 - v2.16.2 (branch classic-v2): film >±15 mnt tak pernah di-decode utuh (demux MP4 + AudioDecoder per jendela 45 dtk, port v3.17.1); ekspor tetap bersuara per part; SHIELD ringan (reload otomatis ≤3×, teruji; berulang → MODE AMAN --kinostra-aman); SUBS AI film panjang dimatikan dgn pesan. Uji 25 hijau (repro 6/6, SHIELD 5/5, suara 3/3, skenario 11/11). Rilis ID 446496081 — Setup+Portable+PANDUAN byte-sama. Garis utama (v3.17.2) tak disentuh.
+
+## v3.18.0 — WATCHDOG HANG DETAK JANTUNG + ANALISIS 2,5× LEBIH CEPAT (2026-11-16)
+
+Konteks: user meluruskan baseline — aplikasi yang dipakai adalah garis utama v3.16.0 (bukan garis klasik v2.16.x). Kebetulan penting: sandbox terdaur ulang dan repo lokal kembali ke v3.14.0, tapi SELURUH kerja v3.15.0→v3.17.2 terselamatkan di remote (branch main 6e6fea2) — lokal diselaraskan (git checkout -B main origin/main) setelah memindahkan 2 video upload yang ter-track. Juga ditemukan: salinan "upload/error kinostra.mp4" di git salah isi (identik video lain) — dipulihkan dari berkas asli user (sha 69f18588).
+
+Akar blank saat impor/putar sudah ditangani v3.17.1 (film panjang tak di-decode utuh); user masih di v3.16.0 → upgrade langsung ke v3.18.0.
+
+- WATCHDOG HANG DETAK JANTUNG: event 'unresponsive' terbukti tak selalu menyala (uji: hang 15 dtk pulih tanpa event; hang user beku permanen tak tertangani SHIELD lama) → preload kini mengirim hb:beat tiap 3 dtk; hilang >12 dtk = hang → forcefullyCrashRenderer terkendali → jalur SHIELD (render-process-gone) muat ulang otomatis; handler 'unresponsive' kini juga pulihkan paksa bila masih macet 1,5 dtk (dulu hanya catat)
+- JEJAK DIAGNOSTIK permanen via ipc log:note → shieldLog: impor (nama · durasi), jalur audio (decode penuh / mode JENDELA), putar (maks 1×/30 dtk), ekspor tunggal & batch — konteks persis saat melapor
+- JENDELA ADAPTIF: film >60 mnt analisis per jendela 120 dtk (188 mnt = 94 jendela, bukan 250) ≈2,5× lebih cepat; RAM puncak tetap 1 jendela ±46 MB; ≤60 mnt persis v3.17.1
+- Uji baru scripts/kinostra-v318-test.mjs 15/15 (smoke v3.18; jejak impor/audio/putar di log; hang 30 dtk → pulih otomatis + HANG/RENDER MATI/pemulihan tercatat; pulih-lalu-impor-lagi; film 120 mnt long120.mp4 dibangun ulang dari base30 ×240: tanpa decode utuh, peaks 0→934/1400 <20 dtk, RMS 0,0883, nol crash); regresi v3172 39/43 (4 sisa = asersi versi — asersi header & pemulihan diuji kini dinamis terhadap package.json)
+- Bump 6 file (package.json+deskripsi, installer.nsi 5 titik, afterpack FileVersion/ProductVersion, README badge+baris fitur 61, PANDUAN judul+bagian "Yang Baru di v3.18.0", index.html boot+header); scripts/bump-v3180.py, release-v3180.sh
+- Build: npm run dist:full → Portable zip OK 132,2 MB 214 entri; NSIS internal electron-builder gagal (VIProductVersion already defined — konflik bawaan yang sama) → makensis manual NSISDIR root nsis-3.0.4.1 → Setup 95,8 MB; UTF-16: Setup 3.18.0 ✓×2, KINOSTRA.exe portable 3.18.0.0 ✓×2, index v3.18 ✓×2, demux.js ikut
+- Rilis selesai: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.18.0 — Setup 91,4 MB (terkompresi), Portable 126,1 MB, PANDUAN; release ID tercatat di output skrip

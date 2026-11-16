@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.17.2
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.18.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,12 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.18.0 — WATCHDOG HANG DETAK JANTUNG + ANALISIS 2,5× LEBIH CEPAT
+
+Ada satu jenis masalah yang belum tertangani pemulihan otomatis lama: **hang beku** — jendela membeku total tapi prosesnya tidak mati, sehingga pemulihan berbasis "proses mati" (SHIELD) tidak pernah terpanggil. Pemicunya: event `unresponsive` bawaan Chromium terbukti tidak selalu menyala (diuji: renderer digantung 15 detik, pulih tanpa satu pun event). v3.18 memasang **detak jantung**: preload mengirim detak ke main process setiap 3 detik selama main thread renderer bebas. Kalau detak hilang lebih dari 12 detik, aplikasi menyimpulkan hang, memulihkan renderer secara paksa, dan jendela dimuat ulang otomatis lewat jalur SHIELD yang sama — semua tercatat di log.
+
+Dua penyempurnaan menyertai. **Jejak diagnostik**: setiap impor (nama + durasi), keputusan jalur audio (decode penuh atau mode JENDELA hemat RAM), mulai memutar (maksimal sekali per 30 detik), ekspor tunggal dan batch kini masuk log crash permanen — saat melapor, konteks persisnya sudah tertulis. **Jendela adaptif**: film lebih dari 60 menit kini dianalisis per jendela 120 detik alih-alih 45 detik — film 188 menit butuh 94 jendela, bukan 250, sehingga masa tunggu analisis setelah impor terasa ±2,5× lebih singkat; RAM puncak tetap sebesar satu jendela (±46 MB), dan film ≤60 menit berjalan persis seperti v3.17.1.
 
 ## Yang Baru di v3.17.2 — LOG CRASH PERMANEN + MODE AMAN MANUAL
 

@@ -167,6 +167,7 @@ async function loadFileBlob(file, force = false) {
   applyRangePreset(); syncRangeInputs();
   if (typeof renderCutList === 'function') renderCutList();   /* v2.12: kosongkan daftar potongan */
   renderTimeline(); updateAll();
+  try { window.kinostra.noteCrash(`impor: ${(file.name || '').slice(0, 80)} · ${Math.round(state.duration || 0)} dtk`); } catch (e) { }
   toast(`Dimuat: ${file.name}`, 'ok');
 }
 
@@ -197,6 +198,9 @@ async function decodeFileAudio() {
     const dur = state.duration || 0;
     const estDur = dur || (state.file.size || 0) / 16384;   /* audio file: heuristik 128 kbps */
     const estNative = estDur * 48000 * 2 * 4;
+    /* v3.18: jejak jalur audio di log — bukti di mesin user jalur
+       hemat RAM benar-benar aktif (atau justru masih decode penuh) */
+    try { window.kinostra.noteCrash(`audio: ${estNative <= 350 * 1024 * 1024 ? 'decode penuh' : 'mode JENDELA (hemat RAM)'} · ${Math.round(estDur)} dtk`); } catch (e) { }
     if (estNative <= 350 * 1024 * 1024) {
       const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
         : await state.file.arrayBuffer();
@@ -228,7 +232,11 @@ async function analyzeAudioViaDemux() {
     const envStep = 0.5, envN = Math.max(1, Math.ceil(dur / envStep));
     const env = new Float32Array(envN);
     let sumSq = 0, nSum = 0;
-    const WIN = 45;
+    /* v3.18: JENDELA ADAPTIF — film >60 mnt pakai jendela 120 dtk
+       (film 188 mnt = 94 jendela, bukan 250) → analisis ±2,5× lebih
+       cepat; RAM puncak tetap 1 jendela (±46 MB). Film ≤60 mnt:
+       45 dtk persis v3.17.1. */
+    const WIN = dur > 3600 ? 120 : 45;
     let nWin = 0, missBeruntun = 0;
     for (let t = 0; t < dur && state.file && (state.mediaEpoch || 0) === epoch; t += WIN) {
       /* v3.17.1: ekspor sedang jalan ATAU video sedang DIPUTAR → tunda
