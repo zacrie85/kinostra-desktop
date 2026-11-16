@@ -90,7 +90,7 @@ try {
     hasLog: typeof window.kinostra.crashLog === 'function',
     hasOpen: typeof window.kinostra.openCrashLog === 'function'
   }))()`);
-  ok('Header bertanda v2.16.2 (garis klasik)', /v2\.16\.2/.test(a.tag), JSON.stringify(a.tag));
+  ok('Header bertanda v2.16.3 (garis klasik)', /v2\.16\.3/.test(a.tag), JSON.stringify(a.tag));
   ok('Panel modul tampil', a.mods > 5, String(a.mods));
   ok('API log crash tersedia (crashLog + openCrashLog)', a.hasLog && a.hasOpen, JSON.stringify(a));
 

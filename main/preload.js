@@ -3,6 +3,11 @@
    ================================================================ */
 const { contextBridge, ipcRenderer } = require('electron');
 
+/* v2.16.3: DETAK JANTUNG — dipakai main utk mendeteksi HANG renderer.
+   Kalau main thread renderer tersumbat (hang), interval ini berhenti
+   mengirim → main tahu dalam 12 dtk → pemulihan paksa + muat ulang. */
+setInterval(() => { try { ipcRenderer.send('hb:beat'); } catch (e) { } }, 3000);
+
 contextBridge.exposeInMainWorld('kinostra', {
   /* dialogs */
   openMedia: () => ipcRenderer.invoke('dialog:openMedia'),
@@ -45,6 +50,8 @@ contextBridge.exposeInMainWorld('kinostra', {
   /* v2.16.1 (garis klasik): log crash permanen — utk pelaporan */
   crashLog: () => ipcRenderer.invoke('sys:crashlog'),
   openCrashLog: () => ipcRenderer.invoke('sys:openCrashLog'),
+  /* v2.16.3: jejak diagnostik satu arah (impor/putar/ekspor → log pemulihan) */
+  noteCrash: (line) => { try { ipcRenderer.send('log:note', String(line).slice(0, 300)); } catch (e) { } },
   /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
   gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 

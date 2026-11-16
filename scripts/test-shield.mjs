@@ -1,5 +1,5 @@
 /* ================================================================
-   UJI v2.16.2 — SHIELD RINGAN: RENDER MATI → JENDELA HIDUP LAGI
+   UJI v2.16.3 — SHIELD RINGAN: RENDER MATI → JENDELA HIDUP LAGI
    (dulu: aplikasi lenyap seperti di rekaman user; kini: dimuat ulang
    otomatis + tercatat di log crash)
    ================================================================ */
@@ -60,7 +60,7 @@ try {
 
   console.log('3. Log crash mencatat kejadian + pemulihan');
   await sleep(1000);
-  const lg = fs.readFileSync('/home/z/.config/KINOSTRA/kinostra-crash.log', 'utf8').split('\n').filter(l => /v2\.16\.2/.test(l));
+  const lg = fs.readFileSync('/home/z/.config/KINOSTRA/kinostra-crash.log', 'utf8').split('\n').filter(l => /v2\.16\.3/.test(l));
   ok('RENDER MATI tercatat', lg.some(l => /RENDER MATI/.test(l)), JSON.stringify(lg.slice(-4)));
   ok('pemulihan otomatis tercatat', lg.some(l => /pemulihan otomatis/.test(l)), JSON.stringify(lg.slice(-3)));
 

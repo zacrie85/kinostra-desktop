@@ -119,6 +119,7 @@ async function loadFileBlob(file, force = false) {
   applyRangePreset(); syncRangeInputs();
   if (typeof renderCutList === 'function') renderCutList();   /* v2.12: kosongkan daftar potongan */
   renderTimeline(); updateAll();
+  try { window.kinostra.noteCrash(`impor: ${(file.name || '').slice(0, 80)} · ${Math.round(state.duration || 0)} dtk`); } catch (e) { }
   toast(`Dimuat: ${file.name}`, 'ok');
 }
 
@@ -146,6 +147,9 @@ async function decodeFileAudio() {
     const dur = state.duration || 0;
     const estDur = dur || (state.file.size || 0) / 16384;   /* audio file: heuristik 128 kbps */
     const estNative = estDur * 48000 * 2 * 4;
+    /* v2.16.3: jejak jalur audio di log — membuktikan di mesin user
+       jalur hemat RAM benar-benar aktif (atau justru masih decode penuh) */
+    try { window.kinostra.noteCrash(`audio: ${estNative <= 350 * 1024 * 1024 ? 'decode penuh' : 'mode JENDELA (hemat RAM)'} · ${Math.round(estDur)} dtk`); } catch (e) { }
     if (estNative <= 350 * 1024 * 1024) {
       const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
         : await state.file.arrayBuffer();

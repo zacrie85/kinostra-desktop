@@ -48,6 +48,29 @@ function crashLog(line) {
 }
 crashLog(`mulai — KINOSTRA v${app.getVersion()} (garis klasik)`);
 
+/* ================================================================
+   v2.16.3 WATCHDOG HANG — DETAK JANTUNG
+   Event 'unresponsive' Electron terbukti TIDAK menyala pada sebagian
+   platform (uji: hang 15 dtk pulih tanpa event). Maka deteksi HANG
+   pakai detak jantung: preload mengirim 'hb:beat' tiap 3 dtk dari
+   main thread renderer. Main thread tersumbat (hang permanen persis
+   keluhan user "begitu diputar hang") → detak berhenti → setelah 12
+   dtk tanpa detak: crash-kan renderer TERKENDALI → jalur SHIELD
+   memuat ulang jendela otomatis; berulang 3× → MODE AMAN.
+   ================================================================ */
+let hbLast = 0, hbSeen = 0, hbBusy = false;
+ipcMain.on('hb:beat', () => { hbLast = Date.now(); hbSeen++; });
+setInterval(() => {
+  if (!win || win.isDestroyed() || !hbSeen || hbBusy) return;
+  if (Date.now() - hbLast <= 12000) return;
+  hbBusy = true;
+  crashLog('HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
+  setTimeout(() => {
+    try { win.webContents.forcefullyCrashRenderer(); } catch (_) { }
+    setTimeout(() => { hbBusy = false; }, 3000);
+  }, 500);
+}, 3000);
+
 function createWindow() {
   console.log('MAIN-CREATEWINDOW v' + app.getVersion());
   win = new BrowserWindow({
@@ -96,7 +119,17 @@ function createWindow() {
       app.quit();
     }
   });
-  win.webContents.on('unresponsive', () => crashLog('HANG — jendela tidak merespons (import/putar/setelan saat itu sedang dicatat pengguna)'));
+  /* v2.16.3 WATCHDOG HANG — dulu unresponsive hanya dicatat; kini HANG
+     dipulihkan PAKSA: tunggu 1,5 dtk (bila pulih sendiri, tidak disentuh),
+     lalu crash-kan renderer → jalur SHIELD memuat ulang jendela otomatis.
+     Hang berulang ikut menghitung pemulihan → 3× = MODE AMAN. */
+  win.webContents.on('unresponsive', () => {
+    crashLog('HANG — jendela tidak merespons; pemulihan paksa dipicu');
+    setTimeout(() => { try { win.webContents.forcefullyCrashRenderer(); } catch (_) { } }, 1500);
+  });
+  /* v2.16.3: jejak diagnostik dari renderer (impor/putar/ekspor) —
+     supaya setiap kejadian di log punya konteks apa yang sedang dilakukan */
+  ipcMain.on('log:note', (e, line) => crashLog(String(line || '').replace(/[\r\n]+/g, ' ').slice(0, 300)));
 
   // MODE SELF-TEST (diagnostik build): screenshot + cek DOM lalu keluar
   if (process.env.KINOSTRA_SMOKE === '1') {

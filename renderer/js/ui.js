@@ -644,6 +644,13 @@ function setPlayIcon() {
 }
 function togglePlay() {
   if (!state.file) return;
+  /* v2.16.3: jejak diagnostik di log crash (maks 1×/30 dtk) — bila
+     hang terjadi saat putar, log menunjukkan konteks waktunya */
+  const now = Date.now();
+  if (!state._lastPlayLog || now - state._lastPlayLog > 30000) {
+    state._lastPlayLog = now;
+    try { window.kinostra.noteCrash(`putar dimulai t=${(videoEl.currentTime || 0).toFixed(1)}dtk · ${(state.file && state.file.name) || ''}`); } catch (e) { }
+  }
   if (videoEl.paused) { getActx().resume(); videoEl.play(); } else videoEl.pause();
 }
 $('#btnPlay').onclick = togglePlay;
@@ -745,3 +752,17 @@ loop();
 $('#chipCodec').textContent = 'VideoEncoder' in window ? 'WEBCODECS AKTIF' : 'WEBCODECS TIDAK ADA';
 $('#chipCodec').classList.add('VideoEncoder' in window ? 'ok' : 'bad');
 if (window.lucide) lucide.createIcons();
+
+/* ---------- v2.16.3: TOMBOL LOG — pengguna tinggal klik, log crash
+   tersalin ke clipboard + berkasnya dibuka; kirim hasil tempel ke chat ---------- */
+$('#btnLogCrash').onclick = async () => {
+  try {
+    const lg = await window.kinostra.crashLog();
+    let tersalin = false;
+    try { await navigator.clipboard.writeText(lg.text); tersalin = true; } catch (e) { }
+    toast(tersalin
+      ? 'Log crash DISALIN — buka chat, tempel (Ctrl+V), kirim ke saya'
+      : 'Log dibuka manual — kirim isinya ke saya', tersalin ? 'ok' : 'warn');
+    try { window.kinostra.openCrashLog(); } catch (e) { }
+  } catch (e) { toast('Log crash gagal dibuka', 'err'); }
+};
