@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v2.16.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v2.16.1
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 16 upgrade.

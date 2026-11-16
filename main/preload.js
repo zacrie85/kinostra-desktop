@@ -42,6 +42,9 @@ contextBridge.exposeInMainWorld('kinostra', {
 
   /* v2.4: info sistem (RAM asli) */
   sysInfo: () => ipcRenderer.invoke('sys:info'),
+  /* v2.16.1 (garis klasik): log crash permanen — utk pelaporan */
+  crashLog: () => ipcRenderer.invoke('sys:crashlog'),
+  openCrashLog: () => ipcRenderer.invoke('sys:openCrashLog'),
   /* v2.14: deteksi GPU terpasang (Win32_VideoController) */
   gpuInfo: () => ipcRenderer.invoke('sys:gpu'),
 

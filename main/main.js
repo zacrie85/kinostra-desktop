@@ -22,6 +22,25 @@ protocol.registerSchemesAsPrivileged([
 
 let win = null;
 
+/* ================================================================
+   v2.16.1 (GARIS KLASIK): LOG CRASH RINGAN — satu-satunya tambahan
+   di atas v2.16.0. Setiap kejadian tidak-normal dicatat PERMANEN ke
+   userData/kinostra-crash.log supaya kalau suatu saat aplikasi hang/
+   crash, penyebabnya BISA DIBUKTIKAN (bukan diduga). TIDAK mengubah
+   perilaku aplikasi apa pun — hanya mencatat.
+   ================================================================ */
+const CRASH_LOG = path.join(app.getPath('userData'), 'kinostra-crash.log');
+function crashLog(line) {
+  try {
+    const t = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    let body = '';
+    try { body = fs.readFileSync(CRASH_LOG, 'utf8'); } catch (_) { }
+    body = (body + `[${t}] v${app.getVersion()} ${line}\n`).split('\n').slice(-400).join('\n');
+    fs.writeFileSync(CRASH_LOG, body);
+  } catch (_) { }
+}
+crashLog(`mulai — KINOSTRA v${app.getVersion()} (garis klasik)`);
+
 function createWindow() {
   console.log('MAIN-CREATEWINDOW v' + app.getVersion());
   win = new BrowserWindow({
@@ -51,6 +70,14 @@ function createWindow() {
   win.webContents.on('console-message', (e, level, message) => {
     if (level >= 2 || (process.env.KINOSTRA_DEBUG === '1' && level >= 1)) console.log('[renderer]', message);
   });
+
+  /* v2.16.1: catat kejadian tidak-normal ke log permanen (log SAJA —
+     perilaku tidak diubah sama sekali dari v2.16.0) */
+  win.webContents.on('render-process-gone', (e, d) => {
+    if (d && d.reason === 'clean-exit') return;
+    crashLog(`RENDER MATI — alasan: ${d && d.reason} · kode keluar: ${d && d.exitCode}`);
+  });
+  win.webContents.on('unresponsive', () => crashLog('HANG — jendela tidak merespons (import/putar/setelan saat itu sedang dicatat pengguna)'));
 
   // MODE SELF-TEST (diagnostik build): screenshot + cek DOM lalu keluar
   if (process.env.KINOSTRA_SMOKE === '1') {
@@ -1494,4 +1521,25 @@ if (!gotLock) {
 
 app.on('window-all-closed', () => {
   app.quit();
+});
+
+/* ================================================================
+   v2.16.1 (GARIS KLASIK): pelengkap log crash ringan
+   ================================================================ */
+app.on('child-process-gone', (e, d) => {
+  if (!d || d.type !== 'gpu' || d.reason === 'clean-exit') return;
+  crashLog(`GPU MATI — alasan: ${d.reason || '?'} · kode keluar: ${d.exitCode}`);
+});
+app.on('will-quit', () => {
+  crashLog('keluar normal');
+});
+ipcMain.handle('sys:crashlog', async () => {
+  let text = '';
+  try { text = fs.readFileSync(CRASH_LOG, 'utf8'); } catch (_) { }
+  return { path: CRASH_LOG, text: text.slice(-8000) };
+});
+ipcMain.handle('sys:openCrashLog', async () => {
+  try { if (!fs.existsSync(CRASH_LOG)) fs.writeFileSync(CRASH_LOG, '[log kosong — belum ada kejadian]\n'); } catch (_) { }
+  shell.showItemInFolder(CRASH_LOG);
+  return { ok: true };
 });
