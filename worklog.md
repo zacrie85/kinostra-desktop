@@ -534,3 +534,16 @@ Akar blank saat impor/putar sudah ditangani v3.17.1 (film panjang tak di-decode 
 - Bump 6 file (package.json+deskripsi, installer.nsi 5 titik, afterpack FileVersion/ProductVersion, README badge+baris fitur 61, PANDUAN judul+bagian "Yang Baru di v3.18.0", index.html boot+header); scripts/bump-v3180.py, release-v3180.sh
 - Build: npm run dist:full → Portable zip OK 132,2 MB 214 entri; NSIS internal electron-builder gagal (VIProductVersion already defined — konflik bawaan yang sama) → makensis manual NSISDIR root nsis-3.0.4.1 → Setup 95,8 MB; UTF-16: Setup 3.18.0 ✓×2, KINOSTRA.exe portable 3.18.0.0 ✓×2, index v3.18 ✓×2, demux.js ikut
 - Rilis selesai: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.18.0 — Setup 91,4 MB (terkompresi), Portable 126,1 MB, PANDUAN; release ID tercatat di output skrip
+
+## v3.19.0 — PELINDUNG PUTAR (2026-11-16)
+
+Laporan user setelah v3.18.0: "begitu video di import dan di play aplikasi langsung hang, blank dan ngerestar sendiri". Bacaan: pelindung v3.18 BEKERJA — hang terdeteksi detak jantung → jendela dipulihkan (tampak "ngestart sendiri") — TAPI bila penyebabnya GPU/driver lemah yang beku persis SAAT MEMUTAR, pemulihan biasa mengulang loop yang sama. v3.19 memutus lingkaran:
+
+- STATUS MEMUTAR dilaporkan renderer → main (preload reportPlay → ipc hb:play; ui.js togglePlay + listener pause/ended; did-finish-load reset playing=false)
+- render-process-gone kini membedakan konteks: bila SHIELD.playing → dicatat 'PELINDUNG PUTAR — kejadian saat memutar ke-N dalam 15 mnt' (sliding window 15 mnt, SHIELD._playCrashT); hakim detak jantung mencatat 'HANG SAAT PUTAR'
+- Kejadian ke-2 dalam 15 mnt → relaunchSafeMode() OTOMATIS (app.relaunch + --kinostra-safe = disable-gpu-compositing; kecepatan render hardware tetap) — restart terlihat paling banyak 1 kali lalu pemutaran stabil
+- relaunchSafeMode() diekstrak & dipakai juga oleh tombol MODE AMAN SEKARANG (sys:safeModeNow) — satu mekanisme
+- Uji baru scripts/kinostra-v319-test.mjs 13/13: smoke v3.19; playing=true sampai ke main; hang-putar #1 → pulih biasa + HANG SAAT PUTAR + kejadian ke-1 tercatat; hang-putar #2 → instance BARU hidup dalam MODE AMAN (shieldStatus.safeMode=true via CDP target-id baru — server devtools lama bisa menggantung beberapa detik saat exit, makanya koneksi ulang menunggu target ber-ID baru + evalRetry sambung-ulang otomatis); impor sehat dalam mode aman. Regresi v3172 38/43 (5 sisa = asersi versi, wajar)
+- Bump 6 file (scripts/bump-v3190.py); build: dist:full → Portable 132,2 MB 214 entri; NSIS internal gagal (VIProductVersion, konflik bawaan) → makensis manual → Setup 95,8 MB; UTF-16: Setup 3.19.0 ✓×2 (nol sisa 3.18), KINOSTRA.exe portable ✓×2, index v3.19 ✓×2
+- Kecelakaan kecil yang tertangani: release-v3190.sh pertama mengunggah aset ber-NAME 3.18.0 (replace hanya menyentuh 'v3.18.0', bukan nama berkas) → scripts/fixup-release-v3190.sh menghapus kedua aset salah & mengunggah ulang aset 3.19.0 yang benar (release ID 446563470)
+- Rilis selesai: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.19.0

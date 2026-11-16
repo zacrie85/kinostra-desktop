@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('kinostra', {
   openCrashLog: () => ipcRenderer.invoke('sys:openCrashLog'),
   /* v3.18: jejak diagnostik satu arah (impor/putar/ekspor → log pemulihan) */
   noteCrash: (line) => { try { ipcRenderer.send('log:note', String(line).slice(0, 300)); } catch (e) { } },
+  /* v3.19: PELINDUNG PUTAR — status memutar dilaporkan ke main */
+  reportPlay: (on) => { try { ipcRenderer.send('hb:play', !!on); } catch (e) { } },
   safeModeNow: () => ipcRenderer.invoke('sys:safeModeNow'),
   onShieldRecovered: (cb) => {
     ipcRenderer.on('shield:recovered', (e, info) => cb(info));

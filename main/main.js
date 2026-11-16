@@ -29,6 +29,7 @@ const MODELS_DIR = path.join(app.getPath('userData'), 'models');
 const SHIELD = {
   gpuCrashes: 0, renderCrashes: 0, reloads: 0, dirtyExit: false,
   unresponsive: false, safeMode: process.argv.includes('--kinostra-safe'),
+  playing: false, _playCrashT: [],   /* v3.19: PELINDUNG PUTAR */
   startedAt: Date.now(), _crashT: [], lastEvent: ''
 };
 const RUNNING_MARKER = path.join(app.getPath('userData'), 'kinostra.running');
@@ -117,19 +118,35 @@ let win = null;
 let hbLast = 0, hbSeen = 0, hbBusy = false;
 ipcMain.on('hb:beat', () => { hbLast = Date.now(); hbSeen++; });
 ipcMain.on('log:note', (e, line) => shieldLog(String(line || '').replace(/[\r\n]+/g, ' ').slice(0, 300)));
+/* v3.19: PELINDUNG PUTAR — renderer melaporkan status memutar; main
+   memakainya utk membedakan crash/hang yang terjadi SAAT video diputar */
+ipcMain.on('hb:play', (e, on) => { SHIELD.playing = !!on; });
 setInterval(() => {
   try {
     if (!win || win.isDestroyed() || !hbSeen || hbBusy) return;
     if (win.webContents.isLoading()) return;
     if (Date.now() - hbLast <= 12000) return;
     hbBusy = true;
-    shieldLog('HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
+    shieldLog(SHIELD.playing
+      ? 'HANG SAAT PUTAR — detak jantung hilang >12 dtk; pemulihan paksa dipicu (PELINDUNG PUTAR menghitung)'
+      : 'HANG — detak jantung renderer hilang >12 dtk; pemulihan paksa dipicu');
     setTimeout(() => {
       try { win.webContents.forcefullyCrashRenderer(); } catch (_) { }
       setTimeout(() => { hbBusy = false; }, 3000);
     }, 500);
   } catch (_) { }
 }, 3000);
+
+/* v3.19: nyalakan ulang aplikasi dalam MODE AMAN (komposit GPU mati,
+   kecepatan render hardware tetap) — dipakai tombol manual PERAWATAN
+   dan PELINDUNG PUTAR otomatis */
+function relaunchSafeMode(reason) {
+  shieldLog('MODE AMAN otomatis (' + reason + ') → nyalakan ulang dengan disable-gpu-compositing');
+  try {
+    app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
+    app.exit(0);
+  } catch (_) { }
+}
 
 /* ---------- Protokol app:// (renderer) & kmodels:// (model AI lokal) ---------- */
 protocol.registerSchemesAsPrivileged([
@@ -174,6 +191,20 @@ function createWindow() {
     console.error('SHIELD render-process-gone:', d);
     shieldLog('RENDER MATI — alasan: ' + (d && d.reason) + ' · kode keluar: ' + (d && d.exitCode) +
       ' · nyala ' + Math.round((Date.now() - SHIELD.startedAt) / 1000) + ' dtk · pemulihan ke-' + SHIELD.renderCrashes);
+    /* v3.19: PELINDUNG PUTAR — crash yang terjadi KETIKA video diputar
+       dicatat terpisah. GPU/driver lemah sering beku persis saat memutar:
+       pemulihan biasa hanya mengulang loop yang sama (beku → pulih →
+       putar lagi → beku lagi → terlihat "ngestart sendiri terus").
+       Kejadian ke-2 dalam 15 menit → langsung MODE AMAN: pengguna
+       melihat restart paling banyak 1 kali, lalu pemutaran stabil. */
+    if (SHIELD.playing && !SHIELD.safeMode) {
+      const now = Date.now();
+      SHIELD._playCrashT = SHIELD._playCrashT.filter(t => now - t < 15 * 60 * 1000);
+      SHIELD._playCrashT.push(now);
+      shieldLog('PELINDUNG PUTAR — kejadian saat memutar ke-' + SHIELD._playCrashT.length + ' dalam 15 mnt' +
+        (SHIELD._playCrashT.length >= 2 ? ' → MODE AMAN otomatis (komposit GPU dimatikan)' : ' → pulihkan biasa dulu'));
+      if (SHIELD._playCrashT.length >= 2) { relaunchSafeMode('crash/hang berulang saat memutar video'); return; }
+    }
     if (d && d.reason === 'clean-exit') return;
     shieldNote('proses render mati (' + (d && d.reason) + ') → pulihkan jendela');
     shieldReload('render ' + (d && d.reason));
@@ -197,6 +228,7 @@ function createWindow() {
   win.webContents.on('responsive', () => { SHIELD.unresponsive = false; });
   /* setelah pemulihan, beri tahu pengguna lewat toast (renderer mendengarkan shield:recovered) */
   win.webContents.on('did-finish-load', () => {
+    SHIELD.playing = false;   /* v3.19: halaman baru — belum ada yang diputar */
     if (SHIELD.reloads > 0) {
       const info = { gpu: SHIELD.gpuCrashes, render: SHIELD.renderCrashes, reloads: SHIELD.reloads };
       try { win.webContents.send('shield:recovered', info); } catch (_) { }
@@ -1814,10 +1846,6 @@ ipcMain.handle('sys:openCrashLog', async () => {
 /* v3.17.2: pengguna bisa menyalakan MODE AMAN sendiri — hentikan rangkaian
    crash GPU tanpa menunggu 4 crash otomatis */
 ipcMain.handle('sys:safeModeNow', async () => {
-  shieldLog('MODE AMAN diminta manual dari PERAWATAN → nyalakan ulang (disable-gpu-compositing)');
-  try {
-    app.relaunch({ args: process.argv.slice(1).concat('--kinostra-safe') });
-    app.exit(0);
-    return { ok: true };
-  } catch (e) { return { ok: false, error: e.message }; }
+  try { relaunchSafeMode('diminta manual dari PERAWATAN'); return { ok: true }; }
+  catch (e) { return { ok: false, error: e.message }; }
 });

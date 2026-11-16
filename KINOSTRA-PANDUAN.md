@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.18.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.19.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,12 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.19.0 — PELINDUNG PUTAR
+
+Laporan dari v3.18: "begitu video di import dan di play aplikasi langsung hang, blank dan ngerestar sendiri". Yang terlihat itu sebenarnya pelindung bekerja — hang terdeteksi, jendela dipulihkan (tampak seperti aplikasi merestar sendiri). Tapi kalau penyebabnya GPU atau driver yang lemah dan beku justru ketika video diputar, pemulihan biasa hanya memutar kembali loop yang sama: putar → beku → pulih → putar lagi → beku lagi.
+
+v3.19 memutus lingkaran itu. Status memutar kini dilaporkan dari renderer ke pelindung (kanal `hb:play`). Crash atau hang yang terjadi **ketika video sedang diputar** dicatat terpisah di log (`HANG SAAT PUTAR`, `PELINDUNG PUTAR — kejadian saat memutar ke-N`). Kejadian pertama tetap dipulihkan biasa; **kejadian kedua dalam 15 menit** membuat aplikasi menyalakan ulang dirinya dalam **MODE AMAN** — komposit GPU dimatikan (penyebab beku/blank di GPU lemah) sementara kecepatan render hardware tetap. Dari sisi pengguna: restart terlihat **paling banyak satu kali**, lalu pemutaran berjalan stabil. Status MODE AMAN tetap terlihat di modul 16 PERAWATAN, dan tombol MODE AMAN SEKARANG kini memakai mekanisme yang sama.
 
 ## Yang Baru di v3.18.0 — WATCHDOG HANG DETAK JANTUNG + ANALISIS 2,5× LEBIH CEPAT
 

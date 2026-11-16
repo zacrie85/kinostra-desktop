@@ -1257,8 +1257,12 @@ function togglePlay() {
     state._lastPlayLog = now;
     try { window.kinostra.noteCrash(`putar dimulai t=${(videoEl.currentTime || 0).toFixed(1)}dtk · ${(state.file.name || '').slice(0, 60)}`); } catch (e) { }
   }
-  if (videoEl.paused) { getActx().resume(); videoEl.play(); } else videoEl.pause();
+  if (videoEl.paused) { getActx().resume(); videoEl.play(); try { window.kinostra.reportPlay(true); } catch (e) { } }
+  else { videoEl.pause(); try { window.kinostra.reportPlay(false); } catch (e) { } }
 }
+/* v3.19: status memutar ikut dilaporkan bila video berhenti sendiri */
+videoEl.addEventListener('pause', () => { try { window.kinostra.reportPlay(false); } catch (e) { } });
+videoEl.addEventListener('ended', () => { try { window.kinostra.reportPlay(false); } catch (e) { } });
 $('#btnPlay').onclick = togglePlay;
 $('#btnPrev').onclick = () => { if (state.duration) { const r = rangeInfo();
   const c = Math.floor((videoEl.currentTime - r.start) / state.splitSec);
