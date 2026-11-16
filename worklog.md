@@ -628,3 +628,5 @@ User: "masih tetap tidak gerak videonya kawan... coba cek lagi, lihat VidSplit s
 - Bump 6 file (scripts/bump-v3250.py: README baris 68, PANDUAN bagian v3.25).
 
 - RILIS v3.25.0 SELESAI (source ter-push dulu, commit 15d9bac): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.25.0.exe 91,4 MB · KINOSTRA-Portable-3.25.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.25.0
+
+- KONFIRMASI LAPANGAN (2026-11-16, user): "berhasil kawan... terima kasih kawan" — v3.25.0 JALUR VIDSPLIT menuntaskan gambar beku di mesin user. Akar resmi ditutup: overlay kanvas di atas video kini digambar HANYA saat isinya berubah; video berdiri sendiri persis VidSplit. Kasus "waktu jalan tapi gambar beku" (v3.20–v3.24) SELESAI.
