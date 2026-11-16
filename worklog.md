@@ -643,3 +643,5 @@ User bertanya: apakah "OPTIMASI PERFORMA — satu klik" & "BERSIHKAN CACHE" suda
 - Sandbox daur ulang memangkas testmedia/long120.mp4 & long240.mp4 (tak ter-track git) → regenerasi ffmpeg: long120=7200 dtk (2 jam, gradients 320x180@8fps crf42 = 35 MB), long240=14400 dtk (4 jam, 70 MB). Pelajaran: file uji panjang wajib ada generator tersimpan — scripts/buat-longtestmedia.sh.
 - UJI: scripts/kinostra-maintenance-test.mjs BARU 14/14 (info jalur/GPU/shader, dry-ukur GPU cache, muat ulang 3×, seed flag → OPTIMASI melepas + flag hilang, modal BERSIHKAN + disk freed, play-ok + native aktif setelah bersih); frame 6/6; overlay-statik 6/6.
 - Bump 6 file (scripts/bump-v3260.py).
+
+- RILIS v3.26.0 SELESAI (source ter-push dulu, commit 11cd272): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.26.0.exe 91,4 MB · KINOSTRA-Portable-3.26.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.26.0
