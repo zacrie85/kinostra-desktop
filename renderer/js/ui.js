@@ -79,19 +79,30 @@ $('#inTitleY').oninput = e => { state.titlePosY = clamp(parseFloat(e.target.valu
 $('#btnTextPosReset').onclick = () => { state.partPosX = 0; state.partPosY = 0; state.titlePosY = 0; syncTextPosLabels(); toast('Posisi teks kembali ke default', 'ok'); };
 syncTextPosLabels();
 
-/* ---------- v3.14: UKURAN TULISAN PART DI VIDEO — 50%–250%, normal 100%;
+/* ---------- v3.14→v3.27: UKURAN & WARNA TULISAN PART DI VIDEO —
+   ukuran 10%–250% (v3.27: bisa turun sampai 10%), warna bebas / OTOMATIS;
    berlaku utk bumper intro & label pojok di dalam video (bukan cover);
-   pratinjau langsung karena drawComposition membaca state.partSize ---------- */
+   pratinjau langsung karena drawComposition membaca state.partSize/partColor ---------- */
 function syncPartSizeV() {
   const lbl = $('#partSizeV'), sld = $('#inPartSize');
   if (lbl) lbl.textContent = Math.round((state.partSize || 1) * 100) + '%';
   if (sld) sld.value = state.partSize || 1;
 }
+function syncPartColorV() {
+  const lbl = $('#partColorV'), inp = $('#inPartColor');
+  const c = String(state.partColor || '').toLowerCase();
+  if (lbl) lbl.textContent = c ? c.toUpperCase() : 'OTOMATIS';
+  if (inp && /^#[0-9a-f]{6}$/.test(c)) inp.value = c;
+}
 if ($('#inPartSize')) {
-  $('#inPartSize').oninput = e => { state.partSize = clamp(parseFloat(e.target.value) || 1, 0.5, 2.5); syncPartSizeV(); };
+  $('#inPartSize').oninput = e => { state.partSize = clamp(parseFloat(e.target.value) || 1, 0.1, 2.5); syncPartSizeV(); };
   $('#inPartSize').onchange = () => toast(`Ukuran tulisan part di video: ${Math.round(state.partSize * 100)}%`, 'ok');
 }
-syncPartSizeV();
+if ($('#inPartColor')) {
+  $('#inPartColor').oninput = e => { const v = String(e.target.value || '').toLowerCase(); if (/^#[0-9a-f]{6}$/.test(v)) { state.partColor = v; syncPartColorV(); } };
+  $('#btnPartColorAuto').onclick = () => { state.partColor = ''; syncPartColorV(); toast('Warna tulisan part: OTOMATIS (putih gading)', 'ok'); };
+}
+syncPartSizeV(); syncPartColorV();
 
 /* ---------- v3.9: 10 FRAME FITURISTIK JUDUL DI VIDEO ---------- */
 (function initTitleFrames() {
@@ -1447,7 +1458,7 @@ function nativeOverlaySig(t) {
   }
   const FSTs = (typeof frameDef === 'function') ? frameDef() : null;
   return [currentSegIndex(t), segmentsCount(), si, cv.width, cv.height,
-    state.partShow, state.partPrefix, state.partPosX, state.partPosY, state.partSize, state.partAnim, state._noPart,
+    state.partShow, state.partPrefix, state.partPosX, state.partPosY, state.partSize, state.partColor, state.partAnim, state._noPart,
     state.titleOn, state.title, state.titleSize, state.titleScale, state.titlePosY, state.upper, state.titleFrame, state.titleAnim,
     state.descOn, state.desc, state.descSize, state.descPosY, state.descPos,
     state.subsOn, state.subScale, state.subPosY, state.splitSec, state.speed,

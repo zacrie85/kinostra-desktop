@@ -258,11 +258,15 @@ function drawComposition(x, W, H, t, opts) {
      lokal = detik OUTPUT sejak awal part (ikut kecepatan) */
   const _spdP = clamp(state.speed || 1, 0.25, 4);
   const _tinP = (t - segB.start) / _spdP;
-  /* v3.14: UKURAN TULISAN PART DI VIDEO — faktor skala 0.5–2.5 (1 = normal);
-     berlaku utk bumper intro & label pojok: font, spasi huruf, garis hiasan
-     & offset vertikal ikut diskala agar proporsional (animasi masuk part
-     ikut akurat karena fsPx & ls dikirim terskala ke ncTextState helpers) */
-  const _sP = clamp(state.partSize || 1, 0.5, 2.5);
+  /* v3.14→v3.27: UKURAN TULISAN PART DI VIDEO — faktor skala 0.1–2.5
+     (v3.27: bisa turun sampai 10%; 1 = normal); berlaku utk bumper intro &
+     label pojok: font, spasi huruf, garis hiasan & offset vertikal ikut
+     diskala agar proporsional (animasi masuk part ikut akurat karena fsPx
+     & ls dikirim terskala ke ncTextState helpers).
+     v3.27: WARNA TULISAN PART — state.partColor ('' = OTOMATIS putih
+     gading) menimpa warna teks di kedua mode; garis hias & sub-info tetap
+     gaya bawaan. Pratinjau = ekspor persis (satu mesin gambar). */
+  const _sP = clamp(state.partSize || 1, 0.1, 2.5);
   const _pA = (state.partAnim && state.partAnim !== 'off' && _tinP < 1.6)
     ? ncTextState(state.partAnim, _tinP, 1e9, seg * 131 + 7 + Math.floor(t * 30)) : null;
   if (state.partShow === 'intro') {
@@ -279,7 +283,7 @@ function drawComposition(x, W, H, t, opts) {
         if (_pA.dy) x.translate(0, _pA.dy * H);
       }
       x.fillStyle = '#F7A600'; x.fillRect(cx - 60 * u * _sP, cy - 84 * u * _sP, 120 * u * _sP, 3 * u * _sP);
-      x.fillStyle = '#F2F0EA'; x.font = `${Math.round(112 * u * _sP)}px "${F}"`;
+      x.fillStyle = state.partColor || '#F2F0EA'; x.font = `${Math.round(112 * u * _sP)}px "${F}"`;
       const _pTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
       ncAnimSpacedLine(x, _pA, _pTxt, cx, cy + 40 * u * _sP, 8 * u * _sP, 112 * u * _sP,
         (t2, ls2, dx) => drawSpaced(x, t2, cx + dx, cy + 40 * u * _sP, ls2, 'center'), W);
@@ -298,7 +302,7 @@ function drawComposition(x, W, H, t, opts) {
       if (_pA.dy) x.translate(0, _pA.dy * H);
     }
     x.fillStyle = '#F7A600'; x.fillRect(px, py - 40 * u * _sP, 4 * u * _sP, 50 * u * _sP);
-    x.fillStyle = '#F2F0EA'; x.font = `${Math.round(46 * u * _sP)}px "${F}"`;
+    x.fillStyle = state.partColor || '#F2F0EA'; x.font = `${Math.round(46 * u * _sP)}px "${F}"`;
     const _cTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
     const w = drawSpaced(x, ncAnimSpacedTxt(x, _pA, _cTxt), px + 16 * u * _sP, py, 3 * u * _sP + (_pA && _pA.kind === 'tracking' ? (1 - ncEaseOut(_pA.inP || 0)) * 46 * u * _sP * 0.5 : 0), 'left');
     x.fillStyle = 'rgba(239,237,231,.5)'; x.font = `500 ${Math.round(20 * u * _sP)}px "JetBrains Mono"`;

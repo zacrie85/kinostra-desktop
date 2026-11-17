@@ -163,9 +163,11 @@ try {
       prefixOpt: [...q('#selPrefix').options].map(o => o.text).join(',')
     };
   })()`);
-  ok('Header bertanda v3.14.0', /v3\.14\.0/.test(a.tag), JSON.stringify({ tag: a.tag }));
+  /* v3.27: asersi versi dibuat agnostik (dulu terikat v3.14.0 — pecah tiap bump);
+     kontrak slider kini min 0.1 (v3.27: 10%–250%) */
+  ok('Header bertanda versi DESKTOP (agnostik)', /DESKTOP v\d+\.\d+\.\d+/.test(a.tag), JSON.stringify({ tag: a.tag }));
   ok(`Slider UKURAN TULISAN PART DI VIDEO ada: min ${a.min} max ${a.max} step ${a.step} nilai awal ${a.val}`,
-    a.sliderAda && a.min === 0.5 && a.max === 2.5 && a.step === 0.05 && a.val === 1, JSON.stringify(a));
+    a.sliderAda && a.min === 0.1 && a.max === 2.5 && a.step === 0.05 && a.val === 1, JSON.stringify(a));
   ok('Label slider awal 100% + state.partSize default 1', a.lblV === '100%' && a.ps0 === 1, JSON.stringify({ lblV: a.lblV, ps0: a.ps0 }));
   ok('Note menyebut tulisan part DI DALAM VIDEO (bukan cover)', a.noteVid, String(a.noteVid));
   ok('Slider cover v3.13 tetap utuh + prefix 5 pilihan (PART/EPISODE/EPS/BAGIAN/#)',

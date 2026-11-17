@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.26.1 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.27.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.26.1</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.27.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -187,8 +187,14 @@
           <option>BAGIAN</option><option>#</option>
         </select>
         <div class="lbl">UKURAN TULISAN PART DI VIDEO <b id="partSizeV" style="float:none">100%</b></div>
-        <input type="range" id="inPartSize" min="0.5" max="2.5" step="0.05" value="1">
-        <div class="note">Ukuran tulisan PART DI DALAM VIDEO 50%–250% (bumper intro &amp; label pojok — bukan di cover); garis hias, sub-info &amp; animasi ikut proporsional.</div>
+        <input type="range" id="inPartSize" min="0.1" max="2.5" step="0.05" value="1">
+        <div class="note">Ukuran tulisan PART DI DALAM VIDEO 10%–250% (bumper intro &amp; label pojok — bukan di cover); garis hias, sub-info &amp; animasi ikut proporsional.</div>
+        <div class="lbl">WARNA TULISAN PART DI VIDEO <b id="partColorV" style="float:none">OTOMATIS</b></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="inPartColor" value="#F2F0EA" style="width:52px;height:32px;padding:2px;background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;cursor:pointer">
+          <button class="btn sm" id="btnPartColorAuto" type="button"><i data-lucide="rotate-ccw"></i> OTOMATIS</button>
+        </div>
+        <div class="note">Warna tulisan PART bebas pilih (intro &amp; label pojok — bukan di cover); garis hias &amp; sub-info tetap gaya bawaan. OTOMATIS = putih gading seperti sebelumnya.</div>
         <div class="lbl">POSISI PART — KIRI ⬅ ➡ KANAN <b id="partXV">TENGAH</b></div>
         <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
         <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>

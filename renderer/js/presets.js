@@ -65,8 +65,9 @@ function captureSettings() {
   /* state tanpa kontrol DOM */
   d.state.neonColor = state.neon.color;
   d.state.trackColor = state.track.color;
+  d.state.partColor = state.partColor || '';   /* v3.27: warna tulisan part ('' = OTOMATIS) */
   /* hitung jumlah setelan utk metadata */
-  d._n = Object.keys(d.segs).length + Object.keys(d.chips).length + Object.keys(d.checks).length + Object.keys(d.vals).length + 2;
+  d._n = Object.keys(d.segs).length + Object.keys(d.chips).length + Object.keys(d.checks).length + Object.keys(d.vals).length + 3;
   return d;
 }
 
@@ -120,6 +121,12 @@ function applySettingsData(d) {
       $$('#trackColors button').forEach(b => {
         b.classList.toggle('on', (b.style.background || '').includes(String(d.state.trackColor).replace('#', '')));
       });
+    }
+    /* v3.27: warna tulisan part — '' berarti OTOMATIS (kembali putih gading) */
+    if (d.state && typeof d.state.partColor === 'string') {
+      state.partColor = d.state.partColor;
+      if (typeof syncPartColorV === 'function') syncPartColorV();
+      applied++;
     }
   } catch (e) { }
   /* 7) refresh global */

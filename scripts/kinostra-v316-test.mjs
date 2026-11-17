@@ -110,7 +110,8 @@ try {
       prevBtnLama: qa('#m8 #btnSampul').length
     };
   })()`);
-  ok('Header bertanda v3.16.0', /v3\.16\.0/.test(a.tag), JSON.stringify(a.tag));
+  /* v3.27: agnostik versi — dulu terikat v3.16.0 (pecah tiap bump) */
+  ok('Header bertanda versi DESKTOP (agnostik)', /DESKTOP v\d+\.\d+\.\d+/.test(a.tag), JSON.stringify(a.tag));
   ok(`Panel berisi 17 modul (terjadi: ${a.nMods})`, a.nMods === 17, String(a.nMods));
   ok('Penomoran 00-16 berurutan tanpa loncat', a.nos.join(',') === Array.from({ length: 17 }, (_, i) => String(i).padStart(2, '0')).join(','), a.nos.join(','));
   ok('Semua header modul punya ikon (17 svg)', a.icons.every(Boolean), JSON.stringify(a.icons));
@@ -270,6 +271,9 @@ try {
       loadFromPath('${MEDIA}/batch-test-1.mp4', true),
       new Promise(r => setTimeout(() => r('TIMEOUT-MUAT'), 60000))
     ]);
+    /* v3.27: tunggu meta benar-benar siap (dulu balapan → state.file null
+       saat ekspor → "reading 'virtual'" — flaky, bukan bug aplikasi) */
+    for (let i = 0; i < 45 && !(state.duration > 0); i++) await new Promise(r => setTimeout(r, 1000));
     /* wiring tombol jalur UI baru — harus terpasang (fungsi, bukan null) */
     const wiring = {
       export: typeof document.querySelector('#btnExport').onclick === 'function',

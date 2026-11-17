@@ -660,3 +660,14 @@ Laporan user: ekspor & split berhenti — "GAGAL: render berhenti merespon 45 de
 - Bump 6 file (scripts/bump-v3261.py).
 
 - RILIS v3.26.1 SELESAI (source ter-push dulu, commit bd3b1eb): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.26.1.exe 91,4 MB · KINOSTRA-Portable-3.26.1-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.26.1. Saran utk mesin yang GAGAL: pasang → OPTIMASI sekali → buka ulang (cache GPU terjadwalkan terbersihkan) → ekspor lagi; bila masih beku, kini jatuh otomatis ke software tanpa nunggu 45 dtk.
+
+## v3.27.0 — MODUL 03: UKURAN TULISAN PART SAMPAI 10% + WARNA BEBAS (2026-11-17)
+
+Permintaan user: (1) slider ukuran tulisan part bisa sampai 10% (dulu minimal 50%), (2) warna tulisan part bisa diganti.
+
+- UKURAN: min slider 0.5 → 0.1 (index.html) + clamp compose.js/_sP 0.1–2.5 + clamp handler ui.js + komentar core.js; garis hias/sub-info/animasi tetap proporsional (mesin skala v3.14 _sP dipakai penuh).
+- WARNA: state.partColor ('' = OTOMATIS #F2F0EA) → compose.js menimpa fillStyle teks di KEDUA mode (intro 112px & pojok 46px); garis hias amber & sub-info tetap bawaan. UI: input type=color #inPartColor + tombol OTOMATIS (#btnPartColorAuto) + label #partColorV (syncPartColorV).
+- Preset: captureSettings d.state.partColor (+_n 2→3) & applySettingsData memulihkan (pola neonColor/trackColor); nativeOverlaySig + partColor → overlay native gambar ulang saat warna berubah.
+- UJI BARU scripts/kinostra-v327-test.mjs 12/12: slider min 0.1, warna merah+label+OTOMATIS, pixel-DIFF intro 100% (2716 px berubah) & 10% (menyusut >30×), garis hias tetap amber, pojok merah skala 10%, preset roundtrip, native sig beda, ekspor nyata 1 part (10%+merah) tanpa fatal + file >50 KB. Metode pixel-DIFF (render A vs B) kebal polusi warna video latar — dua kali salah urutan set state di skrip uji sendiri sebelum benar.
+- Regresi: v314 22/22 (aseri header dibuat agnostik versi + kontrak slider min kini 0.1), maintenance 14/14, frame 6/6, overlay 6/6, ekspor v3.26.1 7/7. v316 22/24 — 2 gagal = flake muat seksi E (dur 0) yang ada sebelum perubahan: probe terisolasi + probe mimik C+D keduanya lulus di build kini; suite tak dirawat sejak v3.16 (aseri header terikat versi, media batch-test-1.mp4 hilang sejak daur ulang — kini dibuat ulang + dicatat di buat-longtestmedia.sh).
+- Bump 6 file (scripts/bump-v3270.py).

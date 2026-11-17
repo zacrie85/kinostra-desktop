@@ -9,3 +9,6 @@ for spec in "120 7200" "240 14400"; do
     -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 42 -c:a aac -b:a 32k -ac 1 -shortest testmedia/long$1.mp4
 done
 ls -la testmedia/long*.mp4
+
+# v3.27: batch-test-1.mp4 (20 dtk) — media uji v315/v316 yang dulu tak dilacak
+ffmpeg -y -loglevel error -f lavfi -i "testsrc2=size=640x360:rate=24:duration=20" -f lavfi -i "sine=frequency=440:duration=20" -c:v libx264 -preset veryfast -crf 30 -pix_fmt yuv420p -c:a aac -shortest testmedia/batch-test-1.mp4
