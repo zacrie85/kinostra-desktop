@@ -110,7 +110,7 @@ try {
     state.titleOn = true; state.title = 'PETUALANGAN GUNUNG'; state.titleSize = 40; state.titlePosY = 0;
     state.partShow = 'off'; state.descOn = false; state.subsOn = false;
     const per = {};
-    for (const f of TITLEFRAMES) {
+    for (const f of TITLEFRAMES.filter(f => f.k !== 'png')) {   /* v3.34: kunci 'png' = frame manual, diuji khusus di v334 */
       if (f.k === 'off') continue;
       state.titleFrame = 'off';
       drawComposition(xa, W, H, 5.0, { native: false });
@@ -137,7 +137,7 @@ try {
     state.partShow = 'intro'; state.partAnim = 'off'; state.partPrefix = 'PART';
     state.partSize = 0.6; state.partColor = ''; state.titleOn = false; state.descOn = false;
     const per = {};
-    for (const f of PARTFRAMES) {
+    for (const f of PARTFRAMES.filter(f => f.k !== 'png')) {   /* v3.34: kunci 'png' = frame manual, diuji khusus di v334 */
       if (f.k === 'off') continue;
       state.partFrame = 'off';
       drawComposition(xa, W, H, 0.3, { native: false });

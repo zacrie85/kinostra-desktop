@@ -84,7 +84,7 @@ try {
 
   /* 1 — aplikasi hidup & label versi v3.33.0 */
   const ver = await evalRetry(cdp, `document.querySelector('.tag') ? document.querySelector('.tag').innerText : ''`, 10000);
-  ok('Aplikasi hidup + label versi v3.33.0', /v3\.33\.0/.test(ver || ''), (ver || '').slice(0, 50));
+  ok('Aplikasi hidup + label versi terkini (v3.34+)', /v3\.3[4-9]\.0/.test(ver || ''), (ver || '').slice(0, 50));
 
   /* 2 — buka modul 02 & pastikan menu frame part ada */
   const buka = await evalRetry(cdp, `(() => {
