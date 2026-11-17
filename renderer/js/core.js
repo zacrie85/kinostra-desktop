@@ -126,7 +126,10 @@ const TITLEFRAMES = [
   { k: 'kristal', n: 'KRISTAL BENING', d: 'Kurungan sudut putih tipis panjang + kilau garis atas — elegan transparan' },
   { k: 'bening', n: 'GARIS BENING', d: 'Hairline putih membulat + berlian kecil di kiri-kanan judul' },
   { k: 'mewah', n: 'MEWAH BENING', d: 'Kaca transparan + hairline emas di dalam — mewah tanpa berat' },
-  { k: 'etere', n: 'ETERE', d: 'Gradasi putih pudar kiri-kanan + garis pusat halus — ringan seperti kabut' }
+  { k: 'etere', n: 'ETERE', d: 'Gradasi putih pudar kiri-kanan + garis pusat halus — ringan seperti kabut' },
+  /* v3.34: FRAME MANUAL — gambar PNG/JPG pilihan sendiri sbg bingkai judul;
+     posisi digeser & ukuran ditarik langsung di pratinjau (atau lewat angka) */
+  { k: 'png', n: 'PNG/JPG SENDIRI', d: 'Pakai gambar sendiri (PNG/JPG) sbg bingkai judul — posisi & ukuran bebas diatur (geser/tarik/angka)' }
 ];
 
 /* ================================================================
@@ -152,7 +155,10 @@ const PARTFRAMES = [
   { k: 'sinar', n: 'SINAR SAMPING', d: 'Gradasi putih pudar kiri-kanan di belakang teks' },
   { k: 'jaring', n: 'JARING TITIK', d: 'Bingkai putus-putus halus (dot grid)' },
   { k: 'murni', n: 'GARIS MURNI', d: 'Satu garis bawah tipis + notch tengah — paling minimal' },
-  { k: 'berkas', n: 'BERKAS CAHAYA', d: 'Kaca tipis + garis cahaya memudar di bawah teks' }
+  { k: 'berkas', n: 'BERKAS CAHAYA', d: 'Kaca tipis + garis cahaya memudar di bawah teks' },
+  /* v3.34: FRAME MANUAL — gambar PNG/JPG pilihan sendiri sbg bingkai part;
+     posisi digeser & ukuran ditarik langsung di pratinjau (atau lewat angka) */
+  { k: 'png', n: 'PNG/JPG SENDIRI', d: 'Pakai gambar sendiri (PNG/JPG) sbg bingkai part — posisi & ukuran bebas diatur (geser/tarik/angka)' }
 ];
 
 const state = {
@@ -180,6 +186,12 @@ const state = {
   titlePosY: 0, partPosX: 0, partPosY: 0,
   /* v3.9: FRAME JUDUL DI VIDEO — kunci TITLEFRAMES (default 'off' = gaya lama) */
   titleFrame: 'off',
+  /* v3.34: FRAME MANUAL PNG/JPG — gambar pilihan sendiri sbg bingkai;
+     rect = fraksi ukuran video (x,y = pojok kiri-atas; w,h = lebar/tinggi)
+     → bebas resolusi output (pratinjau = ekspor persis). data = base64
+     (dipakai ulang saat buka aplikasi & preset); el = <img> siap gambar. */
+  titleImg: { data: null, name: '', x: 0.30, y: 0.04, w: 0.40, h: 0.14, el: null },
+  partImg:  { data: null, name: '', x: 0.28, y: 0.80, w: 0.44, h: 0.11, el: null },
   /* v3.11: ANIMASI MASUK JUDUL & PART DI VIDEO — katalog NCTEXTANIMS
      (fade, rise, typewriter, slam, neon, tracking, glitch, wipe)
      port dari NOVACUT Studio — judul/label masuk dengan animasi di

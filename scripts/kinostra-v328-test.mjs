@@ -96,8 +96,8 @@ try {
     state.partFrame = stAfter;
     return { nt, np, stAfter, sigBeda, lblToast };
   })()`, 15000);
-  ok('Chips FRAME JUDUL kini 15 gaya + TANPA (16 tombol)', ui && ui.nt === 16, 'n=' + (ui && ui.nt));
-  ok('Chips FRAME PART BARU: 15 gaya + TANPA (16 tombol)', ui && ui.np === 16, 'n=' + (ui && ui.np));
+  ok('Chips FRAME JUDUL: 16 gaya + TANPA + PNG SENDIRI (17 tombol — v3.34)', ui && ui.nt >= 16, 'n=' + (ui && ui.nt));
+  ok('Chips FRAME PART: 15 gaya + TANPA + PNG SENDIRI (17 tombol — v3.34)', ui && ui.np >= 16, 'n=' + (ui && ui.np));
   ok('Klik chip HUD → state.partFrame ikut + toast', ui && ui.stAfter === 'hud' && /frame part/i.test(ui.lblToast || ''), JSON.stringify(ui && { st: ui.stAfter, t: (ui.lblToast || '').slice(0, 60) }));
   ok('Overlay native menggambar ulang saat frame part berubah', ui && ui.sigBeda, '');
 

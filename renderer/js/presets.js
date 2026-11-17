@@ -66,6 +66,13 @@ function captureSettings() {
   d.state.neonColor = state.neon.color;
   d.state.trackColor = state.track.color;
   d.state.partColor = state.partColor || '';   /* v3.27: warna tulisan part ('' = OTOMATIS) */
+  /* v3.34: frame manual PNG/JPG — rect + nama + data base64 (≤ 400 KB agar
+     localStorage preset aman; gambar lebih besar → rect & nama saja) */
+  for (const k of ['titleImg', 'partImg']) {
+    const v = state[k]; if (!v) continue;
+    d.state[k] = { x: v.x, y: v.y, w: v.w, h: v.h, name: v.name || '',
+      data: (v.data && v.data.length <= 400000) ? v.data : null };
+  }
   /* hitung jumlah setelan utk metadata */
   d._n = Object.keys(d.segs).length + Object.keys(d.chips).length + Object.keys(d.checks).length + Object.keys(d.vals).length + 3;
   return d;
@@ -128,11 +135,23 @@ function applySettingsData(d) {
       if (typeof syncPartColorV === 'function') syncPartColorV();
       applied++;
     }
+    /* v3.34: frame manual PNG/JPG — rect langsung + gambar dimuat ulang async */
+    for (const k of ['titleImg', 'partImg']) {
+      const v = d.state && d.state[k];
+      if (v && typeof v.x === 'number') {
+        Object.assign(state[k], { x: v.x, y: v.y, w: v.w, h: v.h, name: v.name || '' });
+        if (v.data && typeof loadFrameImgData === 'function') {
+          loadFrameImgData(k, v.name || 'gambar', v.data);
+        }
+        applied++;
+      }
+    }
   } catch (e) { }
   /* 7) refresh global */
   try { if (typeof applyRatio === 'function') applyRatio(); } catch (e) { }
   try { if (typeof updateAll === 'function') updateAll(); } catch (e) { }
   try { if (typeof syncCoverUI === 'function') syncCoverUI(); } catch (e) { }
+  try { if (typeof syncFrameImgUI === 'function') syncFrameImgUI(); } catch (e) { }
   return applied;
 }
 

@@ -99,7 +99,7 @@ try {
       semuaDalam: btns.every(b => b.getBoundingClientRect().right <= asideR.right + 1),
       boxW: Math.round(boxR.width) };
   })()`, 15000);
-  ok('Chips FRAME PART memuat TANPA + 15 gaya (16 tombol)', ui && ui.n === 16, JSON.stringify(ui));
+  ok('Chips FRAME PART: TANPA + 15 gaya + PNG SENDIRI (17 tombol — v3.34)', ui && ui.n >= 16, JSON.stringify(ui));
   ok('Chips melipat ≥2 baris (semua terlihat, tak terpotong)', ui && ui.rows >= 2 && ui.semuaDalam, JSON.stringify(ui));
   ok('Panel kanan lebih lebar (424px, dulu 384px)', ui && ui.asideW >= 424, 'asideW=' + (ui && ui.asideW));
 

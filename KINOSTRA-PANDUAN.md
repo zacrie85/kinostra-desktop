@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.33.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.34.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,19 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.34.0 — FRAME MANUAL PNG/JPG SENDIRI (geser & tarik langsung di pratinjau)
+
+Permintaan kawan: **"bisa masukkan frame/PNG/JPG secara manual untuk frame judul & episode/part, besar-kecilnya diatur panjang-pendek dan tinggi-rendah, framenya bisa klik-tahan-geser kemanapun dan ditarik kiri-kanan-atas-bawah"**. Sekarang ada di KINOSTRA:
+
+- **Pilih gambar sendiri**: di menu FRAME PART DI VIDEO & FRAME JUDUL DI VIDEO ada gaya baru **PNG/JPG SENDIRI** (17 pilihan per menu). Klik gaya itu → panel muncul → tombol **PILIH GAMBAR (PNG/JPG)** — PNG transparan paling pas untuk bingkai; JPG/WebP/SVG juga bisa.
+- **Geser posisi**: di PRATINJAU muncul kotak putus-putus amber. **Klik-tahan badan kotak lalu geser ke mana saja** — posisi ikut jari.
+- **Tarik ukuran**: **tarik pegangan di tepi kiri/kanan/atas/bawah** kotak untuk mengatur lebar & tinggi persis seperti diminta. Bingkai selalu terkampas di dalam layar (tidak bisa keluar).
+- **Atur lewat angka**: POSISI X / POSISI Y / LEBAR / TINGGI (%) bisa diisi manual — sinkron dua-arah dengan geser-tarik. Tombol **POSISI AWAL** mengembalikan posisi bawaan.
+- **Teks tetap di atas**: gambar dipasang di belakang tulisan judul/part (bumper intro & label pojok), ikut animasi masuk, dan **pratinjau = hasil ekspor persis** (satu mesin gambar). Ukuran memakai persen layar — bebas resolusi output (720p s/d 4K hasilnya serupa).
+- **Ikut preset**: SIMPAN/PAKAI preset memuat posisi, ukuran, dan gambarnya; setelan bertahan antar sesi. Mode PNG ikut dihitung efek di gerbang POTONG LANGSUNG (otomatis RENDER PENUH).
+
+Diuji otomatis **15/15 lulus** di aplikasi nyata: katalog 17+17 chip, muat gambar otomatis mengaktifkan mode, kotak = posisi persis, gambar terukur tergambar di rect (jalur PART intro & JUDUL), geser + tarik 4 tepi + kampas layar + input angka + preset + **ekspor nyata MP4** dengan kedua bingkai PNG. Regresi 11 suite lama dijalankan ulang.
 
 ## Yang Baru di v3.33.0 — MENU FRAME DILEBARKAN (semua gaya terlihat & terbaca)
 

@@ -12,14 +12,14 @@
 <div id="boot">
   <div class="blogo">KINO<b>STRA</b></div>
   <div class="bline"></div>
-  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.33.0 · MESIN LOKAL</div>
+  <div class="bsub">SUITE VIDEO OTONOM · DESKTOP v3.34.0 · MESIN LOKAL</div>
 </div>
 
 <header>
   <div class="brand">
     <div class="blk"></div>
     <div class="wm">KINOSTRA</div>
-    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.33.0</div>
+    <div class="tag">SUITE VIDEO OTONOM · DESKTOP v3.34.0</div>
   </div>
   <div class="top-r">
     <div class="chip ok" id="chipOffline">100% OFFLINE</div>
@@ -198,6 +198,23 @@
         <div class="lbl">FRAME PART DI VIDEO — 15 GAYA FUTURISTIK TRANSPARAN</div>
         <div class="chips names" id="partFrameChips"></div>
         <div class="note">Hiasan futuristik transparan di sekeliling tulisan PART (bumper intro &amp; label pojok — bukan di cover); ikut skala ukuran part &amp; pratinjau = ekspor persis.</div>
+        <div id="partImgPanel" style="display:none">
+          <div class="lbl" style="margin-top:4px">GAMBAR BINGKAI PART — PNG/JPG SENDIRI</div>
+          <div class="row">
+            <button class="btn" id="btnPiImgPick"><i data-lucide="image-plus"></i> PILIH GAMBAR (PNG/JPG)</button>
+          </div>
+          <div class="substat" id="piImgName" style="margin-top:4px">BELUM ADA GAMBAR — dipakai sebagai bingkai di belakang tulisan PART</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:6px">
+            <div><div class="substat" style="margin-bottom:3px">POSISI X — KIRI (%)</div><input type="number" class="in mono" id="inPiX" min="0" max="100" step="0.5" value="28" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">POSISI Y — ATAS (%)</div><input type="number" class="in mono" id="inPiY" min="0" max="100" step="0.5" value="80" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">LEBAR (%)</div><input type="number" class="in mono" id="inPiW" min="1" max="100" step="0.5" value="44" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">TINGGI (%)</div><input type="number" class="in mono" id="inPiH" min="1" max="100" step="0.5" value="11" style="padding:6px 9px"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn sm" id="btnPiImgReset"><i data-lucide="rotate-ccw"></i> POSISI AWAL</button>
+          </div>
+          <div class="note">Di PRATINJAU: <b>klik-tahan-geser</b> gambar ke mana saja, <b>tarik tepi kiri/kanan/atas/bawah</b> untuk atur lebar &amp; tinggi — atau isi angka di atas. Ukuran dalam % layar; pratinjau = ekspor persis.</div>
+        </div>
         <div class="lbl">POSISI PART — KIRI ⬅ ➡ KANAN <b id="partXV">TENGAH</b></div>
         <input type="range" id="inPartX" min="-1" max="1" step="0.05" value="0">
         <div class="lbl">POSISI PART — ATAS ⬆ ⬇ BAWAH <b id="partYV">TENGAH</b></div>
@@ -206,6 +223,23 @@
         <input type="range" id="inTitleY" min="-1" max="1" step="0.05" value="0">
         <div class="lbl">FRAME JUDUL DI VIDEO — 15 GAYA</div>
         <div class="chips names" id="titleFrameChips"></div>
+        <div id="titleImgPanel" style="display:none">
+          <div class="lbl" style="margin-top:4px">GAMBAR BINGKAI JUDUL — PNG/JPG SENDIRI</div>
+          <div class="row">
+            <button class="btn" id="btnTiImgPick"><i data-lucide="image-plus"></i> PILIH GAMBAR (PNG/JPG)</button>
+          </div>
+          <div class="substat" id="tiImgName" style="margin-top:4px">BELUM ADA GAMBAR — dipakai sebagai bingkai di belakang tulisan judul</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:6px">
+            <div><div class="substat" style="margin-bottom:3px">POSISI X — KIRI (%)</div><input type="number" class="in mono" id="inTiX" min="0" max="100" step="0.5" value="30" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">POSISI Y — ATAS (%)</div><input type="number" class="in mono" id="inTiY" min="0" max="100" step="0.5" value="4" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">LEBAR (%)</div><input type="number" class="in mono" id="inTiW" min="1" max="100" step="0.5" value="40" style="padding:6px 9px"></div>
+            <div><div class="substat" style="margin-bottom:3px">TINGGI (%)</div><input type="number" class="in mono" id="inTiH" min="1" max="100" step="0.5" value="14" style="padding:6px 9px"></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn sm" id="btnTiImgReset"><i data-lucide="rotate-ccw"></i> POSISI AWAL</button>
+          </div>
+          <div class="note">Di PRATINJAU: <b>klik-tahan-geser</b> gambar ke mana saja, <b>tarik tepi kiri/kanan/atas/bawah</b> untuk atur lebar &amp; tinggi — atau isi angka di atas. Bingkai di belakang tulisan judul; pratinjau = ekspor persis.</div>
+        </div>
         <div class="lbl">ANIMASI MASUK JUDUL — 8 GAYA NOVACUT</div>
         <div class="seg wrap" id="segTitleAnim">
           <button data-v="off" class="on">TANPA</button><button data-v="fade">FADE</button><button data-v="rise">RISE UP</button><button data-v="typewriter">TYPEWRITER</button><button data-v="slam">TITLE SLAM</button><button data-v="neon">NEON FLICKER</button><button data-v="tracking">TRACKING</button><button data-v="glitch">GLITCH</button><button data-v="wipe">WIPE</button>

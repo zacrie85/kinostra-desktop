@@ -116,6 +116,7 @@ syncPartSizeV(); syncPartColorV();
     state.titleFrame = b.dataset.v;
     const cat = TITLEFRAMES.find(f => f.k === state.titleFrame);
     toast(`Frame judul di video: ${cat ? cat.n : 'TANPA'}`, 'ok');
+    if (typeof syncFrameImgUI === 'function') syncFrameImgUI();   /* v3.34: tampil/sembunyi panel & kotak geser */
   });
 })();
 
@@ -131,6 +132,7 @@ syncPartSizeV(); syncPartColorV();
     state.partFrame = b.dataset.v;
     const cat = PARTFRAMES.find(f => f.k === state.partFrame);
     toast(`Frame part di video: ${cat ? cat.n : 'TANPA'}`, 'ok');
+    if (typeof syncFrameImgUI === 'function') syncFrameImgUI();   /* v3.34: tampil/sembunyi panel & kotak geser */
   });
 })();
 
@@ -1477,6 +1479,9 @@ function nativeOverlaySig(t) {
     state.titleOn, state.title, state.titleSize, state.titleScale, state.titlePosY, state.upper, state.titleFrame, state.titleAnim,
     state.descOn, state.desc, state.descSize, state.descPosY, state.descPos,
     state.subsOn, state.subScale, state.subPosY, state.splitSec, state.speed,
+    /* v3.34: frame manual ikut tanda tangan — geser/tarik/angka menggambar ulang */
+    state.titleFrame === 'png' && state.titleImg ? [state.titleImg.x, state.titleImg.y, state.titleImg.w, state.titleImg.h, state.titleImg.name].join(',') : '',
+    state.partFrame === 'png' && state.partImg ? [state.partImg.x, state.partImg.y, state.partImg.w, state.partImg.h, state.partImg.name].join(',') : '',
     state.vfx && state.vfx.vignette, state.frameStyle, FSTs ? FSTs.k : null,
     state.bgMode, state.ratio].join('|');
 }
@@ -1589,3 +1594,144 @@ try {
 $('#chipCodec').textContent = 'VideoEncoder' in window ? 'WEBCODECS AKTIF' : 'WEBCODECS TIDAK ADA';
 $('#chipCodec').classList.add('VideoEncoder' in window ? 'ok' : 'bad');
 if (window.lucide) lucide.createIcons();
+
+/* ================================================================
+   v3.34 — FRAME MANUAL PNG/J (judul & part): pakai gambar sendiri
+   sebagai bingkai. Posisi digeser (klik-tahan di pratinjau), lebar/
+   tinggi ditarik dari tepi kiri/kanan/atas/bawah, atau diisi angka.
+   Semua disimpan sbg FRAKSI layar video (state.titleImg/partImg:
+   x,y = pojok kiri-atas; w,h = ukuran, 0..1) → bebas resolusi output
+   & pratinjau = ekspor persis (drawImgFrame — compose.js).
+   ================================================================ */
+function frameImgMime(nm) {
+  const e = (nm || '').toLowerCase().split('.').pop();
+  return e === 'jpg' || e === 'jpeg' ? 'image/jpeg' : e === 'webp' ? 'image/webp' : e === 'svg' ? 'image/svg+xml' : 'image/png';
+}
+/* muat data base64 → <img> siap gambar di state (pick, preset & uji) */
+function loadFrameImgData(target, name, b64) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const d = state[target];
+      d.data = b64; d.name = name || 'gambar'; d.el = img;
+      /* pilih gambar otomatis mengaktifkan mode PNG/JPG SENDIRI (chip ikut) */
+      if (target === 'titleImg' && state.titleFrame !== 'png') {
+        state.titleFrame = 'png';
+        $$('#titleFrameChips button').forEach(x => x.classList.toggle('on', x.dataset.v === 'png'));
+      }
+      if (target === 'partImg' && state.partFrame !== 'png') {
+        state.partFrame = 'png';
+        $$('#partFrameChips button').forEach(x => x.classList.toggle('on', x.dataset.v === 'png'));
+      }
+      syncFrameImgUI();
+      res(true);
+    };
+    img.onerror = () => { toast('Gambar tidak bisa dibaca', 'err'); res(false); };
+    img.src = 'data:' + frameImgMime(name) + ';base64,' + b64;
+  });
+}
+let _frmStage = null;
+function syncFrameImgUI() {
+  const st = state.titleImg || {}, sp = state.partImg || {};
+  const bT = $('#frmTi'), bP = $('#frmPi');
+  const onT = state.titleFrame === 'png', onP = state.partFrame === 'png';
+  if (bT) { bT.style.display = onT ? '' : 'none'; if (onT) { bT.style.left = (st.x * 100) + '%'; bT.style.top = (st.y * 100) + '%'; bT.style.width = (st.w * 100) + '%'; bT.style.height = (st.h * 100) + '%'; } }
+  if (bP) { bP.style.display = onP ? '' : 'none'; if (onP) { bP.style.left = (sp.x * 100) + '%'; bP.style.top = (sp.y * 100) + '%'; bP.style.width = (sp.w * 100) + '%'; bP.style.height = (sp.h * 100) + '%'; } }
+  const pT = $('#titleImgPanel'), pP = $('#partImgPanel');
+  if (pT) pT.style.display = onT ? '' : 'none';
+  if (pP) pP.style.display = onP ? '' : 'none';
+  const nT = $('#tiImgName'), nP = $('#piImgName');
+  if (nT) nT.textContent = st.data ? ('GAMBAR SIAP: ' + st.name) : 'BELUM ADA GAMBAR — dipakai sebagai bingkai di belakang tulisan judul';
+  if (nP) nP.textContent = sp.data ? ('GAMBAR SIAP: ' + sp.name) : 'BELUM ADA GAMBAR — dipakai sebagai bingkai di belakang tulisan PART';
+  /* 4 angka ikut rect (yang sedang difokus tidak ditimpa saat mengetik) */
+  [['titleImg', ['inTiX', 'inTiY', 'inTiW', 'inTiH']], ['partImg', ['inPiX', 'inPiY', 'inPiW', 'inPiH']]].forEach(([k, ids]) => {
+    const d = state[k];
+    const vals = [d.x, d.y, d.w, d.h].map(v => Math.round(v * 1000) / 10);
+    ids.forEach((id, i) => { const el = document.getElementById(id); if (el && document.activeElement !== el) el.value = vals[i]; });
+  });
+  /* paksa pratinjau menggambar ulang (jalur native & jalur kanvas, saat pause) */
+  try { _natNeed = true; _lastDrawT = -1; _lastDrawAt = 0; } catch (e) { }
+}
+(function initFrameDrag() {
+  const stage = $('#stage');
+  if (!stage || $('#frameDragLayer')) return;
+  _frmStage = stage;
+  const layer = document.createElement('div');
+  layer.id = 'frameDragLayer';
+  const boxHTML = id => `<div class="frmbox" id="${id}" style="display:none">
+    <span class="flbl">BINGKAI — GESER / TARIK TEPI</span>
+    <span class="fh fh-n" data-m="n"></span><span class="fh fh-s" data-m="s"></span>
+    <span class="fh fh-e" data-m="e"></span><span class="fh fh-w" data-m="w"></span></div>`;
+  layer.innerHTML = boxHTML('frmTi') + boxHTML('frmPi');
+  stage.appendChild(layer);
+  const MIN = 0.02;
+  const bindNum = (stKey, id, K) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.addEventListener('input', () => {
+      const d = state[stKey];
+      let v = parseFloat(el.value);
+      if (!isFinite(v)) return;
+      v = clamp(v, 0, 100) / 100;
+      if (K === 'x') d.x = Math.min(v, 1 - d.w);
+      else if (K === 'y') d.y = Math.min(v, 1 - d.h);
+      else if (K === 'w') d.w = Math.min(v, 1 - d.x);
+      else if (K === 'h') d.h = Math.min(v, 1 - d.y);
+      syncFrameImgUI();
+    });
+  };
+  const bindDrag = stKey => {
+    const box = document.getElementById(stKey === 'titleImg' ? 'frmTi' : 'frmPi');
+    if (!box) return;
+    let drag = null;
+    box.addEventListener('pointerdown', ev => {
+      if (ev.button !== undefined && ev.button !== 0) return;
+      const st = stage.getBoundingClientRect();
+      drag = { m: (ev.target.dataset && ev.target.dataset.m) || 'move',
+        px: ev.clientX, py: ev.clientY, d0: { x: state[stKey].x, y: state[stKey].y, w: state[stKey].w, h: state[stKey].h },
+        sw: st.width, sh: st.height };
+      box.classList.add('drag');
+      try { box.setPointerCapture(ev.pointerId); } catch (e) { }
+      ev.preventDefault();
+    });
+    box.addEventListener('pointermove', ev => {
+      if (!drag) return;
+      const dx = (ev.clientX - drag.px) / (drag.sw || 1);
+      const dy = (ev.clientY - drag.py) / (drag.sh || 1);
+      const d0 = drag.d0, d = { x: d0.x, y: d0.y, w: d0.w, h: d0.h };
+      if (drag.m === 'move') {
+        d.x = clamp(d0.x + dx, 0, 1 - d0.w);
+        d.y = clamp(d0.y + dy, 0, 1 - d0.h);
+      } else {
+        if (drag.m.includes('e')) d.w = clamp(d0.w + dx, MIN, 1 - d0.x);
+        if (drag.m.includes('w')) { const x = clamp(d0.x + dx, 0, d0.x + d0.w - MIN); d.x = x; d.w = d0.x + d0.w - x; }
+        if (drag.m.includes('s')) d.h = clamp(d0.h + dy, MIN, 1 - d0.y);
+        if (drag.m.includes('n')) { const y = clamp(d0.y + dy, 0, d0.y + d0.h - MIN); d.y = y; d.h = d0.y + d0.h - y; }
+      }
+      Object.assign(state[stKey], d);
+      syncFrameImgUI();
+    });
+    const up = () => {
+      if (!drag) return;
+      drag = null; box.classList.remove('drag');
+      toast(stKey === 'titleImg' ? 'Bingkai judul: posisi & ukuran tersimpan' : 'Bingkai part: posisi & ukuran tersimpan', 'ok');
+    };
+    box.addEventListener('pointerup', up);
+    box.addEventListener('pointercancel', up);
+  };
+  const pickFrameImg = async stKey => {
+    if (!window.kinostra || !window.kinostra.pickWatermark) { toast('Dialog file tidak tersedia', 'err'); return; }
+    const r = await window.kinostra.pickWatermark();
+    if (!r) return;
+    const okL = await loadFrameImgData(stKey, r.name, r.data);
+    if (okL) toast('Gambar bingkai dimuat: ' + r.name, 'ok');
+  };
+  $('#btnTiImgPick').onclick = () => pickFrameImg('titleImg');
+  $('#btnPiImgPick').onclick = () => pickFrameImg('partImg');
+  $('#btnTiImgReset').onclick = () => { Object.assign(state.titleImg, { x: 0.30, y: 0.04, w: 0.40, h: 0.14 }); syncFrameImgUI(); toast('Bingkai judul kembali ke posisi awal', 'ok'); };
+  $('#btnPiImgReset').onclick = () => { Object.assign(state.partImg, { x: 0.28, y: 0.80, w: 0.44, h: 0.11 }); syncFrameImgUI(); toast('Bingkai part kembali ke posisi awal', 'ok'); };
+  [['titleImg', 'inTiX', 'x'], ['titleImg', 'inTiY', 'y'], ['titleImg', 'inTiW', 'w'], ['titleImg', 'inTiH', 'h'],
+   ['partImg', 'inPiX', 'x'], ['partImg', 'inPiY', 'y'], ['partImg', 'inPiW', 'w'], ['partImg', 'inPiH', 'h']]
+    .forEach(([k, id, K]) => bindNum(k, id, K));
+  bindDrag('titleImg'); bindDrag('partImg');
+  syncFrameImgUI();
+})();

@@ -288,7 +288,9 @@ function drawComposition(x, W, H, t, opts) {
       /* v3.28: FRAME PART — hiasan futuristik transparan di sekeliling teks
          part (katalog PARTFRAMES); digambar sebelum teks & ikut alpha intro;
          lebar teks diukur dulu supaya bingkainya pas (font sudah di-set) */
-      if (state.partFrame && state.partFrame !== 'off') {
+      if (state.partFrame === 'png' && state.partImg && state.partImg.data) {
+        drawImgFrame(x, W, H, state.partImg);   /* v3.34: bingkai gambar sendiri */
+      } else if (state.partFrame && state.partFrame !== 'off') {
         const _pw = measureSpaced(x, _pTxt, 8 * u * _sP);
         drawPartFrame(x, W, H, state.partFrame, {
           cx, x0: cx - _pw / 2 - 18 * u * _sP, x1: cx + _pw / 2 + 18 * u * _sP,
@@ -317,7 +319,9 @@ function drawComposition(x, W, H, t, opts) {
     const _cTxt = `${state.partPrefix} ${String(seg + 1).padStart(2, '0')}`;
     /* v3.28: FRAME PART utk label pojok — membungkus strip amber + teks +
        counter (/total); digambar sebelum teks, ikut alpha animasi masuk */
-    if (state.partFrame && state.partFrame !== 'off') {
+    if (state.partFrame === 'png' && state.partImg && state.partImg.data) {
+      drawImgFrame(x, W, H, state.partImg);   /* v3.34: bingkai gambar sendiri (pojok) */
+    } else if (state.partFrame && state.partFrame !== 'off') {
       const _cw = measureSpaced(x, _cTxt, 3 * u * _sP);
       drawPartFrame(x, W, H, state.partFrame, {
         cx: px + 16 * u * _sP + _cw / 2,
@@ -388,7 +392,9 @@ function drawComposition(x, W, H, t, opts) {
         if (tA.dy) x.translate(0, tA.dy * H);
       }
       const tfKey = state.titleFrame || 'off';
-      if (tfKey !== 'off') {
+      if (tfKey === 'png' && state.titleImg && state.titleImg.data) {
+        drawImgFrame(x, W, H, state.titleImg);   /* v3.34: bingkai gambar sendiri */
+      } else if (tfKey !== 'off') {
         /* ukur lebar blok judul utk menggambar bingkai yang pas */
         let blkW = 0;
         for (const ln of lines) blkW = Math.max(blkW, measureSpaced(x, ln, ls));
@@ -606,6 +612,22 @@ function drawTitleFrame(x, W, H, key, b) {
     x.fillRect(bx0 + gw, by1 - lw(1.4), bw - gw * 2, lw(1.4));
   }
   x.restore();
+}
+
+/* ================================================================
+   v3.34 — FRAME MANUAL PNG/JPG utk JUDUL & PART (kunci 'png' di
+   katalog TITLEFRAMES/PARTFRAMES). Gambar pilihan sendiri digambar
+   UTUH pada rect fraksi video (state.titleImg / state.partImg:
+   x,y = pojok kiri-atas; w,h = lebar/tinggi, 0..1) — digeser & 
+   ditarik langsung di pratinjau lewat lapisan drag (ui.js) atau
+   diisi angka. Teks tetap digambar DI ATAS gambar (bingkai di
+   belakang); ikut alpha animasi masuk karena dipanggil setelah
+   globalAlpha diset di blok judul/part. Datar (stretch) sesuai
+   lebar & tinggi yang dipilih — pratinjau = ekspor persis.
+   ================================================================ */
+function drawImgFrame(x, W, H, d) {
+  if (!d || !d.el || !d.el.complete || !d.el.naturalWidth) return;
+  x.drawImage(d.el, d.x * W, d.y * H, d.w * W, d.h * H);
 }
 
 /* ================================================================
