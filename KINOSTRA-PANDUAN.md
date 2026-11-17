@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.29.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.30.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,19 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.30.0 — SUARA DIJAMIN IKUT + PANEL LEBAR (semua frame tampil)
+
+Dua upgrade atas laporan kawan di v3.29: "video berhasil di export dan split akan tetapi tidak ada suaranya" dan "frame part yang tampil di menu hanya 9, padahal ada 15".
+
+**1. Suara dijamin ikut — semua format video.** Akar masalah: bila sumber video berwadah **bukan MP4/AAC** (mis. WebM, MKV, FLV, atau MP3), pelacak audio internal tidak mengenal wadahnya → jalur audio dianggap tidak ada → hasil ekspor/split jalan **tanpa stream audio sama sekali**. Sekarang:
+- Setiap video selalu dianggap berpotensi bersuara — encoder audio selalu disiapkan.
+- Bila jalur demux AAC (hemat RAM) gagal, KINOSTRA otomatis jatuh ke **decode audio penuh ala v3.16** yang mengenal SEMUA format — persis proses yang dulu selalu bersuara.
+- Pelindung baru: bila hasil decode ternyata kosong (track rusak), buffer kosong tidak pernah dikirim — otomatis dicoba lewat jalur lain, bukan diekspor senyap.
+
+**2. Panel kanan lebih lebar + frame tampil semua.** Lebar panel setelan dinaikkan 384→**424px** dan baris pilihan frame kini **melipat ke baris berikutnya** — seluruh **16 tombol FRAME PART (TANPA + 15 gaya futuristik transparan)** terlihat dalam 2 baris, tidak ada lagi yang tersembunyi di tepi panel. Berlaku juga untuk pilihan frame judul, layout cover, palet & transisi.
+
+Diuji 9/9 (WebM 17 menit: impor tanpa buffer, ekspor PARALEL 5× dengan audio terukur tidak senyap, chips tampil semua) + seluruh regresi lama hijau.
 
 ## Yang Baru di v3.29.0 — EKSPOR & SPLIT KEMBALI KE PROSES v3.16.0 (FIX "encoding audio")
 

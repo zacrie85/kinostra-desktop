@@ -254,7 +254,29 @@ function withTimeout(p, ms, msg) {
    ================================================================ */
 async function ensureExportAudio(ui) {
   if (state.audioBuffer && state.audioBuffer.duration > 0.01) return true;
-  if (state.isAudio) return !!state.audioBuffer;   /* audio-only: buffer dari impor */
+  /* JALUR 1 (hemat RAM): demux AAC — hanya MP4/AAC */
+  if (await buildAudioBufferViaDemux(ui)) return true;
+  /* JALUR 2 (v3.16 verbatim — v3.30): decodeAudioData PENUH — SEMUA format
+     (MKV/WebM/FLV/MP3/WAV…) yang dulu membuat v3.16 selalu bersuara.
+     Demux (jalur 1) gagal utk wadah bukan MP4: probeAudio tidak mengenal
+     kotak MKV/WebM → buffer tak terbentuk → hasil ekspor SENYAP (laporan
+     user v3.29: "video berhasil diexport dan split akan tetapi tidak ada
+     suaranya"). Kini jatuh ke decode penuh seperti v3.16; pelindung RAM:
+     total perkiraan (file + audio ternomori) dijaga ≤ ±3,2 GB. */
+  try {
+    const estSec = state.duration || ((state.file.size || 0) / 16384);
+    const estNative = estSec * 48000 * 2 * 4;
+    if (estNative + (state.file.size || 0) > 3.2e9) {
+      toast('Audio film terlalu besar untuk decode penuh — ekspor lanjut tanpa suara asli', 'warn');
+      return false;
+    }
+    const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
+      : await state.file.arrayBuffer();
+    state.audioBuffer = await getActx().decodeAudioData(ab);
+    return !!(state.audioBuffer && state.audioBuffer.duration > 0.01);
+  } catch (e) { console.warn('siap-audio: decodeAudioData gagal —', e && e.message); return false; }
+}
+async function buildAudioBufferViaDemux(ui) {
   let pr = null;
   try { pr = await probeAudio(state.file); } catch (e) { pr = null; }
   if (!pr || !pr.info) { console.warn('siap-audio: probe gagal (bukan MP4/AAC?)'); return false; }
@@ -268,7 +290,7 @@ async function ensureExportAudio(ui) {
   const cache = { probe: pr };                     /* cache sendiri — terpisah dari analisis */
   const WIN = 120, epoch = state.mediaEpoch || 0;
   state._audioExporting = true;                    /* analisis latar menunggu — sopan */
-  let miss = 0, done = 0;
+  let miss = 0, done = 0, got = 0;
   try {
     for (let t = 0; t < buildEnd; t += WIN) {
       if (state.abort) throw new Error('Dibatalkan');
@@ -281,7 +303,7 @@ async function ensureExportAudio(ui) {
         for (let c = 0; c < chs; c++) {
           const src = wb.getChannelData(Math.min(c, wb.numberOfChannels - 1));
           const n = Math.min(src.length, totalN - off0);
-          if (n > 0) buf.copyToChannel(src.subarray(0, n), c, off0);
+          if (n > 0) { buf.copyToChannel(src.subarray(0, n), c, off0); if (c === 0) got += n; }
         }
       } else if (t + WIN < buildEnd) miss++;
       done += WIN;
@@ -289,6 +311,11 @@ async function ensureExportAudio(ui) {
       await new Promise(rr => setTimeout(rr, 10));   /* napas antar jendela */
     }
   } finally { state._audioExporting = false; }
+  /* v3.30: JANGAN pernah mengirim buffer HAMPIR KOSONG — dulu probe cocok
+     tetapi semua jendela gagal (decoder AAC tak tersedia/track rusak) →
+     buffer penuh NOL → ekspor "berhasil" tetapi senyap total. Kini dianggap
+     gagal → ensureExportAudio jatuh ke decodeAudioData (jalur 2). */
+  if (got < sr * 0.5) { console.warn('siap-audio: jendela AAC tanpa keluaran (' + got + ' sampel) — pakai decode penuh'); return false; }
   if (miss) console.warn(`siap-audio: ${miss} jendela kosong/gagal (senyap di titik itu)`);
   state.audioBuffer = buf;
   return true;
@@ -1491,8 +1518,14 @@ async function exportPartsToDir(dir, ui) {
   const swCfg = await pickSWCfg(W, H, br, fps);
   /* v3.3: backsound MP3 user ikut membuat jalur audio aktif (video tanpa
      suara asli + backsound tetap diekspor DENGAN audio) */
+  /* v3.30: video apa pun dianggap berpotensi bersuara — dulu hanya
+     audioBuffer/_audioDemux (yang belum tentu sudah ada: analisis latar
+     belum jalan saat user langsung ekspor, atau wadah bukan MP4/AAC
+     → probeAudio gagal) → aCodec tak dipilih → hasil ekspor TANPA
+     stream audio sama sekali (kasus "hasil split tidak ada suaranya"). */
   const wantAudio = !!(state.audioBuffer || state._audioDemux || state.music.buffer
-    || (state.bsound && state.bsound.on && state.bsound.buffer));
+    || (state.bsound && state.bsound.on && state.bsound.buffer)
+    || (!state.isAudio && state.file));
   const aCodec = wantAudio ? await pickACodec() : null;
   if (wantAudio && !aCodec) toast('Encoder audio tak tersedia — ekspor tanpa audio', 'warn');
   const segs = segments();
