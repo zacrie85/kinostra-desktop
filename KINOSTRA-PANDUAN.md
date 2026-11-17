@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.32.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.33.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,18 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.33.0 — MENU FRAME DILEBARKAN (semua gaya terlihat & terbaca)
+
+Keluhan kawan: **"di menu frame futuristik cuma 9 yang tampil, padahal ada 15"**. Perbaikan v3.30 dulu baru separuh jalan: tombolnya memang melipat ke baris kedua, tetapi setiap tombol masih memakai kotak kecil 34 piksel (ukuran swatch warna) — jadi hanya ±9 yang muat per baris dan nama-nama panjang seperti **KAPSUL BENING**, **GARIS GANDA HUD**, **PANEL SISTEM** tetap terpotong tak terbaca.
+
+Kini v3.33 menuntaskannya sampai akar:
+
+- **Chip menu FRAME melar mengikuti nama lengkapnya** (lebar otomatis, papan warna panel, huruf jelas) — semua **16 pilihan frame PART** (TANPA + 15 gaya futuristik) dan **16 pilihan frame JUDUL** (TANPA + 15 gaya) kini tampil **utuh dan terbaca semua**, melipat rapi di dalam panel; tidak ada lagi teks terpotong.
+- **Label menu dibetulkan**: "FRAME JUDUL DI VIDEO" tadinya tertulis "10 GAYA" (usang sejak v3.28) — kini "15 GAYA" sesuai katalog.
+- **Yang tidak berubah sama sekali**: cara pakai tetap klik gaya → langsung aktif + toast; pratinjau = ekspor persis; chip swatch warna (filter, warna neon, warna track) tetap kotak kecil 34px persis seperti sebelumnya; tidak ada perubahan mesin render/ekspor.
+
+Diuji otomatis **9/9 lulus** mengukur layout DOM nyata di aplikasi: 16 chip nama lengkap tanpa satu pun terpotong (lebar 55–118px, 5 baris, semua di dalam panel), klik SEGI ENAM → status + toast benar, frame judul 16 chip sama, swatch warna tetap 34px. Regresi 10 suite lama dijalankan ulang.
 
 ## Yang Baru di v3.32.0 — GERBANG SUARA & AUDIO FILM UTUH (akar "film utuh tanpa suara")
 

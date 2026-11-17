@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.32.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.33.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -95,6 +95,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 74 | **SUARA DIJAMIN IKUT + PANEL LEBAR** ⭐v3.30.0 | FIX suara hilang utk WebM/MKV/FLV/MP3 (decode penuh semua-format semantik v3.16 sbg jalur cadangan) · panel kanan 424px + chips melipat — 16 frame PART tampil semua |
 | 75 | **PEMINDAI AUDIO SENYAP** ⭐v3.31.0 | deteksi sumber hening total (−91 dB, umum pada film hasil unduhan) SAAT IMPOR · peringatan + saran BACKSOUND sebelum ekspor |
 | 76 | **GERBANG SUARA + AUDIO FILM UTUH** ⭐v3.32.0 | ekspor film utuh 3-4 jam kini selalu bersuara (audio bersegmen, RAM terkendali) · konfirmasi pra-ekspor dgn MUSIK OTOMATIS sekali klik · status suara di modal hasil |
+| 77 | **MENU FRAME DILEBARKAN** ⭐v3.33.0 | chip FRAME PART (16) & FRAME JUDUL (16) melar mengikuti nama lengkap — semua gaya futuristik terlihat & terbaca penuh, nol teks terpotong (dulu hanya ±9 per baris) |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
