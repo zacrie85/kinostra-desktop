@@ -658,3 +658,5 @@ Laporan user: ekspor & split berhenti — "GAGAL: render berhenti merespon 45 de
 - UJI BARU scripts/kinostra-export-test.mjs 7/7: film 2 jam → range 60 dtk → split 30 dtk → 2 part + cover 3 dtk per part (ffprobe: 33,02 dtk = 30+3 ✓), kilat on, paralel 2, stat file >100 KB, marker dijadwalkan & dikonsumsi saat buka ulang. Regresi: maintenance 14/14, frame 6/6, overlay 6/6.
 - Sandbox daur ulang 2× hari ini (repo balik ke snapshot v3.14 dua kali) — pulih via git reset --hard origin/main; generator testmedia tersimpan (scripts/buat-longtestmedia.sh) membuktikan dirinya.
 - Bump 6 file (scripts/bump-v3261.py).
+
+- RILIS v3.26.1 SELESAI (source ter-push dulu, commit bd3b1eb): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.26.1.exe 91,4 MB · KINOSTRA-Portable-3.26.1-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.26.1. Saran utk mesin yang GAGAL: pasang → OPTIMASI sekali → buka ulang (cache GPU terjadwalkan terbersihkan) → ekspor lagi; bila masih beku, kini jatuh otomatis ke software tanpa nunggu 45 dtk.
