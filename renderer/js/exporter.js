@@ -1032,10 +1032,20 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
         const vf = new VideoFrame(ecv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
         venc.encode(vf, { keyFrame: i === 0 }); vf.close();
         n++; slot.fr = n;
+        /* v3.26.1: PENJAGA ANTREAN frame COVER — dulu loop ini berputar
+           tanpa akhir bila encoder GPU wedged (antrean tak mengalir), dan
+           cover dirender PALING AWAL → semua slot diam → watchdog global
+           45 dtk → "GAGAL: render berhenti merespons". Kini gagal cepat
+           (20 dtk) → mesin retry v2.5 otomatis mencoba dgn encoder software
+           (elemen video & encoder baru dibuat segar). */
+        let _qs = 0;
         while (venc.encodeQueueSize > CAP) {
           await sleep(2);
           if (state.abort) throw new Error('Dibatalkan');
           if (state.exportFatal) throw state.exportFatal;
+          const _n = Date.now();
+          if (!_qs) _qs = _n;
+          else if (_n - _qs > 20000) throw new Error('encoder video macet di frame cover (antrean tidak mengalir 20 dtk) — akan dicoba ulang otomatis dengan encoder software');
         }
       }
       /* kanvas sumber transisi = cover FINAL (tanpa animasi) */
@@ -1114,10 +1124,17 @@ async function renderPartWorker(seg, srcUrl, W, H, fps, br, vCfg, aCodec, slot, 
           _kTs = _ts;
           kilN++;
           doneCb && doneCb();
+          /* v3.26.1: penjaga antrean MODE KILAT — sama dgn frame cover:
+             encoder wedged dulu berputar tanpa akhir → watchdog 45 dtk;
+             kini gagal cepat → ulang otomatis dgn encoder software */
+          let _qsK = 0;
           while (venc.encodeQueueSize > CAP) {
             await sleep(2);
             if (state.abort) throw new Error('Dibatalkan');
             if (state.exportFatal) throw state.exportFatal;
+            const _n = Date.now();
+            if (!_qsK) _qsK = _n;
+            else if (_n - _qsK > 20000) throw new Error('encoder video macet saat MODE KILAT (antrean tidak mengalir 20 dtk) — akan dicoba ulang otomatis dengan encoder software');
           }
         }
         await K.close();
@@ -1578,7 +1595,11 @@ async function exportPartsToDir(dir, ui) {
         if (sig !== lastSig) { lastSig = sig; lastSigAt = now; }
         else if (now - lastSigAt > 45000) {
           clearInterval(iv);
-          /* v2.10: watchdog = kegagalan internal, BUKAN batal pengguna */
+          /* v2.10: watchdog = kegagalan internal, BUKAN batal pengguna
+             v3.26.1: saat semua worker beku & jalur hardware masih dipakai,
+             catat kegagalan HW — ekspor/part BERIKUTNYA otomatis memakai
+             encoder software (anti-pelan), bukan menabrak dinding yang sama */
+          if (hw) { try { noteHwFailure('watchdog global: semua worker beku 45 dtk'); } catch (e) { } }
           if (!xAborted()) {
             state.exportFatal = new Error('Render berhenti merespons 45 detik — dihentikan otomatis. Coba set PARALEL 1× atau kualitas lebih rendah lalu ulangi.');
           }

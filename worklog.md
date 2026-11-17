@@ -645,3 +645,16 @@ User bertanya: apakah "OPTIMASI PERFORMA — satu klik" & "BERSIHKAN CACHE" suda
 - Bump 6 file (scripts/bump-v3260.py).
 
 - RILIS v3.26.0 SELESAI (source ter-push dulu, commit 11cd272): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.26.0.exe 91,4 MB · KINOSTRA-Portable-3.26.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.26.0
+
+## v3.26.1 — OBAT "GAGAL: RENDER BERHENTI MERESPON 45 DETIK" SAAT EKSPOR & SPLIT (2026-11-17)
+
+Laporan user: ekspor & split berhenti — "GAGAL: render berhenti merespon 45 detik", muncul BEGITU proses mulai. Bedah akar:
+
+- Loop frame COVER (exporter.js, dirender PALING AWAL per part) & loop MODE KILAT berputar TANPA PENJAGA: bila encoder GPU wedged (encodeQueueSize tak pernah turun), loop spin selamanya → slot.fr diam → watchdog global (v2.5) menembak 45 dtk → GAGAL. Loop render normal SUDAH terlindung (watchdog 250 ms + qStall 45 dtk + dorong ulang play) — dua loop inilah lubangnya, dan keduanya berjalan PALING AWAL = cocok persis dgn gejala "begitu proses export".
+- FIX 1: penjaga antrean 20 dtk di kedua loop (let _qs/_qsK + deadline) → gagal cepat → mesin retry v2.5 otomatis ulang 1× dgn encoder software (elemen video & encoder segar).
+- FIX 2: watchdog global kini noteHwFailure saat hw aktif → part/ekspor berikutnya otomatis software.
+- FIX 3 (AKAR RACUN v3.26.0): hapus cache shader/kode GPU DI TENGAH SESI berisiko menyendatkan encoder/decoder GPU → kini DIJADWALKAN via marker pending-gpu-cache-clean.json (sys:cleanup menulis; app.whenReady menghapus SEBELUM jendela & proses GPU naik) — verified log "tunggakan cache shader/kode GPU dihapus saat mulai".
+- Lapis terakhir tetap: pemulihan doExport v3.15 (retry setelan aman, part tersimpan tak diulang).
+- UJI BARU scripts/kinostra-export-test.mjs 7/7: film 2 jam → range 60 dtk → split 30 dtk → 2 part + cover 3 dtk per part (ffprobe: 33,02 dtk = 30+3 ✓), kilat on, paralel 2, stat file >100 KB, marker dijadwalkan & dikonsumsi saat buka ulang. Regresi: maintenance 14/14, frame 6/6, overlay 6/6.
+- Sandbox daur ulang 2× hari ini (repo balik ke snapshot v3.14 dua kali) — pulih via git reset --hard origin/main; generator testmedia tersimpan (scripts/buat-longtestmedia.sh) membuktikan dirinya.
+- Bump 6 file (scripts/bump-v3261.py).

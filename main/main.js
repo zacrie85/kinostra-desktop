@@ -1543,31 +1543,24 @@ ipcMain.handle('sys:cleanup', async (e, opts = {}) => {
       }
     } catch (_) { }
     try { if (win && win.webContents) { await win.webContents.session.clearCache(); out.cleared.push('http'); out.diskFreed += out.cacheDir; } } catch (_) { }
-    /* v3.26: hapus isi cache shader/kode GPU — direktorinya dibiarkan (Chromium
-       membuat ulang otomatis); file yang dikunci dilewati tanpa galat */
-    let gFreed = 0, gN = 0, cFreed = 0, cN = 0;
-    for (const p of GPU_DIRS) {
-      const sz = dirSize(p);
-      if (!sz) continue;
-      let del = 0;
+    /* v3.26.1: cache shader/kode GPU DIJADWALKAN — dulu (v3.26.0) dihapus
+       langsung di tengah sesi; menghapus cache saat proses GPU masih hidup
+       berisiko membuat encoder/decoder GPU tersendat (ekspor beku → watchdog
+       "render berhenti merespons 45 detik"). Kini cukup TANDAI: saat
+       aplikasi dibuka ulang, cache dihapus SEBELUM jendela & proses GPU
+       naik → aman, dan tetap jadi obat shader korap. */
+    let gSz = 0, cSz = 0;
+    try { gSz = GPU_DIRS.reduce((a, p) => a + dirSize(p), 0); } catch (_) { }
+    try { cSz = CODE_DIRS.reduce((a, p) => a + dirSize(p), 0); } catch (_) { }
+    if (gSz || cSz) {
       try {
-        for (const f of fs.readdirSync(p)) { try { fs.rmSync(path.join(p, f), { recursive: true, force: true }); del++; } catch (_) { } }
+        fs.writeFileSync(path.join(ud, 'pending-gpu-cache-clean.json'), JSON.stringify({ ts: Date.now(), gpu: gSz, code: cSz }));
+        out.cleared.push('gpu-shader-scheduled');
       } catch (_) { }
-      if (del) { gFreed += sz; gN++; }
+      out.diskFreed += gSz + cSz;
     }
-    for (const p of CODE_DIRS) {
-      const sz = dirSize(p);
-      if (!sz) continue;
-      let del = 0;
-      try {
-        for (const f of fs.readdirSync(p)) { try { fs.rmSync(path.join(p, f), { recursive: true, force: true }); del++; } catch (_) { } }
-      } catch (_) { }
-      if (del) { cFreed += sz; cN++; }
-    }
-    out.gpuCacheCleared = gN; out.codeCacheCleared = cN;
-    out.diskFreed += gFreed + cFreed;
-    if (gN) out.cleared.push('gpu-shader');
-    if (cN) out.cleared.push('code');
+    out.gpuCacheCleared = gSz > 0 ? 1 : 0;
+    out.codeCacheCleared = cSz > 0 ? 1 : 0;
   }
   return out;
 });
@@ -1898,6 +1891,22 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     console.log('MAIN-READY');
+    /* v3.26.1: TUNGGAKAN cache shader/kode GPU — ditandai BERSIHKAN CACHE
+       sesi lalu; dihapus SEKARANG, sebelum jendela & proses GPU naik →
+       aman (tidak seperti menghapus di tengah sesi) dan shader korap ikut
+       terbersihkan. */
+    try {
+      const mf = path.join(app.getPath('userData'), 'pending-gpu-cache-clean.json');
+      if (fs.existsSync(mf)) {
+        const ud2 = app.getPath('userData');
+        let nf = 0;
+        for (const d of ['GPUCache', 'ShaderCache', 'DawnCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'GrShaderCache', 'Code Cache', 'Code Cache GPUCache']) {
+          try { fs.rmSync(path.join(ud2, d), { recursive: true, force: true }); nf++; } catch (_) { }
+        }
+        fs.rmSync(mf, { force: true });
+        console.log(`tunggakan cache shader/kode GPU dihapus saat mulai (${nf} folder)`);
+      }
+    } catch (_) { }
     protocol.handle('app', handleAppScheme);
     protocol.handle('kmodels', handleModelsScheme);
     protocol.handle('kfile', handleKFileScheme);

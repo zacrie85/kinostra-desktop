@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.26.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.26.1-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -88,6 +88,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 67 | **DETEKTOR PIKSEL** ⭐v3.24.0 | Mekanisme beku kedua dari rekaman layar kawan: decoder maju tapi gambar tak pernah tersaji (penyajian mati di lapisan video Windows; detektor frame v3.23 buta kareno fr selalu maju). Kini pengawas menyampel video ke kanvas 48x27 tiap 2 dtk — piksel diam + fr maju = penyajian mati → tangga: kocok halus → visibilitas → jalur kanvas overlay; pilihan diingat per mesin; log memuat identitas GPU. Diuji dgn video adegan-diam nyata: 8/8 lulus, nol false-positive |
 | 68 | **JALUR VIDSPLIT** ⭐v3.25.0 | Akar beku dibedah sebenarnya: kanvas overlay di atas video digambar ulang 15x/dtk walau statik → lapisan video tak pernah naik ke hardware overlay Windows → beku. Kini overlay native digambar HANYA saat isi berubah (uji: 3 gambar/9 dtk, dulu ±135) — video berdiri sendiri persis VidSplit. Plus PENGAWAS LAYAR capturePage (hash piksel jendela sejati) + tangga penyembuhan bersama |
 | 69 | **MODUL 16 UPGRADE** ⭐v3.26.0 | Audit PERAWATAN & PERFORMA: OPTIMASI & BERSIHKAN CACHE kini melepas flag kanvas darurat (native dicoba lagi), menghapus cache shader/kode GPU (bisa ratusan MB), menampilkan total disk dibebaskan, kotak info memuat JALUR PUTAR + GPU, dan benahi bug label "cache tampilan" yang tak pernah tampil sejak v3.16 |
+| 70 | **OBAT EKSPOR BEKU** ⭐v3.26.1 | "GAGAL: render berhenti merespon 45 detik" dituntaskan: penjaga antrean 20 dtk di loop cover & kilat (gagal cepat → retry software otomatis), watchdog mencatat kegagalan HW, cache shader GPU kini dijadwalkan dihapus saat dibuka ulang (bukan di tengah sesi) |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline

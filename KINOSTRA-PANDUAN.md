@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.26.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.26.1
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,17 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.26.1 — OBAT "GAGAL: RENDER BERHENTI MERESPON 45 DETIK" SAAT EKSPOR
+
+Laporan kawan — ekspor & split berhenti dengan pesan *"GAGAL: render berhenti merespons 45 detik"* — sudah dibedah sampai akarnya dan dituntaskan empat lapis:
+
+1. **Dua loop encoder yang tak terlindungi kini dijaga.** Ketika encoder GPU "wedged" (antrean encode tak mengalir), dua loop dulu berputar tanpa akhir: loop **frame COVER** (yang dirender PALING AWAL — itulah kenapa error muncul *begitu* ekspor mulai) dan loop **MODE KILAT**. Semua slot diam → watchdog global menembak setelah 45 detik → GAGAL. Kini keduanya punya penjaga antrean 20 detik: macet terdeteksi cepat, dilempar sebagai kegagalan encoder, dan mesin coba-ulang otomatis (v2.5) segera mengulang part itu dengan **encoder software** — elemen video & encoder dibuat segar.
+2. **Watchdog global kini mencatat kegagalan hardware** saat menyala — ekspor dan part berikutnya otomatis memakai software, tidak menabrak dinding yang sama dua kali.
+3. **Akar racun dari v3.26.0 diambil.** BERSIHKAN CACHE/OPTIMASI dulu menghapus cache shader/kode GPU *di tengah sesi* — menghapus cache saat proses GPU masih hidup berisiko membuat encoder/decoder GPU tersendat. Kini pembersihan **dijadwalkan**: ditandai lewat berkas `pending-gpu-cache-clean.json`, dan cache dihapus saat aplikasi dibuka ulang **sebelum proses GPU naik** — aman dan tetap jadi obat shader korap.
+4. **Pemulihan lama tetap lapis terakhir** (v3.15): bila render tetap gagal, satu kali dicoba ulang dengan setelan aman (paralel 1×, encoder software) tanpa mengulang part yang sudah tersimpan.
+
+Diuji: **uji ekspor nyata baru 7/7** (film 2 jam, 2 part 30 detik + cover 3 detik di tiap part — durasi keluaran 33,02 dtk terverifikasi ffprobe; MODE KILAT; paralel 2×; marker dijadwalkan dan benar-benar dihapus saat aplikasi dibuka ulang dengan jejak log main), uji modul 16 **14/14**, frame-test **6/6**, overlay-statik **6/6**.
 
 ## Yang Baru di v3.26.0 — AUDIT & UPGRADE MODUL 16: PERAWATAN & PERFORMA
 

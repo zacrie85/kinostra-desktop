@@ -191,10 +191,12 @@ async function kinoClearCache() {
     if (cl) {
       if (cl.whisperTmpCleared) acts.push(`${cl.whisperTmpCleared} file sementara transkripsi dihapus (${fMB(cl.whisperTmp / 1048576)})`);
       if ((cl.cleared || []).includes('http')) acts.push('cache tampilan/HTTP aplikasi dibersihkan');   /* v3.26: benahi — dulu mengecek teks yang tak pernah dikirim main */
-      /* v3.26: cache shader/kode GPU + total disk dibebaskan */
-      if (cl.gpuCacheCleared) acts.push(`cache shader GPU dihapus (${fMB(cl.gpuCache / 1048576)}) — memperbaiki juga efek tampilan korup`);
-      if (cl.codeCacheCleared) acts.push(`cache kode JS/GPU dihapus (${fMB(cl.codeCache / 1048576)})`);
-      if (cl.diskFreed > 0) acts.push(`<b>total disk dibebaskan ±${fMB(cl.diskFreed / 1048576)}</b> (beberapa berkas mungkin menyusut penuh setelah aplikasi dibuka ulang)`);
+      /* v3.26.1: cache shader/kode GPU DIJADWALKAN (dihapus saat dibuka
+         ulang, sebelum proses GPU naik — aman; dulu v3.26.0 dihapus di
+         tengah sesi dan berisiko membuat encoder GPU tersendat) */
+      if (cl.gpuCacheCleared) acts.push(`cache shader GPU (${fMB(cl.gpuCache / 1048576)}) dijadwalkan dihapus saat aplikasi dibuka ulang — obat efek tampilan korup`);
+      if (cl.codeCacheCleared) acts.push(`cache kode JS/GPU (${fMB(cl.codeCache / 1048576)}) ikut dijadwalkan`);
+      if (cl.diskFreed > 0) acts.push(`<b>total disk dibebaskan ±${fMB(cl.diskFreed / 1048576)}</b> (cache shader terhapus penuh saat aplikasi dibuka ulang)`);
     }
     const h1 = heapMB();
     const freed = (h0 != null && h1 != null) ? Math.max(0, h0 - h1) : null;
