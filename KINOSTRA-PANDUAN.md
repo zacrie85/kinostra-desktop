@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.27.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.28.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -24,7 +24,7 @@ Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
 | 00 | **Kotak Video · Urutan** 📥 | **SATU kotak untuk semua video** — dari IMPOR MEDIA, drag-drop, maupun TAMBAH VIDEO. Berurutan atas → bawah = urutan proses batch. Thumbnail otomatis, naik/turun urutan, hapus & pratinjau. **v3.16: IMPOR MASSAL 100 video & PROSES OTOMATIS SETELAH IMPOR kini di sini** (dulu modul 10 BATCH PROSES terpisah — digabung karena tumpang tindih) |
 | 01 | **Pengaturan Tersimpan** ⭐v3.16 | **SIMpan seluruh setelan sebagai preset bernama** → mulai pekerjaan baru → klik PAKAI → semua setelan terpasang persis (rasio, judul, split, efek, cover, ekspor…). Lihat bagian *Yang Baru di v3.16* |
 | 02 | Sumber & Rasio | Impor MP4/MKV/TS/WEBM/MP3, output 16:9 atau 9:16, geser KIRI/KANAN/ATAS/BAWAH, Zoom Fokus 1–4×, latar BLUR SINEMATIK otomatis |
-| 03 | Judul & Part Otomatis | Split per 20–60 dtk / JUMLAH PART OTOMATIS (mis. 10 → dibagi merata dari durasi), judul otomatis dari nama file, prefix PART/EPISODE/EPS/BAGIAN/#, **UKURAN TULISAN PART 10%–250% (v3.27; dulu v3.14 50%–250%) + WARNA TULISAN PART bebas (v3.27)**, posisi teks bebas, 10 FRAME JUDUL, 8 ANIMASI MASUK NOVACUT, rentang waktu ekspor + TERAPKAN KE SEMUA VIDEO |
+| 03 | Judul & Part Otomatis | Split per 20–60 dtk / JUMLAH PART OTOMATIS (mis. 10 → dibagi merata dari durasi), judul otomatis dari nama file, prefix PART/EPISODE/EPS/BAGIAN/#, **UKURAN TULISAN PART 10%–250% (v3.27; dulu v3.14 50%–250%) + WARNA TULISAN PART bebas (v3.27)**, posisi teks bebas, 15 FRAME JUDUL (v3.28; dulu 10) + FRAME PART 15 gaya futuristik transparan (v3.28), 8 ANIMASI MASUK NOVACUT, rentang waktu ekspor + TERAPKAN KE SEMUA VIDEO |
 | 04 | Potong & Hapus Bagian | Buang bagian tak diinginkan (iklan/jeda) dari hasil ekspor — nomor part tetap berurutan, pratinjau melompat otomatis |
 | 05 | Deskripsi Video | Teks deskripsi di bawah judul / strip bawah |
 | 06 | Subtitel AI · Vocalis v4 | Mesin native whisper.cpp — fokus Jawa & Indonesia, Mode Lagu/Vokal, AUTO-SUBTITEL saat ekspor/batch, TURBO lewati senyap, ukuran & posisi, ekspor/impor SRT |
@@ -62,6 +62,15 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.28.0 — 15 FRAME JUDUL + 15 FRAME PART FUTURISTIK TRANSPARAN
+
+Dua upgrade di modul **03 JUDUL & PART OTOMATIS** sesuai permintaan kawan:
+
+1. **Frame judul kini 15 gaya.** Ditambah 5 frame elegan transparan: **KACA HALUS** (panel kaca bening sangat tipis), **KRISTAL BENING** (kurungan sudut putih tipis panjang), **GARIS BENING** (hairline membulat + berlian kecil), **MEWAH BENING** (kaca + hairline emas di dalam), dan **ETERE** (gradasi putih pudar kiri-kanan). Semuanya tipis, bening, dan tidak menutupi video.
+2. **Fitur baru: FRAME PART DI VIDEO — 15 gaya futuristik transparan.** Tulisan PART/EPISODE/EPS/BAGIAN/# kini bisa diberi bingkai: HUD SUDUT, GARIS HUD, KAPSUL BENING, KURUNG TEKNO, CHIP DATA, SEGI ENAM, PITA TEKNO, GARIS GANDA HUD, TITIK ORBIT, FASE SUDUT, PANEL SISTEM, SINAR SAMPING, JARING TITIK, GARIS MURNI, BERKAS CAHAYA. Berlaku di bumper intro & label pojok, ikut skala ukuran part, dan digambar mesin yang sama dengan ekspor.
+
+Semua frame deterministik (tanpa animasi) sehingga aman untuk ekspor, ikut tersimpan di preset, dan pratinjau = hasil ekspor persis. Diuji 11/11 (pixel-diff semua gaya di kedua mode, preset, ekspor nyata) + seluruh regresi lama.
 
 ## Yang Baru di v3.27.0 — MODUL 03: TULISAN PART BISA 10% & WARNANYA BEBAS
 

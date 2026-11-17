@@ -119,6 +119,21 @@ syncPartSizeV(); syncPartColorV();
   });
 })();
 
+/* ---------- v3.28: 15 FRAME FUTURISTIK TRANSPARAN utk LABEL PART ---------- */
+(function initPartFrames() {
+  const box = $('#partFrameChips');
+  if (!box || typeof PARTFRAMES === 'undefined') return;
+  box.innerHTML = PARTFRAMES.map(f =>
+    `<button data-v="${f.k}" class="${state.partFrame === f.k ? 'on' : ''}" title="${f.d}">${f.n}</button>`).join('');
+  [...box.querySelectorAll('button')].forEach(b => b.onclick = () => {
+    [...box.querySelectorAll('button')].forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    state.partFrame = b.dataset.v;
+    const cat = PARTFRAMES.find(f => f.k === state.partFrame);
+    toast(`Frame part di video: ${cat ? cat.n : 'TANPA'}`, 'ok');
+  });
+})();
+
 /* ---------- v3.9: MODE PROSES — POTONG LANGSUNG / RENDER PENUH ---------- */
 function syncCutModeStat() {
   const st = $('#cutModeStat');
@@ -1458,7 +1473,7 @@ function nativeOverlaySig(t) {
   }
   const FSTs = (typeof frameDef === 'function') ? frameDef() : null;
   return [currentSegIndex(t), segmentsCount(), si, cv.width, cv.height,
-    state.partShow, state.partPrefix, state.partPosX, state.partPosY, state.partSize, state.partColor, state.partAnim, state._noPart,
+    state.partShow, state.partPrefix, state.partPosX, state.partPosY, state.partSize, state.partColor, state.partFrame, state.partAnim, state._noPart,
     state.titleOn, state.title, state.titleSize, state.titleScale, state.titlePosY, state.upper, state.titleFrame, state.titleAnim,
     state.descOn, state.desc, state.descSize, state.descPosY, state.descPos,
     state.subsOn, state.subScale, state.subPosY, state.splitSec, state.speed,

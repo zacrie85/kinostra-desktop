@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.27.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.28.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -90,6 +90,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 69 | **MODUL 16 UPGRADE** ⭐v3.26.0 | Audit PERAWATAN & PERFORMA: OPTIMASI & BERSIHKAN CACHE kini melepas flag kanvas darurat (native dicoba lagi), menghapus cache shader/kode GPU (bisa ratusan MB), menampilkan total disk dibebaskan, kotak info memuat JALUR PUTAR + GPU, dan benahi bug label "cache tampilan" yang tak pernah tampil sejak v3.16 |
 | 70 | **OBAT EKSPOR BEKU** ⭐v3.26.1 | "GAGAL: render berhenti merespon 45 detik" dituntaskan: penjaga antrean 20 dtk di loop cover & kilat (gagal cepat → retry software otomatis), watchdog mencatat kegagalan HW, cache shader GPU kini dijadwalkan dihapus saat dibuka ulang (bukan di tengah sesi) |
 | 71 | **UKURAN 10% & WARNA TULISAN PART** ⭐v3.27.0 | Modul 03: tulisan PART/EPISODE di video kini bisa kecil sampai 10% (dulu minimal 50%) dan WARNANYA bebas dipilih (pemilih warna + tombol OTOMATIS); berlaku intro & pojok, ikut preset, pratinjau = ekspor persis |
+| 72 | **15 FRAME JUDUL & 15 FRAME PART** ⭐v3.28.0 | Modul 03: frame judul kini 15 gaya (+5 elegan transparan) & FITUR BARU 15 frame futuristik transparan untuk tulisan PART/EPISODE di video (intro & pojok); ikut preset, pratinjau = ekspor persis |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline

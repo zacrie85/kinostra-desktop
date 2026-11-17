@@ -21,8 +21,8 @@ const PRESET_SEGS = [
   'segCoverTitleAnim', 'segCoverPartAnim', 'segCoverDur', 'segCoverPart',
   'segQual', 'segScale', 'segRes', 'segFps', 'segAcc', 'segKilat', 'segCutMode', 'segParallel'
 ];
-/* chips dgn dataset.v pada tombolnya */
-const PRESET_CHIPS = ['titleFrameChips', 'coverLayoutChips', 'coverPaletteChips', 'coverTransChips'];
+/* chips dgn dataset.v pada tombolnya — v3.28: frame part ikut preset */
+const PRESET_CHIPS = ['titleFrameChips', 'partFrameChips', 'coverLayoutChips', 'coverPaletteChips', 'coverTransChips'];
 /* chips khusus — diambil dari state (klik ulang saat muat via teks span) */
 const PRESET_STATE_CHIPS = ['frameStyles', 'colorFilters', 'fontGrid'];
 const PRESET_CHECKS = [

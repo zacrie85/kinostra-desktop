@@ -119,7 +119,40 @@ const TITLEFRAMES = [
   { k: 'neon', n: 'NEON MENYALA', d: 'Bingkai membulat menyala amber berpendar' },
   { k: 'klasik', n: 'EMAS KLASIK', d: 'Bingkai emas ganda + aksen sudut, gaya poster lama' },
   { k: 'panel', n: 'PANEL MODERN', d: 'Panel kaca gelap + bar emas kiri-kanan, gaya streaming' },
-  { k: 'gradasi', n: 'GRADASI PANAS', d: 'Latar gelap lembut + pita gradasi amber→merah di bawah judul' }
+  { k: 'gradasi', n: 'GRADASI PANAS', d: 'Latar gelap lembut + pita gradasi amber→merah di bawah judul' },
+  /* v3.28: 5 FRAME ELEGAN TRANSPARAN (minta kawan) — kaca tipis & garis
+     putih bening; judul tetap "bernapas" di atas video, tanpa pita tebal */
+  { k: 'kaca', n: 'KACA HALUS', d: 'Panel kaca bening sangat tipis + garis putih lembut — elegan transparan' },
+  { k: 'kristal', n: 'KRISTAL BENING', d: 'Kurungan sudut putih tipis panjang + kilau garis atas — elegan transparan' },
+  { k: 'bening', n: 'GARIS BENING', d: 'Hairline putih membulat + berlian kecil di kiri-kanan judul' },
+  { k: 'mewah', n: 'MEWAH BENING', d: 'Kaca transparan + hairline emas di dalam — mewah tanpa berat' },
+  { k: 'etere', n: 'ETERE', d: 'Gradasi putih pudar kiri-kanan + garis pusat halus — ringan seperti kabut' }
+];
+
+/* ================================================================
+   v3.28 — 15 FRAME FUTURISTIK ELEGAN TRANSPARAN utk LABEL PART DI
+   VIDEO (katalog PARTFRAMES). Hiasan di sekeliling tulisan
+   PART/EPISODE/EPS/BAGIAN/# pada bumper intro & label pojok —
+   digambar drawComposition (compose.js) → pratinjau = ekspor persis.
+   Deterministik tanpa animasi → aman utk ekspor tiap frame.
+   ================================================================ */
+const PARTFRAMES = [
+  { k: 'off', n: 'TANPA', d: 'Gaya lama: garis/strip amber saja' },
+  { k: 'hud', n: 'HUD SUDUT', d: 'Empat kurungan sudut putih tipis + tanda kecil di tengah' },
+  { k: 'garishud', n: 'GARIS HUD', d: 'Kotak hairline putih + tick tengah + bar samping tipis' },
+  { k: 'kapsul', n: 'KAPSUL BENING', d: 'Pil kaca membulat penuh + hairline putih' },
+  { k: 'kurung', n: 'KURUNG TEKNO', d: 'Kurung besar [ ] di kiri-kanan teks part' },
+  { k: 'chipdata', n: 'CHIP DATA', d: 'Kotak tag kecil + garis bawah selebar teks' },
+  { k: 'hexa', n: 'SEGI ENAM', d: 'Panel kaca segi enam dgn sisi miring futuristik' },
+  { k: 'tape', n: 'PITA TEKNO', d: 'Strip transparan ujung miring (parallelogram)' },
+  { k: 'duagaris', n: 'GARIS GANDA HUD', d: 'Dua bingkai hairline bertumpuk halus' },
+  { k: 'orbit', n: 'TITIK ORBIT', d: 'Titik di empat sudut + garis hairline atas-bawah' },
+  { k: 'fase', n: 'FASE SUDUT', d: 'Kurungan L + aksen diagonal 45° futuristik' },
+  { k: 'sistem', n: 'PANEL SISTEM', d: 'Panel kaca + bar aksen kiri + notch tengah' },
+  { k: 'sinar', n: 'SINAR SAMPING', d: 'Gradasi putih pudar kiri-kanan di belakang teks' },
+  { k: 'jaring', n: 'JARING TITIK', d: 'Bingkai putus-putus halus (dot grid)' },
+  { k: 'murni', n: 'GARIS MURNI', d: 'Satu garis bawah tipis + notch tengah — paling minimal' },
+  { k: 'berkas', n: 'BERKAS CAHAYA', d: 'Kaca tipis + garis cahaya memudar di bawah teks' }
 ];
 
 const state = {
@@ -136,6 +169,8 @@ const state = {
      v3.27: WARNA TULISAN PART — '' = OTOMATIS (putih gading #F2F0EA) */
   partSize: 1,
   partColor: '',
+  /* v3.28: FRAME PART DI VIDEO — kunci PARTFRAMES (default 'off' = gaya lama) */
+  partFrame: 'off',
   /* v3.2: JUMLAH PART OTOMATIS — isi N → durasi per part = durasi video / N
      (0 = mati; dihitung ulang otomatis tiap video baru dimuat) */
   splitParts: 0,
