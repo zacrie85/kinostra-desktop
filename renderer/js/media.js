@@ -192,6 +192,7 @@ async function decodeFileAudio() {
        batch film ke-3 ke atas kehabisan memori fisik */
     state.audioBuffer = null; state.peaks = null;
     state._audioDemux = null; state._audioEnv = null; state._audioWin = null;
+    state.audioSenyap = false;                     /* v3.31: pemindai audio senyap per video */
     /* v3.17.1 PERBAIKAN LAYAR HITAM/CRASH SETELAH IMPOR — akar masalah:
        decodeAudioData penuh film panjang = AudioBuffer float stereo
        ±21 MB/menit (film 2 jam ≈ 2,5 GB; film 188 mnt ≈ 4 GB) di SATU
@@ -218,6 +219,12 @@ async function decodeFileAudio() {
         : await state.file.arrayBuffer();
       state.audioBuffer = await getActx().decodeAudioData(ab);
       buildPeaks();
+      /* v3.31: PEMINDAI AUDIO SENYAP — film split-an hasil unduhan sering
+         DIHAPUS suaranya (hening total, puncak ≈ −91 dB) sementara wadahnya
+         tetap punya track AAC; user baru sadar setelah hasil ekspor dianggap
+         "tidak ada suaranya". Ukur puncak sampel sekali di impor & beri tahu
+         SEBELUM ekspor (kasus nyata v3.30: sumber PART_01 hening −91 dB). */
+      checkSilentAudio('impor');
       return;
     }
     /* media panjang: analisis bertahap di belakang — jangan pernah utuh */
@@ -225,6 +232,49 @@ async function decodeFileAudio() {
     toast('Video panjang — audio dianalisis hemat memori bertahap; suara asli tetap ikut saat ekspor & POTONG LANGSUNG.', 'info');
     analyzeAudioViaDemux();   /* async, tidak menunggu loading */
   } catch (e) { state.audioBuffer = null; toast('Track audio tidak terbaca — ekspor mungkin tanpa suara asli', 'warn'); }
+}
+
+/* ---------- v3.31: PEMINDAI AUDIO SENYAP ----------
+   Sumber tanpa suara (hasil unduhan film split-an sering begitu): track
+   AAC ADA tetapi isinya hening digital (puncak < −60 dBFS). Ekspor
+   menyalin audio asli dengan setia → hasil ikut hening; user mengira
+   aplikasinya rusak. Diukur SEKALI per video (cache per mediaEpoch):
+   puncak sampel < 0,001 (≈ −60 dBFS) → SENYAP. Pemindaian dijalankan
+   saat impor (file kecil, decode penuh) & saat ekspor (buffer siap,
+   termasuk jalur demux/decode penuh v3.30). Pesan menyesuaikan bila
+   MUSIK/BACKSOUND sudah siap mengisi suara. */
+function audioTertutupMusik() {
+  return !!(state.music && state.music.buffer)
+    || !!(state.bsound && state.bsound.on && state.bsound.buffer);
+}
+function measureAudioPeak(b) {
+  if (!b || !b.length) return 0;
+  const d = b.getChannelData(0), d2 = b.numberOfChannels > 1 ? b.getChannelData(1) : null;
+  let p = 0;
+  const step = Math.max(1, Math.floor(d.length / 1500000));   /* maks ±1,5 jt sampel */
+  for (let i = 0; i < d.length; i += step) {
+    const v = Math.abs(d2 ? (d[i] + d2[i]) / 2 : d[i]);
+    if (v > p) p = v;
+  }
+  return p;
+}
+function checkSilentAudio(tempat) {
+  const b = state.audioBuffer;
+  if (!b || (b.duration || 0) < 1.5) return false;
+  if (state._senyapEpoch === (state.mediaEpoch || 0)) return !!state.audioSenyap;
+  state._senyapEpoch = state.mediaEpoch || 0;
+  const pk = measureAudioPeak(b);
+  state.audioSenyap = pk < 0.001;                /* 0 (bening betul-betul kosong) ikut senyap */
+  if (!state.audioSenyap) return false;
+  const dB = pk > 0 ? Math.round(20 * Math.log10(pk)) : -91;
+  try { window.kinostra.noteCrash(`audio: SUMBER SENYAP (puncak ${dB} dB) terdeteksi saat ${tempat}`); } catch (e) { }
+  try {
+    const bs = document.querySelector('#bsoundStat');
+    if (bs) bs.textContent = `⚠ AUDIO ASLI VIDEO SENYAP (hening ${dB} dB) — sumber tak berisi suara. Isi suara hasil ekspor lewat BACKSOUND MP3 di bawah.`;
+  } catch (e) { }
+  if (audioTertutupMusik()) toast(`AUDIO ASLI VIDEO SENYAP (hening ${dB} dB) — suara asli sumber kosong; hasil ekspor akan berisi MUSIK/BACKSOUND saja.`, 'warn');
+  else toast(`AUDIO ASLI VIDEO SENYAP (hening ${dB} dB) — file sumber TIDAK berisi suara (bukan gangguan aplikasi). Hasil ekspor/split akan hening juga; isi suara lewat modul 11 MUSIK & NARASI AI → BACKSOUND MP3 SENDIRI.`, 'warn');
+  return true;
 }
 
 /* v3.17.1: analisis audio panjang TANPA decode utuh — jendela 45 dtk

@@ -255,7 +255,10 @@ function withTimeout(p, ms, msg) {
 async function ensureExportAudio(ui) {
   if (state.audioBuffer && state.audioBuffer.duration > 0.01) return true;
   /* JALUR 1 (hemat RAM): demux AAC — hanya MP4/AAC */
-  if (await buildAudioBufferViaDemux(ui)) return true;
+  if (await buildAudioBufferViaDemux(ui)) {
+    if (typeof checkSilentAudio === 'function') checkSilentAudio('ekspor');   /* v3.31 */
+    return true;
+  }
   /* JALUR 2 (v3.16 verbatim — v3.30): decodeAudioData PENUH — SEMUA format
      (MKV/WebM/FLV/MP3/WAV…) yang dulu membuat v3.16 selalu bersuara.
      Demux (jalur 1) gagal utk wadah bukan MP4: probeAudio tidak mengenal
@@ -273,7 +276,9 @@ async function ensureExportAudio(ui) {
     const ab = state.file.virtual ? await (await fetch(state.file.kurl)).arrayBuffer()
       : await state.file.arrayBuffer();
     state.audioBuffer = await getActx().decodeAudioData(ab);
-    return !!(state.audioBuffer && state.audioBuffer.duration > 0.01);
+    const oke = !!(state.audioBuffer && state.audioBuffer.duration > 0.01);
+    if (oke && typeof checkSilentAudio === 'function') checkSilentAudio('ekspor');   /* v3.31 */
+    return oke;
   } catch (e) { console.warn('siap-audio: decodeAudioData gagal —', e && e.message); return false; }
 }
 async function buildAudioBufferViaDemux(ui) {

@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.30.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.31.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,18 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.31.0 — PEMINDAI AUDIO SENYAP (deteksi sumber tanpa suara)
+
+Bedah file nyata dari kawan di v3.30 membuktikan sesuatu yang penting: **file sumbernya sendiri hening total** — puncak volume −91 dB sepanjang video. Track AAC-nya ADA, tetapi isinya kosong. Ini umum terjadi pada film split-an hasil unduhan: pengunggah sering menghapus atau mengganti audio untuk menghindari deteksi hak cipta. Aplikasi menyalin audio asli dengan setia — yang aslinya memang tidak berisi suara — sehingga hasil ekspor pun hening.
+
+**Kini KINOSTRA memeriksa audio sumber sejak impor:**
+- Puncak sampel audio diukur sekali per video — saat impor (file kecil) dan saat ekspor (buffer siap).
+- Jika sumber ternyata hening total (puncak di bawah −60 dBFS), muncul **peringatan jelas**: "AUDIO ASLI VIDEO SENYAP — file sumber TIDAK berisi suara (bukan gangguan aplikasi)". Modul 11 juga diberi tanda ⚠.
+- Peringatan langsung memberi solusi: isi suara lewat **BACKSOUND MP3 SENDIRI** (modul 11 MUSIK & NARASI AI) — hasil ekspor akan bernada dengan musik pilihan kawan.
+- Bila MUSIK/BACKSOUND sudah terpasang, pesan menyesuaikan: hasil ekspor akan berisi MUSIK/BACKSOUND.
+
+Diuji 12/12 (deteksi di impor, salinan setia sumber senyap, hasil bernada lewat musik, tanpa alarm palsu pada sumber bernada) + seluruh regresi lama hijau.
 
 ## Yang Baru di v3.30.0 — SUARA DIJAMIN IKUT + PANEL LEBAR (semua frame tampil)
 
