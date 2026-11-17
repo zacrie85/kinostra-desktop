@@ -673,3 +673,17 @@ Permintaan user: (1) slider ukuran tulisan part bisa sampai 10% (dulu minimal 50
 - Bump 6 file (scripts/bump-v3270.py).
 
 - RILIS v3.27.0 SELESAI (source ter-push dulu, commit 651777b): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.27.0.exe 91,4 MB · KINOSTRA-Portable-3.27.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.27.0
+
+## v3.28.0 — 15 FRAME JUDUL (+5 ELEGAN TRANSPARAN) & 15 FRAME PART FUTURISTIK TRANSPARAN (2026-11-17)
+
+Permintaan user: (1) tambah 5 frame judul tampilan elegan transparan (dari 10 → 15), (2) buat 15 frame futuristik elegan transparan utk episode/part/bagian.
+
+- KEJADIAN: sandbox terdaur ulang ke snapshot v3.14.0 di tengah tugas → semua kerja v3.15–v3.27 hilang dari working tree. PULIH via `git fetch origin && git reset --hard origin/main` (902c09a) — semua aman karena kebiasaan push source sebelum build. testmedia/long120.mp4 & batch-test-1.mp4 (tak terlacak) ikut hilang → dibuat ulang via baris di buat-longtestmedia.sh.
+- TITLEFRAMES 10 → 15: kaca (panel kaca putih .055 + hairline), kristal (kurungan sudut putih panjang), bening (hairline membulat + berlian), mewah (kaca + hairline emas dalam), etere (gradasi putih kiri-kanan) — branch baru di drawTitleFrame.
+- PARTFRAMES (fitur baru): katalog 15 gaya di core.js + drawPartFrame di compose.js (15 branch, warna CREAM/CYAN transparan, deterministik tanpa animasi) + panggilan di bumper intro (setelah _pTxt, ukur lebar dgn measureSpaced) & label pojok (membungkus strip+teks+counter) — ikut _sP (skala ukuran part), ikut alpha/animasi masuk.
+- Wiring: state.partFrame ('off'), chips #partFrameChips di modul 03 (index.html + initPartFrames ui.js), PRESET_CHIPS + partFrameChips, nativeOverlaySig + partFrame.
+- Uji BARU scripts/kinostra-v328-test.mjs 11/11: chips 16+16, pixel-DIFF semua 15 frame judul (>60 px) & 15 frame part di intro (>40 px), pojok kapsul+hud, preset roundtrip frame part+judul (hexa/kaca), native sig beda, ekspor nyata 1 part (frame HUD + merah + 60%) + file >50 KB.
+- Regresi: v327 12/12, v314 22/22, modul16 14/14, frame 6/6, overlay 6/6, ekspor 7/7; v316 22/24 (flake seksi E lama — terdokumentasi, tak berubah).
+- Bump 6 file (scripts/bump-v3280.py).
+
+- RILIS v3.28.0 SELESAI (source ter-push dulu, commit 3142ee8): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.28.0.exe 91,4 MB · KINOSTRA-Portable-3.28.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.28.0
