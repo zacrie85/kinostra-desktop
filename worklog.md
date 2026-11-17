@@ -700,3 +700,18 @@ Permintaan user: export & split error "gagal expor encoding audio" pada MERENDER
 - Bump 6 file (scripts/bump-v3290.py).
 
 - RILIS v3.29.0 SELESAI (source ter-push dulu, commit 3e7d759): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.29.0.exe 91,5 MB · KINOSTRA-Portable-3.29.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.29.0
+
+## v3.30.0 — FIX SUARA HILANG (semua format) + PANEL LEBAR (16 frame tampil semua) (2026-11-17)
+
+Laporan user di v3.29: (1) "video berhasil diexport dan split akan tetapi tidak ada suaranya", (2) gambar referensi: chip FRAME PART (TANPA+15 gaya) terpotong tepi panel — cuma ±9 terlihat.
+
+- AKAR (1): sumber berwadah BUKAN MP4/AAC (WebM/MKV/FLV/MP3) → probeAudio tak mengenal wadah → _audioDemux tak pernah ada → wantAudio salah → aCodec TAK dipilih → hasil ekspor TANPA stream audio sama sekali. (Di v3.16 semua format bersuara karena decodeAudioData penuh sejak impor.)
+- FIX (1) exporter.js: wantAudio kini menganggap semua video berpotensi bersuara (|| (!state.isAudio && state.file)); ensureExportAudio jadi dua jalur — JALUR 1 buildAudioBufferViaDemux (demux AAC, hemat RAM, MP4/AAC) bila gagal → JALUR 2 decodeAudioData PENUH semua format (semantik v3.16; pelindung RAM: file+audio ternomori ≤3,2 GB); pelindung BARU: buffer demux dengan <0,5 dtk sampel nyata dianggap gagal (tidak pernah mengirim buffer penuh NOL → ekspor senyap).
+- FIX (2) kinestra.css: main grid 384px→424px + .chips flex-wrap:wrap — 16 tombol FRAME PART tampil SEMUA dalam 2 baris (berlaku juga utk chip judul/cover/palet/transisi).
+- KECIL: asersi uji pertama keliru (n==15; faktanya PARTFRAMES = TANPA + 15 gaya = 16 tombol) → diperbaiki, 9/9.
+- UJI BARU scripts/kinostra-v330-test.mjs 9/9: chips 16 tampil ≥2 baris semua dalam panel 424px; WebM 17 mnt Opus (25,9 MB): impor tanpa buffer & tanpa demux (prekondisi kasus user), ekspor PARALEL 5× 2 part selesai, buffer = durasi PENUH 1020 dtk (bukti JALUR 2 decodeAudioData aktif), tiap part stream AAC + mean_volume > -55 dB.
+- Regresi: v329 7/7, modul16 14/14, ekspor 7/7, v328 11/11, v327 12/12, v314 22/22, frame 6/6, overlay 6/6; v316 22/24 (flake seksi E lama — terdokumentasi, tak berubah).
+- Media uji baru: testmedia/longwebm.webm (17 mnt VP8+Opus, dibuat dgn ffmpeg lavfi sine+testsrc2).
+- Bump 6 file (scripts/bump-v3300.py).
+
+- RILIS v3.30.0 SELESAI (source ter-push dulu, commit e09e98d): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.30.0.exe 91,4 MB · KINOSTRA-Portable-3.30.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.30.0
