@@ -687,3 +687,16 @@ Permintaan user: (1) tambah 5 frame judul tampilan elegan transparan (dari 10 �
 - Bump 6 file (scripts/bump-v3280.py).
 
 - RILIS v3.28.0 SELESAI (source ter-push dulu, commit 3142ee8): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.28.0.exe 91,4 MB · KINOSTRA-Portable-3.28.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.28.0
+
+## v3.29.0 — TRANSPLANTASI PROSES EXPORT & SPLIT DARI v3.16.0 (FIX "encoding audio") (2026-11-17)
+
+Permintaan user: export & split error "gagal expor encoding audio" pada MERENDER 71 PART · PARALEL 5× (ULANGI-SW); kemudian minta transplantasi proses export & split dari KINOSTRA v3.16.0 (versi yang hasilnya terbukti bagus).
+
+- AKAR BUG: sejak v3.17.1, audio film panjang di-decode per jendela SAAT render (renderMix → decodeAudioWindow + flag global _audioWinBusy, tunggu max 5 dtk lalu nekat decode bersamaan). Dgn PARALEL 5× worker berebut decoder single-flight → janji decode menggantung → watchdog 5 menit 'encoding audio macet' → retry ULANGI-SW → gagal. Bukti diff: v3.16.0 TIDAK punya decodeAudioWindow/_audioDemux sama sekali (exporter.js hanya +40 baris sejak v3.16 — sisanya penjaga anti-beku v3.26.1 yang dipertahankan).
+- TRANSPLANTASI (semantik v3.16.0, RAM lebih aman): renderMix = blok v3.16.0 verbatim (hanya membaca state.audioBuffer penuh); ensureExportAudio() membangun buffer [0..rentang ekspor+300 dtk] SEKALI berurutan via demux AAC SEBELUM worker pertama jalan (bertahap per jendela — TANPA ArrayBuffer ±2 GB; decode utuh saat impor TIDAK dipulihkan → bebas layar hitam v3.16 di film 3-4 jam; peaks/zoom pembicara tak tersentuh; POTONG LANGSUNG pulang awal sebelum jalur ini). GABUNG VIDEO (exportMergeToDir) menyiapkan buffer per film.
+- KECIL TAPI PENTING: `pkill -f electron` membunuh shell-nya sendiri (pola cocok cmdline shell sendiri) → gunakan `[e]lectron`; argumen ke-2 run-test-xvfb.sh = timeout node (120 dtk terlalu kecil utk uji ekspor — pakai 480).
+- UJI BARU scripts/kinostra-v329-test.mjs 7/7: impor panjang tanpa buffer penuh (prekondisi), ekspor PARALEL 5× > jumlah part selesai TANPA 'audio macet', buffer tersisa ≥500 dtk (semantik v3.16), UI 'menyiapkan audio penuh', 2 part MP4, tiap part stream AAC + mean_volume > -55 dB (tidak senyap).
+- Regresi: modul16 14/14, ekspor anti-beku 7/7, v327 12/12, v314 22/22, v328 11/11, frame 6/6, overlay 6/6; v316 22/24 (flake seksi E lama — terdokumentasi, tak berubah).
+- Bump 6 file (scripts/bump-v3290.py).
+
+- RILIS v3.29.0 SELESAI (source ter-push dulu, commit 3e7d759): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.29.0.exe 91,5 MB · KINOSTRA-Portable-3.29.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.29.0
