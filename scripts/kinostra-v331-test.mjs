@@ -88,9 +88,19 @@ async function exportOne(cdp, outDir) {
     state.titleOn = false; state.descOn = false; state.subsOn = false;
     state.partShow = 'intro'; state.partAnim = 'off'; state.partFrame = 'off';
     state.cutMode = 'full'; state.acc = 'cpu'; state.scale = '0.5';
-    try { const res = await exportPartsToDir(${JSON.stringify(outDir)}, { title() { }, prog() { }, sub() { } });
-      return { n: res.length, fatal: state.exportFatal ? String(state.exportFatal.message) : null }; }
-    catch (e) { return { n: 0, err: String((e && e.message) || e) }; }
+    /* v3.32: GERBANG SUARA — modal konfirmasi sumber senyap kini muncul
+       sebelum ekspor; uji lama memilih TETAP EKSPOR (HENING) = salinan setia */
+    const p = exportPartsToDir(${JSON.stringify(outDir)}, { title() { }, prog() { }, sub() { } });
+    let gerbang = false;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      const t = document.querySelector('#mTitle') ? document.querySelector('#mTitle').textContent : '';
+      if (t && t.includes('SENYAP')) { gerbang = true; break; }
+    }
+    if (gerbang) { const b = document.querySelector('#pfLanjut'); if (b) b.click(); }
+    try { const res = await p;
+      return { n: res.length, gerbang, fatal: state.exportFatal ? String(state.exportFatal.message) : null }; }
+    catch (e) { return { n: 0, gerbang, err: String((e && e.message) || e) }; }
   })()`, 300000);
 }
 function volDetect(p) {

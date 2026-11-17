@@ -193,6 +193,7 @@ async function decodeFileAudio() {
     state.audioBuffer = null; state.peaks = null;
     state._audioDemux = null; state._audioEnv = null; state._audioWin = null;
     state.audioSenyap = false;                     /* v3.31: pemindai audio senyap per video */
+    state._audioSeg = null;                        /* v3.32: segmen audio ekspor video LAMA tidak boleh bocor */
     /* v3.17.1 PERBAIKAN LAYAR HITAM/CRASH SETELAH IMPOR — akar masalah:
        decodeAudioData penuh film panjang = AudioBuffer float stereo
        ±21 MB/menit (film 2 jam ≈ 2,5 GB; film 188 mnt ≈ 4 GB) di SATU
@@ -234,14 +235,15 @@ async function decodeFileAudio() {
   } catch (e) { state.audioBuffer = null; toast('Track audio tidak terbaca — ekspor mungkin tanpa suara asli', 'warn'); }
 }
 
-/* ---------- v3.31: PEMINDAI AUDIO SENYAP ----------
+/* ---------- v3.31→v3.32: PEMINDAI AUDIO SENYAP ----------
    Sumber tanpa suara (hasil unduhan film split-an sering begitu): track
    AAC ADA tetapi isinya hening digital (puncak < −60 dBFS). Ekspor
    menyalin audio asli dengan setia → hasil ikut hening; user mengira
    aplikasinya rusak. Diukur SEKALI per video (cache per mediaEpoch):
    puncak sampel < 0,001 (≈ −60 dBFS) → SENYAP. Pemindaian dijalankan
-   saat impor (file kecil, decode penuh) & saat ekspor (buffer siap,
-   termasuk jalur demux/decode penuh v3.30). Pesan menyesuaikan bila
+   saat impor (file kecil: decode penuh; film panjang: jendela demux
+   v3.32 — peringatan muncul SEJAK IMPOR, tak menunggu ekspor) & saat
+   ekspor (buffer siap / segmen pertama). Pesan menyesuaikan bila
    MUSIK/BACKSOUND sudah siap mengisi suara. */
 function audioTertutupMusik() {
   return !!(state.music && state.music.buffer)
@@ -258,15 +260,17 @@ function measureAudioPeak(b) {
   }
   return p;
 }
-function checkSilentAudio(tempat) {
-  const b = state.audioBuffer;
-  if (!b || (b.duration || 0) < 1.5) return false;
+/* v3.32: inti pemindai — menerima puncak yang sudah diukur (dari buffer
+   penuh, segmen pertama ekspor, ATAU jendela analisis film panjang). */
+function checkSilentPeak(pk, spanSec, tempat) {
   if (state._senyapEpoch === (state.mediaEpoch || 0)) return !!state.audioSenyap;
+  if (!(spanSec >= 1.5) || !(pk >= 0)) return false;
   state._senyapEpoch = state.mediaEpoch || 0;
-  const pk = measureAudioPeak(b);
   state.audioSenyap = pk < 0.001;                /* 0 (bening betul-betul kosong) ikut senyap */
-  if (!state.audioSenyap) return false;
-  const dB = pk > 0 ? Math.round(20 * Math.log10(pk)) : -91;
+  if (state.audioSenyap) warnAudioSenyap(pk > 0 ? Math.round(20 * Math.log10(pk)) : -91, tempat);
+  return state.audioSenyap;
+}
+function warnAudioSenyap(dB, tempat) {
   try { window.kinostra.noteCrash(`audio: SUMBER SENYAP (puncak ${dB} dB) terdeteksi saat ${tempat}`); } catch (e) { }
   try {
     const bs = document.querySelector('#bsoundStat');
@@ -274,7 +278,64 @@ function checkSilentAudio(tempat) {
   } catch (e) { }
   if (audioTertutupMusik()) toast(`AUDIO ASLI VIDEO SENYAP (hening ${dB} dB) — suara asli sumber kosong; hasil ekspor akan berisi MUSIK/BACKSOUND saja.`, 'warn');
   else toast(`AUDIO ASLI VIDEO SENYAP (hening ${dB} dB) — file sumber TIDAK berisi suara (bukan gangguan aplikasi). Hasil ekspor/split akan hening juga; isi suara lewat modul 11 MUSIK & NARASI AI → BACKSOUND MP3 SENDIRI.`, 'warn');
-  return true;
+}
+function checkSilentAudio(tempat, pkKnown) {
+  if (pkKnown !== undefined) return checkSilentPeak(pkKnown, state.audioBuffer ? state.audioBuffer.duration : (state._audioSeg ? state._audioSeg.segSec : 180), tempat);
+  const b = state.audioBuffer;
+  if (!b || (b.duration || 0) < 1.5) return false;
+  return checkSilentPeak(measureAudioPeak(b), b.duration, tempat);
+}
+
+/* ---------- v3.32: AUDIO EKSPOR BERSEGMENT (AKAR "FILM UTUH TANPA SUARA") ----------
+   v3.30 membangun SATU AudioBuffer untuk seluruh rentang ekspor. Ekspor
+   FILM UTUH (mis. 71 part × 183 dtk = 3,5 jam) butuh buffer ±4,9 GB →
+   alokasi `new AudioBuffer` gagal di mesin RAM 4-8 GB → jalur 1 gagal →
+   pelindung RAM jalur 2 (≤3,2 GB) juga menolak → ekspor jalan TANPA track
+   audio sama sekali. Inilah penyebab laporan "hasil export & split tidak
+   ada suaranya" pada ekspor film utuh. Kini: bila buffer penuh > 1 GB,
+   audio disiapkan BERSEGMENT — renderMix meminta segmen 180 dtk sesuai
+   kebutuhan tiap part dari antrian decode BERURUTAN (satu decoder pada
+   satu waktu → bebas rebutan pelan v3.17), cache LRU ±8 segmen (±550 MB)
+   → RAM selalu terkendali berapa pun panjang filmnya. */
+function audioSegStoreInit(pr) {
+  state._audioSeg = {
+    probe: pr, cache: { probe: pr }, on: true,
+    sr: (pr.info && pr.info.sampleRate) || 48000,
+    chs: (pr.info && pr.info.channels) || 2,
+    segSec: 180, cap: 8, nDec: 0,
+    map: new Map(), pend: new Map(), q: Promise.resolve()
+  };
+}
+function audioSegsFor(start, durMedia) {
+  const st = state._audioSeg;
+  if (!st || !st.on) return Promise.resolve([]);
+  const i0 = Math.max(0, Math.floor(start / st.segSec));
+  const i1 = Math.floor((start + Math.max(0.01, durMedia)) / st.segSec);
+  const want = [];
+  for (let i = i0; i <= i1; i++) want.push(i);
+  const pend = want.map(i => {
+    if (st.map.has(i)) return Promise.resolve(st.map.get(i));
+    if (st.pend.has(i)) return st.pend.get(i);
+    const p = st.q.then(() => decodeAudioWindow(st.cache, i * st.segSec, st.segSec))
+      .then(wb => {
+        const buf = (wb && wb.duration > 0.01) ? wb : null;
+        if (buf) {
+          st.map.set(i, buf);
+          while (st.map.size > st.cap) {   /* LRU: buang segmen tertua */
+            const first = st.map.keys().next().value;
+            if (first === i) break;
+            st.map.delete(first);
+          }
+        }
+        st.pend.delete(i); st.nDec++;
+        return buf;
+      });
+    st.pend.set(i, p);
+    st.q = p.catch(() => null);   /* antrean lanjut walau satu segmen gagal */
+    return p;
+  });
+  return Promise.all(pend).then(list =>
+    want.map((i, k) => list[k] ? { t0: i * st.segSec, buf: list[k] } : null).filter(Boolean));
 }
 
 /* v3.17.1: analisis audio panjang TANPA decode utuh — jendela 45 dtk
@@ -320,7 +381,7 @@ async function analyzeAudioViaDemux() {
        cepat; RAM puncak tetap 1 jendela (±46 MB). Film ≤60 mnt:
        45 dtk persis v3.17.1. */
     const WIN = dur > 3600 ? 120 : 45;
-    let nWin = 0, missBeruntun = 0;
+    let nWin = 0, missBeruntun = 0, puncakAnalisis = 0, _senyapDikirim = false;
     for (let t = 0; t < dur && state.file && (state.mediaEpoch || 0) === epoch; t += WIN) {
       /* v3.17.1: ekspor sedang jalan ATAU video sedang DIPUTAR → tunda
          analisis. Analisis adalah pekerjaan latar yang sopan — jangan pernah
@@ -357,6 +418,8 @@ async function analyzeAudioViaDemux() {
         for (let j = o; j < Math.min(L, o + bs); j += 16) { const v = Math.abs(dch[j] || 0); if (v > m) m = v; }
         peaks[k] = m;
       }
+      /* v3.32: pantau puncak antar jendela — deteksi dini sumber senyap */
+      for (let k = i0; k < i1; k++) if (peaks[k] > puncakAnalisis) puncakAnalisis = peaks[k];
       let s2 = 0, c = 0;
       for (let j = 0; j < L; j += 24) { const v = dch[j] || 0; s2 += v * v; c++; }
       const rmsWin = Math.sqrt(s2 / Math.max(1, c));
@@ -370,6 +433,23 @@ async function analyzeAudioViaDemux() {
       }
       state.peaks = peaks; state.audioRms = Math.sqrt(sumSq / Math.max(1, nSum));
       state._rmsEpoch = epoch; state._audioEnv = env;
+      /* v3.32: DETEKSI DINI SUMBER SENYAP utk film panjang — setelah ±45 dtk
+         audio terdecode tanpa satu pun sampel bernada, beri tahu SEJAK IMPOR.
+         Dulu peringatan baru muncul saat ekspor; film utuh 3,5 jam bahkan tak
+         pernah sampai ke pemindai lama (buffer audio ±4,9 GB gagal dibuat —
+         akar "ekspor film utuh tanpa suara"). Koreksi otomatis bila jendela
+         berikutnya menemukan suara (film senyap hanya di awal). */
+      if (!_senyapDikirim && puncakAnalisis < 0.001 && t1 >= 45) {
+        _senyapDikirim = true;
+        checkSilentPeak(puncakAnalisis, t1, 'impor (film panjang)');
+      } else if (_senyapDikirim && state.audioSenyap && puncakAnalisis >= 0.001) {
+        state.audioSenyap = false; state._senyapEpoch = undefined; _senyapDikirim = false;
+        try {
+          const bs = document.querySelector('#bsoundStat');
+          if (bs && bs.textContent.includes('SENYAP')) bs.textContent = 'Belum ada backsound — video pakai suara asli saja';
+        } catch (e) { }
+        toast('Audio asli terdeteksi BERNADA di bagian lain film — peringatan senyap dibatalkan.', 'ok');
+      }
       await new Promise(r => setTimeout(r, 120));   /* v3.22: napas jendela 120 ms (dulu 0) */
     }
     if ((state.mediaEpoch || 0) === epoch && state.file) {

@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.31.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.32.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,20 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.32.0 — GERBANG SUARA & AUDIO FILM UTUH (akar "film utuh tanpa suara")
+
+Tangkapan layar kawan di v3.31 memperlihatkan keterangan: **"Audio film terlalu besar untuk decode penuh — ekspor lanjut tanpa suara asli"**. Itulah akar sebenarnya kenapa **ekspor film utuh** selalu tanpa suara: untuk film 3-4 jam, aplikasi mencoba menyiapkan SELURUH audio film sebagai satu buffer memori (film 3,5 jam = ±4,9 GB) — alokasi itu gagal di kebanyakan mesin, lalu ekspor berjalan **tanpa track audio**. Ekspor sebagian part tidak pernah kena karena rentangnya kecil; ekspor penuh (mis. 71 part) selalu kena. Video pendek/normal tidak pernah kena karena decode-nya kecil — persis laporan "video lain bisa, khusus video ini tidak".
+
+**Kini audio ekspor BERSEGMENT — RAM selalu terkendali berapa pun panjang film:**
+- Audio disiapkan per segmen 180 detik sesuai kebutuhan tiap part (cache ±8 segmen, ±550 MB) — suara asli ikut di SEMUA part, dari awal sampai akhir film.
+- Rentang ekspor kecil tetap memakai jalur buffer penuh v3.30 yang terbukti.
+
+**GERBANG SUARA — kawan tidak akan lagi mendapat file senyap tanpa penjelasan:**
+- Deteksi sumber hening kini menyala **sejak impor** juga untuk film panjang (dulu baru saat ekspor), dengan koreksi otomatis bila ternyata ada suara di bagian lain film.
+- Sebelum ekspor, bila sumber senyap & tanpa musik: muncul konfirmasi **"AUDIO ASLI VIDEO SENYAP"** dengan tombol **🎵 PAKAI MUSIK OTOMATIS & EKSPOR** — sekali klik, skor musik disusun otomatis (dibatasi 300 detik, diputar berulang, aman di RAM) dan seluruh hasil ekspor/split bernada. Bisa juga memilih "TETAP EKSPOR (HENING)" atau "BATAL".
+- POTONG LANGSUNG ikut diberi peringatan (audio asli disalin apa adanya — sumber senyap → hasil senyap).
+- Setiap part dievaluasi puncak audionya saat dirender: part hening ditandai, dan **modal hasil kini menampilkan STATUS SUARA** (SUARA: BERNADA (audio asli) / BERNADA (musik) / ⚠ HENING + cara memperbaiki) beserta versi KINOSTRA di setiap laporan.
 
 ## Yang Baru di v3.31.0 — PEMINDAI AUDIO SENYAP (deteksi sumber tanpa suara)
 

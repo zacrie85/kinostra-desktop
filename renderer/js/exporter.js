@@ -289,6 +289,31 @@ async function buildAudioBufferViaDemux(ui) {
   const buildEnd = Math.min(state.duration || (r.end + 300), r.end + 300);
   const sr = pr.info.sampleRate || 48000, chs = pr.info.channels || 2;
   const totalN = Math.ceil(buildEnd * sr) + sr;
+  /* v3.32: RENTANG BESAR → MODE SEGMENT. Ekspor film utuh (mis. 71 part ×
+     183 dtk = 3,5 jam) butuh AudioBuffer ±4,9 GB — alokasi gagal di mesin
+     RAM 4-8 GB → jalur 1 gagal → pelindung RAM jalur 2 juga menolak →
+     ekspor jalan TANPA track audio (toast "Audio film terlalu besar…" —
+     laporan user nyata). Kini: buffer penuh > 1 GB tak dibuat; renderMix
+     mengambil audio per segmen 180 dtk dari antrian decode berurutan
+     (audioSegsFor — media.js), RAM selalu ±550 MB berapa pun panjang film. */
+  const _segBytes = totalN * chs * 4;
+  if (_segBytes > 1.0e9) {
+    audioSegStoreInit(pr);
+    state._audioExporting = true;   /* analisis latar menunggu — sopan */
+    try {
+      const r0 = (typeof rangeInfo === 'function') ? rangeInfo() : { start: 0 };
+      const segs0 = await audioSegsFor(Math.min(r0.start, Math.max(0, buildEnd - 1)), 1);
+      if (segs0 && segs0.length) {
+        if (typeof checkSilentAudio === 'function') checkSilentAudio('ekspor', measureAudioPeak(segs0[0].buf));
+        console.warn('siap-audio: rentang besar (' + (Math.round(_segBytes / 1e8) / 10) + ' GB) — mode SEGMENT per part (RAM terkendali)');
+        try { window.kinostra.noteCrash('audio: mode SEGMENT (' + Math.round(buildEnd) + ' dtk rentang · segmen 180 dtk · LRU 8)'); } catch (e) { }
+        return true;
+      }
+    } finally { state._audioExporting = false; }
+    console.warn('siap-audio: segmen pertama kosong — jatuh ke jalur berikutnya');
+    state._audioSeg = null;
+    return false;
+  }
   let buf = null;
   try { buf = new AudioBuffer({ numberOfChannels: chs, length: totalN, sampleRate: sr }); }
   catch (e) { console.warn('siap-audio: memori tak cukup —', e && e.message); return false; }
@@ -378,6 +403,24 @@ async function renderMix(start, durOut, spd = 1) {
     const g = oc.createGain(); g.gain.value = state.audioGain;
     s.connect(g); connectSrc(g);
     s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
+  } else if (state._audioSeg && state._audioSeg.on) {
+    /* v3.32: sumber audio BERSEGMENT — film utuh tak pernah dijadikan satu
+       buffer raksasa; segmen 180 dtk didekode berurutan saat part meminta.
+       Pemetaan waktu: mediaTime [m0..m1] → output (m0−start)/spd dgn
+       playbackRate spd (kecepatan v2.12 ikut bekerja per segmen). */
+    const filmEnd = state.duration || (start + durOut * spd);
+    const mEnd = Math.min(start + durOut * spd, filmEnd);
+    let segs = [];
+    try { segs = await audioSegsFor(start, Math.max(0.01, mEnd - start)); } catch (e) { }
+    for (const sg of segs) {
+      const m0 = Math.max(start, sg.t0), m1 = Math.min(mEnd, sg.t0 + sg.buf.duration);
+      if (m1 - m0 <= 0.02) continue;
+      const s = oc.createBufferSource(); s.buffer = sg.buf;
+      s.playbackRate.value = spd;
+      const g = oc.createGain(); g.gain.value = state.audioGain;
+      s.connect(g); connectSrc(g);
+      s.start((m0 - start) / spd, m0 - sg.t0, (m1 - m0) / spd);
+    }
   }
   if (state.music.buffer && state.music.buffer.duration > 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.music.buffer;
@@ -455,6 +498,14 @@ async function encodeAudioStream(muxer, seg, durOut, spd = 1, codec, mergeOff = 
       if (state.exportFatal) throw state.exportFatal;
       const len = Math.min(BLK, durOut - outOff);
       const mix = await renderMix(seg.start + outOff * spd, len, spd);
+      /* v3.32: GERBANG SUARA per part — puncak campuran diukur per blok
+         (murah, sampling). Part yang SELURUH bloknya < 0,001 (≈ −60 dBFS)
+         ditandai HENING → modal hasil menjelaskan penyebab & solusinya. */
+      try {
+        const _pk = measureAudioPeak(mix);
+        const _pv = (state._partPk && state._partPk.get(seg.i)) || 0;
+        if (_pk > _pv) state._partPk.set(seg.i, _pk);
+      } catch (e) { }
       const L = mix.getChannelData(0), R2 = chs > 1 ? mix.getChannelData(1) : L;
       for (let off = 0; off < mix.length; off += sr) {
         if (state.abort) throw new Error('Dibatalkan');
@@ -1544,6 +1595,13 @@ async function exportPartsToDir(dir, ui) {
       toast(`POTONG LANGSUNG butuh semua efek mati (aktif: ${blk}) — memakai RENDER PENUH`, 'warn');
     } else {
       try {
+        /* v3.32: gerbang suara POTONG LANGSUNG — audio asli DISALIN apa
+           adanya, jadi sumber senyap → hasil senyap. Tanpa opsi musik
+           (campur musik butuh render penuh); tawarkan lanjut/batal. */
+        if (state.audioSenyap && !audioTertutupMusik()) {
+          const pf = await praEksporSuara('fastcut');
+          if (pf === 'batal') throw new Error('Dibatalkan');
+        }
         const res = await fastCutExport(segs, dir, ui);
         if (ui.prog) ui.prog(1);
         return res;
@@ -1566,6 +1624,19 @@ async function exportPartsToDir(dir, ui) {
       console.warn('siap audio gagal —', e && e.message);
     }
     if (!state.audioBuffer) toast('Suara asli tidak tersedia — ekspor lanjut (musik/backsound tetap ikut bila ada)', 'warn');
+  }
+  /* v3.32: GERBANG SUARA PRA-EKSPOR — sumber senyap & tanpa musik/backsound →
+     tawarkan MUSIK OTOMATIS sekali klik SEBELUM waktu ekspor dihabiskan */
+  if (aCodec) {
+    const pf = await praEksporSuara('render');
+    if (pf === 'musik') {
+      try {
+        setSub('Menyusun musik otomatis (sekali klik)…');
+        await composeMusic(false, true, true);
+        if (!state.music.buffer) throw new Error('skor kosong');
+        toast('MUSIK OTOMATIS siap — hasil ekspor akan bernada', 'ok');
+      } catch (e) { toast('MUSIK OTOMATIS gagal (' + ((e && e.message) || e) + ') — ekspor lanjut tanpa musik', 'warn'); }
+    } else if (pf === 'batal') throw new Error('Dibatalkan');
   }
   let par = pickParallelCount(segs.length, enc.kind === 'hw');
   /* v3.9: KILAT + encoder SOFTWARE = dekode+encode sama-sama makan CPU —
@@ -1611,6 +1682,7 @@ async function exportPartsToDir(dir, ui) {
     return _srcUrl;
   };
   const results = new Array(segs.length).fill(null);
+  state._partPk = new Map();   /* v3.32: puncak campuran per part (gerbang suara) */
   state.exportFatal = null;   /* v2.10: mulai ekspor baru — bersihkan sisa gagal lama */
   try {
     if (ui.title) ui.title(segs);
@@ -1724,10 +1796,18 @@ async function exportPartsToDir(dir, ui) {
       ui.sub(`selesai dalam ${el < 90 ? el.toFixed(0) + ' detik' : (el / 60).toFixed(1) + ' menit'} · ${par}× paralel${hw ? ' · GPU' : ''}`);
     }
     if (ui.prog) ui.prog(1);
+    /* v3.32: tandai part HENING (gerbang suara) — ditampilkan di modal hasil */
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (!r || r.skipped) continue;
+      const pk = state._partPk && state._partPk.get(slots[i].seg.i);
+      if (pk !== undefined) r.silent = pk < 0.001;
+    }
     return results;
   } finally {
     state.exportFatal = null;   /* v2.10: jangan bocor ke ekspor/video berikutnya */
     state._kilat = null;        /* v3.9: probe kilat tidak bocor ke video berikutnya */
+    state._audioSeg = null;     /* v3.32: segmen audio ekspor selesai — RAM dibebaskan */
     if (_srcUrl != null && !state.file.virtual) try { URL.revokeObjectURL(_srcUrl); } catch (e) { }
   }
 }
@@ -1796,10 +1876,31 @@ async function doExport() {
   state.busy = false;
 }
 function showResults(results, dir) {
+  /* v3.32: STATUS SUARA hasil + versi aplikasi — user tak pernah lagi
+     mendapat file senyap tanpa penjelasan; laporan masalah ikut versi */
+  const nOk = results.filter(r => r && !r.skipped).length;
+  const nSil = results.filter(r => r && r.silent).length;
+  const adaMusik = audioTertutupMusik();
+  let suara;
+  if (nOk && nSil === nOk) suara = `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:#f6a623">⚠ SUARA: HENING — audio asli sumber kosong &amp; tanpa musik/backsound (pasang di modul 11 MUSIK &amp; NARASI AI, lalu ekspor ulang)</span></div>`;
+  else if (nSil) suara = `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:#f6a623">⚠ ${nSil} dari ${nOk} part HENING — audio asli sumber kosong di bagian itu</span></div>`;
+  else if (adaMusik) suara = `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:#39d98a">SUARA: BERNADA (musik/backsound)</span></div>`;
+  else suara = `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:#39d98a">SUARA: BERNADA (audio asli)</span></div>`;
+  let _v = '';
+  try {
+    for (const el of document.querySelectorAll('.bsub, .tag, .btitle')) {
+      const m = (el.textContent || '').match(/v\d+\.\d+\.\d+/);
+      if (m) { _v = m[0]; break; }
+    }
+    if (!_v) { const m = (document.body.innerText || '').match(/v\d+\.\d+\.\d+/); if (m) _v = m[0]; }
+  } catch (e) { }
+  if (!_v) _v = 'DESKTOP';
   const body = results.map((r, i) =>
-    `<div class="rrow"><span class="rn">${r.name}</span><span class="rs">${fmtMB(r.size)}</span></div>`).join('')
+    `<div class="rrow"><span class="rn">${r.name}${r.silent ? ' <span style="color:#f6a623">⚠ hening</span>' : ''}</span><span class="rs">${fmtMB(r.size)}</span></div>`).join('')
+    + suara
     + `<div class="rrow" style="border-style:dashed"><span class="rn" style="color:var(--tx2)">Folder: ${dir}</span></div>
-       <button class="btn acc wide" id="openFolder" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>`;
+       <button class="btn acc wide" id="openFolder" style="margin-top:6px"><i data-lucide="folder-open"></i> BUKA FOLDER OUTPUT</button>
+       <div style="margin-top:6px;font-size:10px;color:var(--tx2)">KINOSTRA ${_v} · gerbang suara per part aktif</div>`;
   /* v2.7 FIX: modal hasil harus selalu bisa ditutup — dulu showModal tanpa
      `cancel:true` menyembunyikan tombol TUTUP sehingga pop-up tidak bisa
      ditutup dan aplikasi terasa macet. Sekarang: TUTUP tampil + tombol ×
@@ -1809,6 +1910,35 @@ function showResults(results, dir) {
   M.c.textContent = 'TUTUP';
   const of = M.b.querySelector('#openFolder');
   if (of) of.onclick = () => window.kinostra.openPath(dir);
+}
+
+/* ---------- v3.32: GERBANG SUARA PRA-EKSPOR ----------
+   Modal konfirmasi SEBELUM ekspor bila audio asli sumber terbukti senyap
+   dan tidak ada musik/backsound: hasil pasti hening — tawarkan MUSIK
+   OTOMATIS sekali klik (mesin komposisi prosedural music.js), tetap
+   ekspor, atau batal. Untuk POTONG LANGSUNG: tanpa opsi musik (audio
+   disalin apa adanya; campur musik butuh render penuh). */
+function praEksporSuara(mode) {
+  if (state.isAudio || audioTertutupMusik() || !state.audioSenyap) return Promise.resolve('lanjut');
+  return new Promise(res => {
+    const musikBtn = mode === 'fastcut' ? '' :
+      `<button class="btn acc wide" id="pfMusik" style="margin:4px 0"><i data-lucide="music"></i> PAKAI MUSIK OTOMATIS &amp; EKSPOR</button>`;
+    showModal({
+      title: '⚠ AUDIO ASLI VIDEO SENYAP',
+      sub: 'File sumber tidak berisi suara (hening total — umum pada film hasil unduhan)',
+      cancel: true, onCancel() { hideModal(); res('batal'); },
+      body: `<div style="text-align:left">
+        <p style="margin:0 0 8px">Hasil ekspor/split akan <b style="color:#f6a623">HENING</b> tanpa musik/backsound${mode === 'fastcut' ? ' — POTONG LANGSUNG menyalin audio asli apa adanya' : ''}. Untuk suara: pakai musik otomatis di bawah${mode === 'fastcut' ? ' lewat RENDER PENUH (matikan POTONG LANGSUNG dulu)' : ''}, atau lanjut tanpa suara.</p>
+        ${musikBtn}
+        <button class="btn wide" id="pfLanjut" style="margin:4px 0">TETAP EKSPOR (HENING)</button>
+      </div>`
+    });
+    if (window.lucide) lucide.createIcons();
+    M.c.textContent = 'BATAL';
+    const bm = M.b.querySelector('#pfMusik'), bl = M.b.querySelector('#pfLanjut');
+    if (bm) bm.onclick = () => { hideModal(); res('musik'); };
+    if (bl) bl.onclick = () => { hideModal(); res('lanjut'); };
+  });
 }
 
 /* ---------- ringkasan ekspor ---------- */
@@ -2048,6 +2178,9 @@ async function doMerge() {
       sub: s => setSub(s)
     });
     hideModal();
+    /* v3.32: gabung/potong menyalin audio sumber — sumber senyap & tanpa
+       musik → hasil senyap (tandai utk modal hasil) */
+    if (state.audioSenyap && !audioTertutupMusik()) results.forEach(r => { if (r && !r.skipped) r.silent = true; });
     showResults(results, dir);
     toast(`Gabungan selesai: ${results[0].name}`, 'ok');
   } catch (e) {

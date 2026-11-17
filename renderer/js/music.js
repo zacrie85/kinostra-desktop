@@ -48,7 +48,11 @@ async function composeMusic(reroll, quiet = false, force = false) {
   try {
     await sleep(30);
     const Mz = MOODS[state.music.mood], inten = state.music.intensity;
-    const dur = (state.duration || 30) + 1.5, sr = 44100;
+    /* v3.32: durasi skor DIBATASI 300 dtk — renderMix memutar musik BERULANG
+       (loop v2.10), jadi skor tak perlu sepanjang film. Dulu film utuh 3,5 jam
+       meminta buffer musik ±4,5 GB → alokasi gagal → MUSIK OTOMATIS selalu
+       gagal justru di film panjang (kasus user: 71 part). 300 dtk = ±106 MB. */
+    const dur = Math.min((state.duration || 30) + 1.5, 300), sr = 44100;
     const oc = new OfflineAudioContext(2, Math.ceil(sr * dur), sr);
     const R = mulberry32(state.music.seed);
     const spb = 60 / Mz.bpm, bar = spb * 4, e8 = spb / 2;

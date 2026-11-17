@@ -288,7 +288,12 @@ try {
     state.kb.mode = 'off'; state.trans.mode = 'off'; state.frameStyle = 'off'; state.neon.on = false;
     state.cutMode = 'render'; state.cover.on = false; setSegOn('segCover', 'off');
     let err = null, n = 0;
-    try { const res = await exportPartsToDir('${OUT_A}', { prog() { }, sub() { }, title() { } }); n = res.length; }
+    const _p = exportPartsToDir('${OUT_A}', { prog() { }, sub() { }, title() { } });
+    /* v3.32: gerbang suara sumber senyap → klik TETAP EKSPOR (HENING) */
+    for (let _i = 0; _i < 60; _i++) { await new Promise(_r => setTimeout(_r, 500));
+      const _t = (document.querySelector('#mTitle') || {}).textContent || '';
+      if (_t.includes('SENYAP')) { const _b = document.querySelector('#pfLanjut'); if (_b) { _b.click(); break; } } }
+    try { const res = await _p; n = res.length; }
     catch (e2) { err = e2 && e2.message; }
     return { n, err };
   })()`);
@@ -299,7 +304,11 @@ try {
     const sl = document.querySelector('#inPartSize');
     sl.value = '2'; sl.dispatchEvent(new Event('input', { bubbles: true }));   /* jalur UI penuh */
     let err = null, n = 0;
-    try { const res = await exportPartsToDir('${OUT_B}', { prog() { }, sub() { }, title() { } }); n = res.length; }
+    const _p = exportPartsToDir('${OUT_B}', { prog() { }, sub() { }, title() { } });
+    for (let _i = 0; _i < 60; _i++) { await new Promise(_r => setTimeout(_r, 500));
+      const _t = (document.querySelector('#mTitle') || {}).textContent || '';
+      if (_t.includes('SENYAP')) { const _b = document.querySelector('#pfLanjut'); if (_b) { _b.click(); break; } } }
+    try { const res = await _p; n = res.length; }
     catch (e2) { err = e2 && e2.message; }
     return { n, err, ps: state.partSize };
   })()`);
@@ -354,7 +363,11 @@ try {
     const sl = document.querySelector('#inPartSize');
     sl.value = '2'; sl.dispatchEvent(new Event('input', { bubbles: true }));
     let err = null, n = 0;
-    try { const res = await exportPartsToDir('${OUT_C}', { prog() { }, sub() { }, title() { } }); n = res.length; }
+    const _p = exportPartsToDir('${OUT_C}', { prog() { }, sub() { }, title() { } });
+    for (let _i = 0; _i < 60; _i++) { await new Promise(_r => setTimeout(_r, 500));
+      const _t = (document.querySelector('#mTitle') || {}).textContent || '';
+      if (_t.includes('SENYAP')) { const _b = document.querySelector('#pfLanjut'); if (_b) { _b.click(); break; } } }
+    try { const res = await _p; n = res.length; }
     catch (e2) { err = e2 && e2.message; }
     return { n, err, ps: state.partSize };
   })()`);
