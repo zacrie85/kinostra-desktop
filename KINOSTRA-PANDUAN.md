@@ -1,4 +1,4 @@
-# KINOSTRA — Suite Video Otonom · DESKTOP v3.28.0
+# KINOSTRA — Suite Video Otonom · DESKTOP v3.29.0
 
 Aplikasi desktop **100% offline** untuk Windows 10/11 (64-bit).
 Porting setia dari KINOSTRA v1.0 (web) + 17 upgrade.
@@ -62,6 +62,19 @@ Tiga permintaan sekaligus:
 - **AMAN berlapis**: hanya MP4/MOV H.264 (avc1/avc3); frame dikeluarkan **terurut PTS** (penyangga pengurut untuk sumber ber-B-frame); PTS negatif dinormalkan; stempel waktu monoton dijaga (frame ganda dibuang); **gagal apa pun → otomatis kembali ke jalur TURBO lama** tanpa kehilangan apa pun; percobaan ulang part gabungan dijaga "watermark" supaya tidak merusak file
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
+
+## Yang Baru di v3.29.0 — EKSPOR & SPLIT KEMBALI KE PROSES v3.16.0 (FIX "encoding audio")
+
+Sesuai permintaan kawan, proses **EXPORT & SPLIT** ditransplantasi dari **KINOSTRA v3.16.0** — versi yang hasil ekspor & split-nya terbukti bagus. Ini memperbaiki kasus "MERENDER 71 PART · PARALEL 5× … (ULANGI-SW) … Gagal ekspor: encoding audio".
+
+Akar masalahnya: sejak v3.17.1 audio film panjang di-decode per jendela SAAT render; dengan PARALEL 5× para pekerja berebut satu decoder audio (tunggu maks 5 detik lalu men-decode bersamaan) → proses decode menggantung → dijaga jam 5 menit → "encoding audio macet" → part diulang (ULANGI-SW) → ekspor gagal.
+
+Sekarang (semantik v3.16, dengan perbaikan RAM):
+1. **Audio disiapkan SEKALI sebelum render dimulai** — satu AudioBuffer penuh dari awal sampai batas rentang ekspor; semua pekerja hanya MEMBACA buffer yang sama, PARALEL berapa pun tidak lagi berebut decoder.
+2. **Impor tidak berubah** — buffer dibangun bertahap per jendela (tanpa ArrayBuffer ±2 GB dan tanpa decode utuh saat impor), jadi bebas layar hitam/crash v3.16 di film 3-4 jam; garis gelombang & zoom pembicara tetap jalan seperti sebelumnya.
+3. **POTONG LANGSUNG tak tersentuh** (sampel audio disalin langsung) dan **GABUNG VIDEO** juga menyiapkan buffer per film.
+
+Diuji 7/7 (ekspor PARALEL 5× dengan part bersamaan — tanpa "audio macet", audio hasil TIDAK senyap) + seluruh regresi lama hijau.
 
 ## Yang Baru di v3.28.0 — 15 FRAME JUDUL + 15 FRAME PART FUTURISTIK TRANSPARAN
 

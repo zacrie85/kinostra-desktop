@@ -236,6 +236,64 @@ function withTimeout(p, ms, msg) {
       e => { clearTimeout(tm); rej(e); });
   });
 }
+/* ================================================================
+   v3.29.0 — TRANSPLANTASI v3.16.0: SATU AUDIOBUFFER PENUH UTK EKSPOR
+   & SPLIT (proses v3.16 yang terbukti bagus di mesin pengguna).
+   v3.16 asli men-decode audio utuh SAAT IMPOR (decodeAudioData penuh)
+   → di film 3-4 jam itu justru memicu layar hitam/crash proses render
+   (alasan v3.17.1 lahir). Kini semantik v3.16 dipulihkan di SISI
+   EKSPOR: SEBELUM worker pertama jalan, audio [0..rentang ekspor+
+   margin] dibangun SEKALI secara berurutan menjadi SATU AudioBuffer —
+   semua worker hanya MEMBACA buffer yang sama (PARALEL berapa pun
+   tidak lagi berebut decoder). Dibangun bertahap per jendela lewat
+   demux AAC + AudioDecoder (RAM puncak = buffer + 1 jendela; TANPA
+   ArrayBuffer ±2 GB seperti decodeAudioData) dan hanya sampai batas
+   rentang ekspor — lebih hemat daripada v3.16 asli. Impor & analisis
+   jendela (peaks/zoom pembicara) tidak tersentuh. POTONG LANGSUNG
+   tidak lewat fungsi ini (sampel audio disalin langsung dari file).
+   ================================================================ */
+async function ensureExportAudio(ui) {
+  if (state.audioBuffer && state.audioBuffer.duration > 0.01) return true;
+  if (state.isAudio) return !!state.audioBuffer;   /* audio-only: buffer dari impor */
+  let pr = null;
+  try { pr = await probeAudio(state.file); } catch (e) { pr = null; }
+  if (!pr || !pr.info) { console.warn('siap-audio: probe gagal (bukan MP4/AAC?)'); return false; }
+  const r = rangeInfo();
+  const buildEnd = Math.min(state.duration || (r.end + 300), r.end + 300);
+  const sr = pr.info.sampleRate || 48000, chs = pr.info.channels || 2;
+  const totalN = Math.ceil(buildEnd * sr) + sr;
+  let buf = null;
+  try { buf = new AudioBuffer({ numberOfChannels: chs, length: totalN, sampleRate: sr }); }
+  catch (e) { console.warn('siap-audio: memori tak cukup —', e && e.message); return false; }
+  const cache = { probe: pr };                     /* cache sendiri — terpisah dari analisis */
+  const WIN = 120, epoch = state.mediaEpoch || 0;
+  state._audioExporting = true;                    /* analisis latar menunggu — sopan */
+  let miss = 0, done = 0;
+  try {
+    for (let t = 0; t < buildEnd; t += WIN) {
+      if (state.abort) throw new Error('Dibatalkan');
+      if (state.exportFatal) throw state.exportFatal;
+      if (!state.file || (state.mediaEpoch || 0) !== epoch) throw new Error('Media berganti saat menyiapkan audio');
+      let wb = null;
+      try { wb = await decodeAudioWindow(cache, t, WIN); } catch (e) { wb = null; }
+      if (wb && wb.duration > 0.01) {
+        const off0 = Math.max(0, Math.round((wb.kWin ? wb.kWin.t : t) * sr));
+        for (let c = 0; c < chs; c++) {
+          const src = wb.getChannelData(Math.min(c, wb.numberOfChannels - 1));
+          const n = Math.min(src.length, totalN - off0);
+          if (n > 0) buf.copyToChannel(src.subarray(0, n), c, off0);
+        }
+      } else if (t + WIN < buildEnd) miss++;
+      done += WIN;
+      if (ui && ui.sub) try { ui.sub(`menyiapkan audio penuh (proses v3.16) ${Math.min(100, Math.round(done * 100 / Math.max(1, buildEnd)))}%`); } catch (e) { }
+      await new Promise(rr => setTimeout(rr, 10));   /* napas antar jendela */
+    }
+  } finally { state._audioExporting = false; }
+  if (miss) console.warn(`siap-audio: ${miss} jendela kosong/gagal (senyap di titik itu)`);
+  state.audioBuffer = buf;
+  return true;
+}
+
 async function renderMix(start, durOut, spd = 1) {
   const sr = 48000, len = Math.max(1, Math.ceil(durOut * sr));
   const oc = new OfflineAudioContext(2, len, sr);
@@ -269,30 +327,25 @@ async function renderMix(start, durOut, spd = 1) {
      (loop) sehingga durasi buffer berapa pun tidak pernah crash.
      v2.12: kecepatan → audio asli diputar lebih cepat/lambat memakai
      playbackRate (pitch ikut naik/turun seperti efek fast-forward klasik). */
-  /* v3.17.1: sumber audio asli — buffer penuh (media pendek) ATAU decode
-     per jendela lewat demux AAC + AudioDecoder (media panjang; RAM selalu
-     sekecil jendela). Media non-MP4/AAC tanpa buffer → tanpa suara asli. */
-  let AB = state.audioBuffer;
-  let ABwin = false;
-  if (!AB && state._audioDemux && !state.isAudio && typeof decodeAudioWindow === 'function') {
-    state._audioExporting = true;   /* analisis latar tunda diri selama ekspor */
-    try {
-      for (let i = 0; i < 50 && state._audioWinBusy; i++) await new Promise(r => setTimeout(r, 100));
-      const dNeed = Math.min(durOut, Math.max(0.01, (state.duration || (start + durOut)) - start));
-      AB = await decodeAudioWindow(state._audioDemux, start, dNeed + 0.5);
-      ABwin = !!AB;
-    } catch (e) { console.warn('audio jendela gagal —', e && e.message); }
-    state._audioExporting = false;
-  }
-  if (AB && AB.duration > 0.01) {
-    const off0 = ABwin ? Math.max(0, start - (AB.kWin ? AB.kWin.t : start)) : start;
-    if (off0 < AB.duration - 0.01) {
-      const s = oc.createBufferSource(); s.buffer = AB;
-      s.playbackRate.value = spd;
-      const g = oc.createGain(); g.gain.value = state.audioGain;
-      s.connect(g); connectSrc(g);
-      s.start(0, off0, Math.max(0.01, Math.min(durOut, (AB.duration - off0) / spd)));
-    }
+  /* v3.29.0 TRANSPLANTASI v3.16.0: sumber audio asli = SATU AudioBuffer
+     penuh (state.audioBuffer) — persis proses v3.16 yang terbukti bagus.
+     Dulu (v3.17.1–v3.28) tiap blok men-decode audio per jendela lewat
+     decodeAudioWindow; dgn PARALEL 5× para worker berebut decoder
+     single-flight (_audioWinBusy — tunggu max 5 dtk lalu decode bersamaan)
+     → janji decode menggantung → audio terpaku → watchdog 5 menit
+     "encoding audio macet" → ULANGI-SW → ekspor gagal. Kini buffer
+     disiapkan SEKALI sebelum worker jalan (ensureExportAudio) dan render
+     hanya MEMBACA — tidak ada decode audio saat render, PARALEL berapa
+     pun aman. Buffer dibangun bertahap per jendela (tanpa ArrayBuffer
+     ±2 GB) dan hanya sampai batas rentang ekspor — RAM puncak lebih
+     rendah daripada v3.16 asli; impor tidak tersentuh (bebas layar
+     hitam v3.16 pada film 3-4 jam). */
+  if (state.audioBuffer && state.audioBuffer.duration > 0.01 && start < state.audioBuffer.duration - 0.01) {
+    const s = oc.createBufferSource(); s.buffer = state.audioBuffer;
+    s.playbackRate.value = spd;
+    const g = oc.createGain(); g.gain.value = state.audioGain;
+    s.connect(g); connectSrc(g);
+    s.start(0, start, Math.max(0.01, Math.min(durOut, (state.audioBuffer.duration - start) / spd)));
   }
   if (state.music.buffer && state.music.buffer.duration > 0.01) {
     const s = oc.createBufferSource(); s.buffer = state.music.buffer;
@@ -1462,6 +1515,20 @@ async function exportPartsToDir(dir, ui) {
       }
     }
   }
+  /* v3.29.0 TRANSPLANTASI v3.16.0: audio penuh disiapkan SEKALI di sini —
+     SEBELUM worker pertama jalan (POTONG LANGSUNG pulang lebih awal dan
+     tidak butuh decode: sampel audio disalin langsung dari file). Semua
+     worker nanti hanya membaca SATU buffer yang sama — PARALEL berapa
+     pun tidak lagi berebut decoder audio (akar bug "encoding audio
+     macet" / ULANGI-SW pada MERENDER 71 PART · PARALEL 5×). */
+  if (aCodec) {
+    try { await ensureExportAudio(ui); }
+    catch (e) {
+      if (state.abort || String((e && e.message) || e).includes('Dibatalkan')) throw e;
+      console.warn('siap audio gagal —', e && e.message);
+    }
+    if (!state.audioBuffer) toast('Suara asli tidak tersedia — ekspor lanjut (musik/backsound tetap ikut bila ada)', 'warn');
+  }
   let par = pickParallelCount(segs.length, enc.kind === 'hw');
   /* v3.9: KILAT + encoder SOFTWARE = dekode+encode sama-sama makan CPU —
      paralel tinggi justru saling rem (CI/VPS tanpa GPU). Batasi 2×.
@@ -1854,6 +1921,13 @@ async function exportMergeToDir(paths, dir, ui) {
         } catch (e) { console.warn('analisis pembicara gagal utk', nmv, e && e.message); }
       }
       if (state.music.buffer) await composeMusic(false, true, true);
+      /* v3.29.0 TRANSPLANTASI v3.16.0: buffer audio penuh per film SEBELUM
+         part film ini dirender (renderMix hanya membaca buffer; dulu merge
+         memakai decode jendela per blok — sama rentan "audio macet" saat
+         proses berat). Buffer film berikutnya dibangun setelah lama
+         dilepas di atas (hemat RAM). */
+      if (ui.sub) ui.sub(`[${i + 1}/${paths.length}] ${nmv} · menyiapkan audio…`);
+      try { await ensureExportAudio(ui); } catch (e) { console.warn('siap audio merge gagal —', e && e.message); }
       const srcUrl = state.file.virtual ? state.file.kurl : URL.createObjectURL(state.file);
       /* v3.9: MODE KILAT — probe film yang baru dimuat (MP4 avc1 tanpa B-frame)
          → semua part film ini didekode langsung; gagal probe → TURBO otomatis */
