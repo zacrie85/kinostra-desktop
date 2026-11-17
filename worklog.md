@@ -715,3 +715,16 @@ Laporan user di v3.29: (1) "video berhasil diexport dan split akan tetapi tidak 
 - Bump 6 file (scripts/bump-v3300.py).
 
 - RILIS v3.30.0 SELESAI (source ter-push dulu, commit e09e98d): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.30.0.exe 91,4 MB · KINOSTRA-Portable-3.30.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.30.0
+
+## v3.31.0 — PEMINDAI AUDIO SENYAP (2026-11-17)
+
+Laporan user v3.30: "hasil export & split masih belum ada suaranya" + contoh hasil export diunggah (PART_01_PART_01.mp4). FILE SUMBER JUGA diunggah user sebelumnya → bedah langsung:
+
+- TEMUAN AKAR: file SUMBER `DIKIRA_..._PART_01.mp4` HENING TOTAL — max_volume −91,0 dB sepanjang 183 dtk (track AAC ada, isi kosong; umum pada film split-an hasil unduhan utk menghindari hak cipta). Hasil export user (max −91,0 dB) = salinan SETIA sumber → aplikasi bekerja benar; suara asli memang tidak ada di file. Pesan: putar sumber di pemutar mana pun utk membuktikan.
+- FITUR BARU (media.js): measureAudioPeak() (puncak sampel, maks ±1,5 jt sampel diuji) + checkSilentAudio(tempat) — cache per mediaEpoch; puncak < 0,001 (≈ −60 dBFS) → SENYAP → state.audioSenyap + toast peringatan (teks beda bila MUSIK/BACKSOUND siap: audioTertutupMusik()) + tanda ⚠ di #bsoundStat (modul 11) + noteCrash log. Pemindaian dijalankan: decodeFileAudio (impor, decode penuh) + ensureExportAudio jalur 1 & jalur 2 (exporter.js, typeof-guard).
+- decodeFileAudio kini reset state.audioSenyap=false per video.
+- UJI BARU scripts/kinostra-v331-test.mjs 12/12: deteksi di impor (flag+toast+⚠) · ekspor sumber senyap = salinan setia ≤ −80 dB · dgn MUSIK sintetis: pesan berubah (MUSIK/BACKSOUND) & hasil BERNADA > −55 dB · sumber bernada −16 dB tidak salah alarm. Media uji: testmedia/silent180.mp4 (anullsrc) + tone180.mp4 (sine −16 dB).
+- Regresi: v330 9/9, v329 7/7, modul16 14/14, ekspor 7/7, v328 11/11, v327 12/12, v314 22/22, frame 6/6, overlay 6/6; v316 22/24 (flake lama).
+- Bump 6 file (scripts/bump-v3310.py).
+
+- RILIS v3.31.0 SELESAI (source ter-push dulu, commit a710aac): 3 aset benar sejak unggah pertama — KINOSTRA-Setup-3.31.0.exe 91,4 MB · KINOSTRA-Portable-3.31.0-win64.zip 130,1 MB · KINOSTRA-PANDUAN.md. URL: https://github.com/zacrie85/kinostra-desktop/releases/tag/v3.31.0
