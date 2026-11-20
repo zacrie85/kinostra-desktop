@@ -91,7 +91,7 @@ try {
 
   /* 1 — versi & katalog: chip PNG/JPG SENDIRI masuk dua menu (17 chip) */
   const ver = await evalRetry(cdp, `document.querySelector('.tag') ? document.querySelector('.tag').innerText : ''`, 10000);
-  ok('Aplikasi hidup + label versi v3.34.0', /v3\.34\.0/.test(ver || ''), (ver || '').slice(0, 50));
+  ok('Aplikasi hidup + label versi terkini (v3.35+)', /v3\.3[5-9]/.test(ver || ''), (ver || '').slice(0, 50));
   const kat = await evalRetry(cdp, `({
     nT: document.querySelectorAll('#titleFrameChips button').length,
     nP: document.querySelectorAll('#partFrameChips button').length,
@@ -99,7 +99,7 @@ try {
     lastP: [...document.querySelectorAll('#partFrameChips button')].pop().textContent.trim(),
     kT: (typeof TITLEFRAMES !== 'undefined') ? TITLEFRAMES.length : 0,
     kP: (typeof PARTFRAMES !== 'undefined') ? PARTFRAMES.length : 0 })`, 10000);
-  ok('Katalog 16+1: chip PNG/JPG SENDIRI di menu JUDUL & PART', kat.nT === 17 && kat.nP === 17 && kat.lastT === 'PNG/JPG SENDIRI' && kat.lastP === 'PNG/JPG SENDIRI' && kat.kT === 17 && kat.kP === 17,
+  ok('Katalog 21+1: chip PNG/JPG SENDIRI di menu JUDUL & PART', kat.nT === 22 && kat.nP === 22 && kat.lastT === 'PNG/JPG SENDIRI' && kat.lastP === 'PNG/JPG SENDIRI' && kat.kT === 22 && kat.kP === 22,
     `judul ${kat.nT} chip · part ${kat.nP} chip`);
 
   /* 2 — muat video + gambar uji (jalur loadFrameImgData = jalur tombol PILIH) */

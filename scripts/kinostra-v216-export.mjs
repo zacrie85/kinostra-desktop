@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Uji STAGE 2 v2.16 — ekspor mini dengan frame khusus baru (end-to-end) */
-import WebSocket from '/home/z/my-project/kinostra-desktop/node_modules/ws/index.js';
+import WebSocket from '/home/z/my-project/node_modules/ws/index.js';   /* v3.35: jalur node_modules root (salinan lama kinostra-desktop tak lagi berisi ws) */
 import fs from 'fs';
 import { execSync } from 'child_process';
 

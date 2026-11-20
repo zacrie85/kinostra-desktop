@@ -465,6 +465,199 @@ function drawComposition(x, W, H, t, opts) {
    Dipanggil SEBELUM teks judul digambar (teks selalu di lapisan atas).
    b = { cx, x0, x1 (lebar teks), top, bot (batas blok teks), fs, u }
    ================================================================ */
+/* ================================================================
+   v3.35 — 5 FRAME REFERENSI KAWAN (kunci 'komik', 'glossy',
+   'sport', 'pitaemas', 'neonlayar' di TITLEFRAMES & PARTFRAMES).
+   Port gaya dari 5 gambar referensi user: (1) banner lower-third
+   komik merah-biru, (2) banner glossy gaming hitam-merah, (3)
+   banner sport lingkar biru, (4) pita emas, (5) bingkai neon
+   cyan-pink. Semua digambar sebagai BINGKAI/HIASAN saja — bagian
+   tengah tidak pernah diisi (kosong/transparan) supaya tulisan
+   judul/PART tampil DI DALAM bingkai. Lencana lingkaran (glossy/
+   sport) dipasang menggantung di tepi kiri box dgn jangkauan ke
+   dalam dibatasi b.safe (jarak teks dari tepi) → tak pernah
+   menimpa huruf pertama. Deterministik tanpa animasi → aman ekspor
+   per frame; pratinjau = ekspor persis (satu mesin gambar).
+   b = { cx, x0, x1, y0, y1, fs, u, safe? }
+   ================================================================ */
+function drawRefFrame(x, W, H, key, b) {
+  const u = b.u, fs = Math.max(8, b.fs);
+  const x0 = b.x0, x1 = b.x1, y0 = b.y0, y1 = b.y1, cx = b.cx;
+  const bw = Math.max(10, x1 - x0), bh = Math.max(8, y1 - y0);
+  const midY = (y0 + y1) / 2;
+  const lw = m => Math.max(1.4, m * fs / 52);
+  const DARK = 'rgba(15,10,32,.92)';        /* outline komik gelap */
+  /* lencana lingkaran menggantung di tepi kiri (glossy & sport) —
+     jangkauan ke dalam ≤ safe supaya tak menutupi teks */
+  const badgeRing = (rim, dot) => {
+    const r = Math.min(bh * 0.30, fs * 0.30, (b.safe != null ? b.safe : fs * 0.16) * 0.95);
+    const bx = x0, by = midY;
+    x.beginPath(); x.arc(bx, by, r, 0, 7);
+    const cg = x.createLinearGradient(0, by - r, 0, by + r);
+    cg.addColorStop(0, rim[0]); cg.addColorStop(1, rim[1]);
+    x.strokeStyle = cg; x.lineWidth = lw(4.5); x.stroke(); x.stroke();
+    x.beginPath(); x.arc(bx, by, r * 0.72, 0, 7);
+    x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = lw(1.3); x.stroke();
+    x.beginPath(); x.arc(bx, by, r * 0.30, 0, 7);
+    x.fillStyle = dot; x.fill();
+    return r;
+  };
+  x.save(); x.lineJoin = 'round'; x.lineCap = 'round';
+  if (key === 'komik') {
+    /* KOMIK MERAH-BIRU — strip merah di kiri-atas + bingkai banner
+       biru-ungu jajar-genjang dgn outline hitam tebal ala komik +
+       bintang kilau; bagian dalam banner kosong utk teks */
+    const s = fs * 0.16;
+    const x0s = x0 + s;
+    /* strip merah hiasan di atas (bukan tempat teks — di luar box) */
+    const rh = fs * 0.34, rw = Math.min(bw * 0.42, fs * 3.4);
+    const ry = y0 - rh - fs * 0.06;
+    if (ry > 4) {
+      x.beginPath();
+      x.moveTo(x0s + rw * 0.10, ry); x.lineTo(x0s + rw, ry);
+      x.lineTo(x0s + rw - rh * 0.28, ry + rh); x.lineTo(x0s, ry + rh); x.closePath();
+      x.fillStyle = '#E8322E'; x.fill();
+      x.strokeStyle = DARK; x.lineWidth = lw(3); x.stroke();
+      x.strokeStyle = 'rgba(255,255,255,.85)'; x.lineWidth = lw(1.2);
+      x.beginPath(); x.moveTo(x0s + rw * 0.18, ry + rh * 0.32); x.lineTo(x0s + rw * 0.86, ry + rh * 0.32); x.stroke();
+    }
+    /* bintang kilau di kanan-atas (klampas dalam layar) */
+    const sx2 = Math.min(x1 + fs * 0.42, W - 8), sy2 = y0 + fs * 0.10;
+    if (sx2 > x1 + fs * 0.24) {
+      const star = (sx, sy, r) => {
+        x.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? r * 0.38 : r;
+          const px2 = sx + Math.cos(a) * rr, py2 = sy + Math.sin(a) * rr;
+          i ? x.lineTo(px2, py2) : x.moveTo(px2, py2);
+        }
+        x.closePath();
+      };
+      x.fillStyle = '#FFD23F'; star(sx2, sy2, fs * 0.20); x.fill();
+      x.strokeStyle = DARK; x.lineWidth = lw(1.6); x.stroke();
+      if (sx2 + fs * 0.44 < W - 6) {
+        x.fillStyle = 'rgba(255,255,255,.9)';
+        star(sx2 + fs * 0.30, sy2 - fs * 0.26, fs * 0.10); x.fill();
+      }
+    }
+    /* banner utama — dua lapis outline (hitam tebal + biru-ungu),
+       dalam transparan */
+    x.beginPath();
+    x.moveTo(x0s, y0); x.lineTo(x1, y0); x.lineTo(x1 - s, y1); x.lineTo(x0, y1); x.closePath();
+    x.strokeStyle = DARK; x.lineWidth = lw(6.5); x.stroke(); x.stroke();
+    x.strokeStyle = '#7B6CF0'; x.lineWidth = lw(3.4); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = lw(1.2);
+    x.beginPath(); x.moveTo(x0s + bw * 0.06, y0 + lw(4.6)); x.lineTo(x1 - bw * 0.06, y0 + lw(4.6)); x.stroke();
+  } else if (key === 'glossy') {
+    /* GLOSSY GAMING — plat merah di belakang + banner gelap glossy
+       (gradasiSteel) dgn bibir atas merah & kilau + lencana tim;
+       dalam banner kosong utk teks */
+    const bs = fs * 0.14, off = fs * 0.16;
+    const bx0 = x0 + fs * 0.08, by0 = y0 + bh * 0.06, bx1 = x1, by1 = y1 - bh * 0.06;
+    /* plat merah offset kanan-bawah — outline saja (terlihat menyala
+       di tepi kanan-bawah, interior tetap kosong) */
+    x.save(); x.translate(off, off * 0.75);
+    x.beginPath();
+    x.moveTo(bx0 + bs, by0); x.lineTo(bx1, by0); x.lineTo(bx1 - bs, by1); x.lineTo(bx0, by1); x.closePath();
+    x.strokeStyle = '#C4282B'; x.lineWidth = lw(3.2); x.stroke(); x.stroke();
+    x.restore();
+    /* banner gelap glossy — outline gradasi, dalam transparan */
+    x.beginPath();
+    x.moveTo(bx0 + bs, by0); x.lineTo(bx1, by0); x.lineTo(bx1 - bs, by1); x.lineTo(bx0, by1); x.closePath();
+    const gg = x.createLinearGradient(0, by0, 0, by1);
+    gg.addColorStop(0, 'rgba(96,98,118,.95)'); gg.addColorStop(0.45, 'rgba(32,33,42,.95)'); gg.addColorStop(1, 'rgba(10,10,14,.95)');
+    x.strokeStyle = gg; x.lineWidth = lw(5.5); x.stroke(); x.stroke();
+    x.strokeStyle = '#E8322E'; x.lineWidth = lw(2.2);
+    x.beginPath(); x.moveTo(bx0 + bs, by0); x.lineTo(bx1, by0); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.38)'; x.lineWidth = lw(1.4);
+    x.beginPath(); x.moveTo(bx0 + bs + bw * 0.05, by0 + lw(4.4)); x.lineTo(bx0 + bs + bw * 0.30, by0 + lw(4.4)); x.stroke();
+    badgeRing(['#3E404E', '#101018'], '#E8322E');
+  } else if (key === 'sport') {
+    /* SPORT LINGKAR — banner runcing biru dgn garis kecepatan di
+       kiri + lencana lingkaran biru; dalam banner kosong utk teks */
+    const s = fs * 0.30, g0 = Math.max(6 * u, x0 - fs * 0.44);
+    x.beginPath();
+    x.moveTo(x0 + fs * 0.10, y0); x.lineTo(x1, y0);
+    x.lineTo(x1 - s, y1); x.lineTo(x0 + fs * 0.10, y1); x.closePath();
+    x.strokeStyle = 'rgba(10,20,40,.92)'; x.lineWidth = lw(6); x.stroke(); x.stroke();
+    x.strokeStyle = '#58C7F0'; x.lineWidth = lw(2.6); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = lw(1.1);
+    x.beginPath(); x.moveTo(x0 + fs * 0.16, y0 + lw(4.6)); x.lineTo(x1 - s * 0.55, y0 + lw(4.6)); x.stroke();
+    /* garis kecepatan (3 goresan di kiri banner) */
+    x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = lw(2);
+    x.beginPath();
+    x.moveTo(g0 + fs * 0.14, y0 + bh * 0.18); x.lineTo(x0 + fs * 0.02, y0 + bh * 0.18);
+    x.moveTo(g0, midY); x.lineTo(x0 - fs * 0.06, midY);
+    x.moveTo(g0 + fs * 0.14, y1 - bh * 0.18); x.lineTo(x0 + fs * 0.02, y1 - bh * 0.18);
+    x.stroke();
+    badgeRing(['#4FB4E8', '#1668B0'], 'rgba(255,255,255,.85)');
+  } else if (key === 'pitaemas') {
+    /* PITA EMAS — badan pita melengkung ringan (outline emas ganda)
+       + ekor lipatan dua sisi; bagian tengah kosong utk teks */
+    const arc = fs * 0.10;
+    const gg = x.createLinearGradient(0, y0, 0, y1);
+    gg.addColorStop(0, '#F7C33F'); gg.addColorStop(0.5, '#E89A1F'); gg.addColorStop(1, '#C97B12');
+    /* ekor kiri & kanan (hiasan di luar box — diisi emas penuh) */
+    const tail = (side) => {
+      const tw = Math.min(fs * 0.55, side < 0 ? Math.max(0, x0 - 6 * u) : Math.max(0, W - 6 * u - x1));
+      if (tw < fs * 0.16) return;
+      const sx = side < 0 ? x0 : x1;
+      x.beginPath();
+      x.moveTo(sx, y0 + bh * 0.14);
+      x.lineTo(sx + side * tw, y0 + bh * 0.06);
+      x.lineTo(sx + side * tw * 0.55, midY);
+      x.lineTo(sx + side * tw, y1 - bh * 0.06);
+      x.lineTo(sx, y1 - bh * 0.14);
+      x.closePath();
+      x.fillStyle = gg; x.fill();
+      x.strokeStyle = 'rgba(74,42,8,.9)'; x.lineWidth = lw(1.8); x.stroke();
+      /* lipatan gelap di sambungan ekor & badan — di sisi EKOR
+         (tidak masuk ke dalam box tulisan) */
+      x.beginPath();
+      x.moveTo(sx, y0 + bh * 0.14); x.lineTo(sx, y0 + bh * 0.14 + fs * 0.12);
+      x.lineTo(sx + side * tw * 0.34, y0 + bh * 0.14 + fs * 0.12);
+      x.closePath();
+      x.fillStyle = '#8A5A10'; x.fill();
+    };
+    tail(-1); tail(1);
+    /* badan pita — dua lapis: emas tebal + outline gelap tipis */
+    x.beginPath();
+    x.moveTo(x0, y0 + arc);
+    x.quadraticCurveTo(cx, y0 - arc * 1.4, x1, y0 + arc);
+    x.lineTo(x1, y1 - arc * 0.4);
+    x.quadraticCurveTo(cx, y1 - arc * 1.9, x0, y1 - arc * 0.4);
+    x.closePath();
+    x.strokeStyle = gg; x.lineWidth = lw(5.5); x.stroke(); x.stroke();
+    x.strokeStyle = 'rgba(74,42,8,.9)'; x.lineWidth = lw(1.8); x.stroke();
+    x.strokeStyle = 'rgba(255,236,180,.75)'; x.lineWidth = lw(1.1);
+    x.beginPath();
+    x.moveTo(x0 + lw(3.4), y0 + arc * 1.5);
+    x.quadraticCurveTo(cx, y0 - arc * 0.7, x1 - lw(3.4), y0 + arc * 1.5);
+    x.stroke();
+  } else if (key === 'neonlayar') {
+    /* NEON CYAN-PINK — bingkai membulat menyala cyan + pendar pink
+       di tepi bawah dalam; interior transparan penuh */
+    const r = Math.min(fs * 0.28, bh * 0.3, bw * 0.3);
+    roundedRectPath(x, x0, y0, bw, bh, r);
+    x.shadowColor = 'rgba(53,214,255,.9)'; x.shadowBlur = fs * 0.60;
+    x.strokeStyle = 'rgba(60,205,255,.9)'; x.lineWidth = lw(4.5); x.stroke(); x.stroke();
+    x.shadowBlur = fs * 0.95;
+    x.strokeStyle = 'rgba(60,205,255,.30)'; x.lineWidth = lw(8.5); x.stroke();
+    x.shadowBlur = 0;
+    x.strokeStyle = 'rgba(225,250,255,.85)'; x.lineWidth = Math.max(1, lw(1.3)); x.stroke();
+    /* pendar pink di tepi bawah (ala referensi) */
+    const gh = Math.max(3, fs * 0.16);
+    const pg = x.createLinearGradient(0, y1 - gh, 0, y1);
+    pg.addColorStop(0, 'rgba(255,63,168,0)');
+    pg.addColorStop(1, 'rgba(255,63,168,.75)');
+    x.shadowColor = 'rgba(255,63,168,.8)'; x.shadowBlur = fs * 0.45;
+    x.fillStyle = pg;
+    x.fillRect(x0 + lw(3), y1 - gh, bw - lw(6), gh);
+    x.shadowBlur = 0;
+  }
+  x.restore();
+}
+
 function drawTitleFrame(x, W, H, key, b) {
   const AMB = '#F7A600', CREAM = 'rgba(242,240,234,', u = b.u, fs = b.fs;
   const px = fs * 0.55;                     /* ruang napas kiri-kanan */
@@ -610,6 +803,11 @@ function drawTitleFrame(x, W, H, key, b) {
     x.fillStyle = 'rgba(255,255,255,.38)';
     x.fillRect(bx0 + gw, by0, bw - gw * 2, lw(1.4));
     x.fillRect(bx0 + gw, by1 - lw(1.4), bw - gw * 2, lw(1.4));
+  }
+  /* v3.35: 5 FRAME REFERENSI KAWAN — komik/glossy/sport/pitaemas/
+     neonlayar (bagian dalam kosong utk judul) */
+  else if (key === 'komik' || key === 'glossy' || key === 'sport' || key === 'pitaemas' || key === 'neonlayar') {
+    drawRefFrame(x, W, H, key, { cx: b.cx, x0: bx0, x1: bx1, y0: by0, y1: by1, fs, u, safe: b.x0 - bx0 });
   }
   x.restore();
 }
@@ -778,6 +976,11 @@ function drawPartFrame(x, W, H, key, b) {
     x.shadowColor = CREAM + '.6)'; x.shadowBlur = fs * 0.30;
     x.fillRect(x0 + bw * 0.06, y1 - lw(2.2), bw * 0.88, lw(2.2));
     x.shadowBlur = 0;
+  }
+  /* v3.35: 5 FRAME REFERENSI KAWAN — komik/glossy/sport/pitaemas/
+     neonlayar (bagian dalam kosong utk teks part) */
+  else if (key === 'komik' || key === 'glossy' || key === 'sport' || key === 'pitaemas' || key === 'neonlayar') {
+    drawRefFrame(x, W, H, key, { cx: b.cx, x0, x1, y0, y1, fs, u });
   }
   x.restore();
 }

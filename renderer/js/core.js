@@ -127,6 +127,15 @@ const TITLEFRAMES = [
   { k: 'bening', n: 'GARIS BENING', d: 'Hairline putih membulat + berlian kecil di kiri-kanan judul' },
   { k: 'mewah', n: 'MEWAH BENING', d: 'Kaca transparan + hairline emas di dalam — mewah tanpa berat' },
   { k: 'etere', n: 'ETERE', d: 'Gradasi putih pudar kiri-kanan + garis pusat halus — ringan seperti kabut' },
+  /* v3.35: 5 FRAME REFERENSI KAWAN — port gaya dari 5 gambar referensi
+     user (banner lower-third komik, glossy gaming, sport lingkar, pita
+     emas, bingkai neon cyan-pink). Bagian TENGAH dibiarkan kosong/
+     transparan — tulisan judul tampil di dalamnya. */
+  { k: 'komik', n: 'KOMIK MERAH-BIRU', d: 'Banner komik: strip merah di atas + bingkai biru-ungu outline tebal + bintang kilau — dalam kosong utk judul' },
+  { k: 'glossy', n: 'GLOSSY GAMING', d: 'Banner gelap glossy dgn plat merah, bibir atas merah & lencana lingkaran — gaya esports, dalam kosong utk judul' },
+  { k: 'sport', n: 'SPORT LINGKAR', d: 'Banner runcing biru dgn garis kecepatan & lencana lingkaran biru — gaya balapan/olahraga, dalam kosong utk judul' },
+  { k: 'pitaemas', n: 'PITA EMAS', d: 'Pita emas melengkung dgn ekor lipatan dua sisi — klasik megah, bagian tengah kosong utk judul' },
+  { k: 'neonlayar', n: 'NEON CYAN-PINK', d: 'Bingkai neon cyan menyala + pendar pink di tepi bawah — dalam transparan penuh utk judul' },
   /* v3.34: FRAME MANUAL — gambar PNG/JPG pilihan sendiri sbg bingkai judul;
      posisi digeser & ukuran ditarik langsung di pratinjau (atau lewat angka) */
   { k: 'png', n: 'PNG/JPG SENDIRI', d: 'Pakai gambar sendiri (PNG/JPG) sbg bingkai judul — posisi & ukuran bebas diatur (geser/tarik/angka)' }
@@ -156,6 +165,15 @@ const PARTFRAMES = [
   { k: 'jaring', n: 'JARING TITIK', d: 'Bingkai putus-putus halus (dot grid)' },
   { k: 'murni', n: 'GARIS MURNI', d: 'Satu garis bawah tipis + notch tengah — paling minimal' },
   { k: 'berkas', n: 'BERKAS CAHAYA', d: 'Kaca tipis + garis cahaya memudar di bawah teks' },
+  /* v3.35: 5 FRAME REFERENSI KAWAN — port gaya dari 5 gambar referensi
+     user utk tulisan PART/EPISODE juga (komik, glossy, sport, pita
+     emas, neon). Bagian TENGAH kosong/transparan — teks part tampil
+     di dalamnya. */
+  { k: 'komik', n: 'KOMIK MERAH-BIRU', d: 'Banner komik: strip merah di atas + bingkai biru-ungu outline tebal + bintang kilau — dalam kosong utk teks part' },
+  { k: 'glossy', n: 'GLOSSY GAMING', d: 'Banner gelap glossy dgn plat merah, bibir atas merah & lencana lingkaran — gaya esports, dalam kosong utk teks part' },
+  { k: 'sport', n: 'SPORT LINGKAR', d: 'Banner runcing biru dgn garis kecepatan & lencana lingkaran biru — gaya balapan/olahraga, dalam kosong utk teks part' },
+  { k: 'pitaemas', n: 'PITA EMAS', d: 'Pita emas melengkung dgn ekor lipatan dua sisi — klasik megah, bagian tengah kosong utk teks part' },
+  { k: 'neonlayar', n: 'NEON CYAN-PINK', d: 'Bingkai neon cyan menyala + pendar pink di tepi bawah — dalam transparan penuh utk teks part' },
   /* v3.34: FRAME MANUAL — gambar PNG/JPG pilihan sendiri sbg bingkai part;
      posisi digeser & ukuran ditarik langsung di pratinjau (atau lewat angka) */
   { k: 'png', n: 'PNG/JPG SENDIRI', d: 'Pakai gambar sendiri (PNG/JPG) sbg bingkai part — posisi & ukuran bebas diatur (geser/tarik/angka)' }

@@ -63,11 +63,26 @@ Tiga permintaan sekaligus:
 - **Pilihan**: modul 09 → **MODE KILAT** → **KILAT** (default) atau **TURBO (LAMA)** bila ingin perilaku lama persis
 - Diuji otomatis **39/39 lulus** (baru) — termasuk ekspor nyata: split 3 part kilat (durasi, isi warna per part, jaminan 720p, bingkai judul, part paling atas), demux+dekode langsung merah/hijau/biru, uji kecepatan KILAT < TURBO, gabung 2 film lewat kfile://; regresi v3.6–v3.8 bersih (hanya asersi versi lama yang wajar)
 
+## Yang Baru di v3.35.0 — 5 FRAME REFERENSI KAWAN (bagian dalam kosong untuk tulisan)
+
+Permintaan kawan: **"buatkan frame seperti 5 gambar referensi untuk episode/part dan untuk judul video, bagian dalamnya kosong/transparan untuk tempat tulisan"**. Kelima gaya dari gambar referensi kini ada di KINOSTRA — dan karena digambar langsung oleh mesin yang sama dengan pratinjau, **bingkainya otomatis menyesuaikan ukuran teks** (beda dengan frame PNG/JPG manual yang ukurannya tetap):
+
+- **Di mana**: modul 03 → menu **FRAME JUDUL DI VIDEO** & **FRAME PART DI VIDEO** (kini **20 gaya + PNG/JPG SENDIRI** per menu) — lima gaya baru di ujung sebelum PNG/JPG SENDIRI:
+  1. **KOMIK MERAH-BIRU** — strip merah di kiri-atas + bingkai banner biru-ungu dengan outline hitam tebal ala komik + bintang kilau (gaya lower-third video komik).
+  2. **GLOSSY GAMING** — banner gelap glossy dengan plat merah menyala di tepi, bibir atas merah, kilau putih, dan lencana lingkaran di kiri (gaya esports/gaming).
+  3. **SPORT LINGKAR** — banner runcing biru dengan 3 garis kecepatan dan lencana lingkaran biru (gaya balapan/olahraga).
+  4. **PITA EMAS** — pita emas melengkung dengan outline ganda dan ekor lipatan emas di kedua sisi (klasik megah).
+  5. **NEON CYAN-PINK** — bingkai membulat menyala cyan dengan pendar pink di tepi bawah (interior transparan penuh).
+- **Dalamnya kosong/transparan**: semua bingkai hanya menggambar hiasan tepi — **bagian tengah tidak pernah diisi**, tulisan judul/PART tampil di dalamnya persis seperti diminta. Lencana lingkaran menggantung di tepi kiri dengan jangkauan yang dibatasi, jadi **tidak pernah menimpa huruf pertama**.
+- **Otomatis pas**: bingkai mengikuti lebar & tinggi teks (judul berapa kata pun, tulisan PART 10%–250% pun ikut), berlaku di **bumper intro & label pojok**, ikut animasi masuk, dan **pratinjau = hasil ekspor persis**.
+- **Bebas resolusi & aman ekspor**: digambar deterministik per frame (aman ekspor paralel); hiasan luar (bintang, garis kecepatan, ekor pita) otomatis terkampas di dalam layar; frame judul tetap dihitung efek di gerbang POTONG LANGSUNG (otomatis RENDER PENUH).
+- **Boleh dicampur**: misalnya judul pakai PITA EMAS + part pakai KOMIK MERAH-BIRU — atau tetap pakai PNG/JPG SENDIRI seperti v3.34.0; semua gaya lama tidak berubah.
+
 ## Yang Baru di v3.34.0 — FRAME MANUAL PNG/JPG SENDIRI (geser & tarik langsung di pratinjau)
 
 Permintaan kawan: **"bisa masukkan frame/PNG/JPG secara manual untuk frame judul & episode/part, besar-kecilnya diatur panjang-pendek dan tinggi-rendah, framenya bisa klik-tahan-geser kemanapun dan ditarik kiri-kanan-atas-bawah"**. Sekarang ada di KINOSTRA:
 
-- **Pilih gambar sendiri**: di menu FRAME PART DI VIDEO & FRAME JUDUL DI VIDEO ada gaya baru **PNG/JPG SENDIRI** (17 pilihan per menu). Klik gaya itu → panel muncul → tombol **PILIH GAMBAR (PNG/JPG)** — PNG transparan paling pas untuk bingkai; JPG/WebP/SVG juga bisa.
+- **Pilih gambar sendiri**: di menu FRAME PART DI VIDEO & FRAME JUDUL DI VIDEO ada gaya baru **PNG/JPG SENDIRI** (kini 22 pilihan per menu sejak v3.35.0). Klik gaya itu → panel muncul → tombol **PILIH GAMBAR (PNG/JPG)** — PNG transparan paling pas untuk bingkai; JPG/WebP/SVG juga bisa.
 - **Geser posisi**: di PRATINJAU muncul kotak putus-putus amber. **Klik-tahan badan kotak lalu geser ke mana saja** — posisi ikut jari.
 - **Tarik ukuran**: **tarik pegangan di tepi kiri/kanan/atas/bawah** kotak untuk mengatur lebar & tinggi persis seperti diminta. Bingkai selalu terkampas di dalam layar (tidak bisa keluar).
 - **Atur lewat angka**: POSISI X / POSISI Y / LEBAR / TINGGI (%) bisa diisi manual — sinkron dua-arah dengan geser-tarik. Tombol **POSISI AWAL** mengembalikan posisi bawaan.

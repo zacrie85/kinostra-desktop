@@ -103,8 +103,9 @@ try {
   /* 3 — 16 chip dgn nama katalog lengkap (TANPA + 15 gaya) */
   const p = await evalRetry(cdp, UKUR.replace('%SEL%', "'#partFrameChips'"), 10000);
   const HARAP = ['TANPA', 'HUD SUDUT', 'GARIS HUD', 'KAPSUL BENING', 'KURUNG TEKNO', 'CHIP DATA', 'SEGI ENAM', 'PITA TEKNO',
-    'GARIS GANDA HUD', 'TITIK ORBIT', 'FASE SUDUT', 'PANEL SISTEM', 'SINAR SAMPING', 'JARING TITIK', 'GARIS MURNI', 'BERKAS CAHAYA', 'PNG/JPG SENDIRI'];
-  ok('17 chip frame part dgn nama katalog lengkap (v3.34 +PNG)', !!p && p.n === 17 && JSON.stringify(p.teks) === JSON.stringify(HARAP),
+    'GARIS GANDA HUD', 'TITIK ORBIT', 'FASE SUDUT', 'PANEL SISTEM', 'SINAR SAMPING', 'JARING TITIK', 'GARIS MURNI', 'BERKAS CAHAYA',
+    'KOMIK MERAH-BIRU', 'GLOSSY GAMING', 'SPORT LINGKAR', 'PITA EMAS', 'NEON CYAN-PINK', 'PNG/JPG SENDIRI'];
+  ok('22 chip frame part dgn nama katalog lengkap (v3.35 +5 referensi +PNG)', !!p && p.n === 22 && JSON.stringify(p.teks) === JSON.stringify(HARAP),
     !!p ? p.n + ' chip · wrap=' + p.wrap : 'null');
 
   /* 4 — chip melar mengikuti nama: semua lebar > kotak swatch 34px */
@@ -135,8 +136,9 @@ try {
          (label HTML kini dibetulkan: dulu "10 GAYA" padahal katalog v3.28 = 15 gaya) */
   const j = await evalRetry(cdp, UKUR.replace('%SEL%', "'#titleFrameChips'"), 10000);
   const HARAPJ = ['TANPA', 'GARIS KEMBAR', 'KOTAK TEGAS', 'BINGKAI GANDA', 'SUDUT KAMERA', 'PITA JUDUL', 'PITA SINEMA', 'NEON MENYALA',
-    'EMAS KLASIK', 'PANEL MODERN', 'GRADASI PANAS', 'KACA HALUS', 'KRISTAL BENING', 'GARIS BENING', 'MEWAH BENING', 'ETERE', 'PNG/JPG SENDIRI'];
-  ok('Frame judul 17 chip (TANPA+15+PNG v3.34) nama utuh & di dalam panel', !!j && j.n === 17 && JSON.stringify(j.teks) === JSON.stringify(HARAPJ) && j.clip.length === 0 && j.luar.length === 0 && j.lebar.every(w => w > 34),
+    'EMAS KLASIK', 'PANEL MODERN', 'GRADASI PANAS', 'KACA HALUS', 'KRISTAL BENING', 'GARIS BENING', 'MEWAH BENING', 'ETERE',
+    'KOMIK MERAH-BIRU', 'GLOSSY GAMING', 'SPORT LINGKAR', 'PITA EMAS', 'NEON CYAN-PINK', 'PNG/JPG SENDIRI'];
+  ok('Frame judul 22 chip (TANPA+20+PNG v3.35) nama utuh & di dalam panel', !!j && j.n === 22 && JSON.stringify(j.teks) === JSON.stringify(HARAPJ) && j.clip.length === 0 && j.luar.length === 0 && j.lebar.every(w => w > 34),
     !!j ? j.n + ' chip · clip=' + j.clip.length + ' min=' + Math.min(...j.lebar) + 'px' : 'null');
 
   /* 9 — regresi: chip swatch warna tetap kotak 34px persis sebelumnya */

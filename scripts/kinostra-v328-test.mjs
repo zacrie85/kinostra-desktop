@@ -125,8 +125,8 @@ try {
     return per;
   })()`, 60000);
   const tKeys = td ? Object.keys(td) : [];
-  ok('Semua 15 frame judul tergambar (pixel-diff > 60 px masing-masing)',
-    tKeys.length === 15 && tKeys.every(k => td[k] > 60), JSON.stringify(td));
+  ok('Semua 20 frame judul tergambar (pixel-diff > 60 px masing-masing — v3.35: +5 referensi)',
+    tKeys.length === 20 && tKeys.every(k => td[k] > 60), JSON.stringify(td));
 
   /* ===== PIXEL-DIFF: 15 frame part di BUMPER INTRO (ukuran 60% biar beda jelas) ===== */
   const pd = await evalRetry(cdp, `(() => {
@@ -152,8 +152,8 @@ try {
     return per;
   })()`, 60000);
   const pKeys = pd ? Object.keys(pd) : [];
-  ok('Semua 15 frame PART tergambar di bumper intro (pixel-diff > 40 px)',
-    pKeys.length === 15 && pKeys.every(k => pd[k] > 40), JSON.stringify(pd));
+  ok('Semua 20 frame PART tergambar di bumper intro (pixel-diff > 40 px — v3.35: +5 referensi)',
+    pKeys.length === 20 && pKeys.every(k => pd[k] > 40), JSON.stringify(pd));
 
   /* ===== PIXEL-DIFF: frame part di LABEL POJOK (2 gaya sampel) + skala ikut ===== */
   const pk = await evalRetry(cdp, `(() => {
