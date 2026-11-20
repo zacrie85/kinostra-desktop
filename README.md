@@ -5,7 +5,7 @@
 **Aplikasi desktop Windows 100% offline untuk produksi video otomatis.**
 Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedural → Efek Visual → Export MP4.
 
-![Version](https://img.shields.io/badge/version-3.34.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
+![Version](https://img.shields.io/badge/version-3.35.0-amber) ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F%2011%20x64-blue) ![Offline](https://img.shields.io/badge/offline-100%25-success) ![Engine](https://img.shields.io/badge/engine-Electron%2033-9feaf9)
 
 [⬇️ Download Installer (.exe)](#-install) · [📦 Portable (.zip)](#-install) · [📖 Panduan Lengkap](KINOSTRA-PANDUAN.md)
 
@@ -97,6 +97,7 @@ Auto-split video → Subtitle AI Whisper → Object Tracking → Musik Prosedura
 | 76 | **GERBANG SUARA + AUDIO FILM UTUH** ⭐v3.32.0 | ekspor film utuh 3-4 jam kini selalu bersuara (audio bersegmen, RAM terkendali) · konfirmasi pra-ekspor dgn MUSIK OTOMATIS sekali klik · status suara di modal hasil |
 | 77 | **MENU FRAME DILEBARKAN** ⭐v3.33.0 | chip FRAME PART (16) & FRAME JUDUL (16) melar mengikuti nama lengkap — semua gaya futuristik terlihat & terbaca penuh, nol teks terpotong (dulu hanya ±9 per baris) |
 | 78 | **FRAME MANUAL PNG/JPG SENDIRI** ⭐v3.34.0 | pilih gambar sendiri (PNG/JPG) sebagai bingkai JUDUL & PART · geser posisi (klik-tahan) & tarik tepi kiri/kanan/atas/bawah utk lebar/tinggi langsung di pratinjau · bisa juga lewat angka · pratinjau = ekspor persis |
+| 79 | **5 FRAME REFERENSI KAWAN** ⭐v3.35.0 | frame gaya 5 gambar referensi utk JUDUL & PART/EPISODE: KOMIK MERAH-BIRU · GLOSSY GAMING · SPORT LINGKAR · PITA EMAS · NEON CYAN-PINK — bagian dalam KOSONG/transparan sbg tempat tulisan; bingkai otomatis mengikuti ukuran teks (beda dgn PNG manual), intro & pojok, pratinjau = ekspor persis |
 ⭐ = fitur baru/upgrade terbaru
 
 ## 🔒 100% Offline
